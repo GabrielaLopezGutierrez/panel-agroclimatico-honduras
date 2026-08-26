@@ -429,7 +429,7 @@ def write_snapshot(key, text) -> tuple[Path, bool]:
                   "url": cfg.CSV_DIR.format(iso3=cfg.ISO3) + CSV_FILES[key],
                   "filas": text.count("\n"), "sha256": digest}
     SNAPSHOT_INDEX.write_text(json.dumps(index, indent=2, ensure_ascii=False),
-                              encoding="utf-8")
+                              encoding="utf-8", newline="\n")
     return out, True
 
 

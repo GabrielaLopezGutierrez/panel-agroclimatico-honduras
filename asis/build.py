@@ -237,7 +237,7 @@ def build_official(weights: pd.Series, refresh=True) -> dict:
 
     cfg.OFICIAL_DIR.mkdir(parents=True, exist_ok=True)
     weights.rename("n_px").to_frame().to_csv(
-        cfg.OFICIAL_DIR / "pesos_departamento.csv")
+        cfg.OFICIAL_DIR / "pesos_departamento.csv", lineterminator="\n")
     for name, spec in NATIONAL.items():
         if info.get(spec["key"], {}).get("estado") != "ok":
             continue
@@ -298,8 +298,8 @@ def build_geometry():
     cfg.GEO_DIR.mkdir(parents=True, exist_ok=True)
     geojson, ref = export_geometry()
     GEOJSON_PATH.write_text(json.dumps(geojson, ensure_ascii=False),
-                            encoding="utf-8")
-    ref.to_csv(MUNI_PATH, index=False)
+                            encoding="utf-8", newline="\n")
+    ref.to_csv(MUNI_PATH, index=False, lineterminator="\n")
     log(f"\ngeometria: {len(ref)} municipios -> {GEOJSON_PATH.name} "
         f"({GEOJSON_PATH.stat().st_size // 1024} KB)")
     return len(ref)
@@ -333,9 +333,22 @@ def write_manifest(series_info: dict, official: dict, validation: dict,
             "n_dekads": len(dekads),
             "dekads": dekads,
         }
+    # Si nada cambio salvo la hora, se conserva la anterior. De lo contrario el
+    # manifiesto seria el unico archivo distinto en cada corrida y la
+    # actualizacion automatica commitearia una linea de fecha tres veces al mes:
+    # `actualizado` pasaria a significar "ultima vez que se miro" en vez de
+    # "ultima vez que el panel cambio", que es lo que interesa a quien cita una
+    # cifra.
+    if previous:
+        sin_fecha = {k: v for k, v in manifest.items() if k != "actualizado"}
+        antes = {k: v for k, v in previous.items() if k != "actualizado"}
+        if sin_fecha == antes and previous.get("actualizado"):
+            manifest["actualizado"] = previous["actualizado"]
+            log("manifiesto: sin cambios, se conserva la fecha anterior")
+
     cfg.DATA.mkdir(parents=True, exist_ok=True)
     MANIFEST.write_text(json.dumps(manifest, indent=2, ensure_ascii=False),
-                        encoding="utf-8")
+                        encoding="utf-8", newline="\n")
     log(f"manifiesto: {MANIFEST}")
     return manifest
 
