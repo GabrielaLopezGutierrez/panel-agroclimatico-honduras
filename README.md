@@ -13,6 +13,8 @@ permite verlo, filtrarlo y descargarlo en CSV.
 | **Periodo** | Desde 2005, gobernado por `START_YEAR` |
 | **Series** | ASI primera, ASI postrera, VCI, y el peor caso de las dos temporadas |
 
+**App en línea:** https://panel-agroclimatico-honduras-s8vsevqbdphjosdmjeysye.streamlit.app/
+
 ## Cómo se usa
 
 ### La app
@@ -32,8 +34,8 @@ servicio que corra Streamlit.
 
 ### Desplegar la app
 
-Va en Streamlit Community Cloud, que lee el repositorio directamente. En
-[share.streamlit.io](https://share.streamlit.io) se conecta el repo con:
+Está en Streamlit Community Cloud, que lee el repositorio directamente. La
+configuración es:
 
 | Campo | Valor |
 |---|---|
