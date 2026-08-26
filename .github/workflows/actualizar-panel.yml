@@ -23,7 +23,10 @@ on:
         default: false
 
 permissions:
+  # Un bloque de permisos pone en none todo lo que no se declara: sin
+  # issues:write el aviso de republicacion recibe 403 al listar los issues.
   contents: write
+  issues: write
 
 concurrency:
   # Dos corridas a la vez se pisarian escribiendo el mismo parquet.

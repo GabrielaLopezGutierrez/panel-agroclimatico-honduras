@@ -151,14 +151,41 @@ def build_series(series_id: str, start: str, end: str, recheck: int,
             "dekads": sorted(stored_dekads(series_id))}
 
 
+def diff_dekad(old: pd.Series, fresh: pd.Series, tol: float) -> dict | None:
+    """Diferencias reales entre la media municipal guardada y la recién bajada.
+
+    Devuelve None si no hay nada que reportar. Es función aparte y sin disco
+    para poder probarla: de su exactitud depende que la actualización automática
+    avance o se detenga.
+
+    Un municipio sin dato en las dos versiones no es un cambio. Contar todos los
+    nulos de cada lado, en vez de los que cruzan de nulo a valor, hacía que el
+    aviso saltara en cada corrida: el ASI tiene municipios fuera de temporada
+    siempre, y con eso la actualización nunca habría podido avanzar sola.
+    """
+    joined = pd.concat([old.rename("viejo"), fresh.rename("nuevo")], axis=1)
+    if joined.empty:
+        return None
+    diff = (joined["nuevo"] - joined["viejo"]).abs()
+    worst = float(diff.max()) if diff.notna().any() else 0.0
+    appeared = int((joined["viejo"].isna() & joined["nuevo"].notna()).sum())
+    vanished = int((joined["viejo"].notna() & joined["nuevo"].isna()).sum())
+    over = int((diff > tol).sum())
+    if not over and not appeared and not vanished:
+        return None
+    return {"dif_max": round(worst, 4), "tolerancia": tol,
+            "municipios_afectados": over, "aparecen": appeared,
+            "desaparecen": vanished}
+
+
 def compare_stored(series_id: str, year: int, fresh: pd.DataFrame,
                    dekads: list[str]) -> list[dict]:
-    """Compara un dekad recién bajado contra el guardado.
+    """Compara los dekads recién bajados contra los guardados.
 
-    Devuelve solo los que difieren de verdad. La comparación es sobre la media
-    municipal, que es la cifra que se publica; por debajo de la tolerancia de la
-    serie es ruido de redondeo del servicio. La tolerancia se escala al rango
-    del indicador: el ASI va de 0 a 100 y el VCI de 0 a 1.
+    La comparación es sobre la media municipal, que es la cifra que se publica;
+    por debajo de la tolerancia de la serie es ruido de redondeo del servicio. La
+    tolerancia se escala al rango del indicador: el ASI va de 0 a 100 y el VCI de
+    0 a 1.
     """
     p = series_dir(series_id) / f"{year}.parquet"
     if not p.exists():
@@ -171,16 +198,9 @@ def compare_stored(series_id: str, year: int, fresh: pd.DataFrame,
         b = fresh[fresh["dekad_id"] == dk].set_index("adm2_code")["mean"]
         if a.empty or b.empty:
             continue
-        joined = pd.concat([a.rename("viejo"), b.rename("nuevo")], axis=1)
-        diff = (joined["nuevo"] - joined["viejo"]).abs()
-        worst = float(diff.max()) if len(diff) else 0.0
-        appeared = int(joined["viejo"].isna().sum())
-        vanished = int(joined["nuevo"].isna().sum())
-        if worst > tol or appeared or vanished:
-            out.append({"serie": series_id, "dekad_id": dk,
-                        "dif_max": round(worst, 4), "tolerancia": tol,
-                        "municipios_afectados": int((diff > tol).sum()),
-                        "aparecen": appeared, "desaparecen": vanished})
+        found = diff_dekad(a, b, tol)
+        if found:
+            out.append({"serie": series_id, "dekad_id": dk, **found})
     return out
 
 
