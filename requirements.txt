@@ -1,7 +1,10 @@
 # Dependencias de la app. No incluye rasterio ni geopandas a proposito: la app
 # solo lee parquet y un geojson ya simplificado, y arrastrar GDAL al hosting
 # alargaria el despliegue sin dar nada.
-streamlit>=1.40
+# 1.62 es el piso real: el codigo usa width="stretch" en
+# plotly_chart, dataframe y download_button, y placeholder= en
+# multiselect. Con 1.40 la app arranca y falla al primer render.
+streamlit>=1.62
 pandas>=2.2
 pyarrow>=16
 plotly>=5.24

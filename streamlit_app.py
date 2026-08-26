@@ -433,5 +433,52 @@ def main():
             render(name, query, muni, cut, mf)
 
 
+# --- Modulos locales obsoletos en memoria ------------------------------------
+# Streamlit reejecuta el script principal en cada interaccion y, tras un
+# despliegue, puede hacerlo reutilizando los modulos locales que ya tenia
+# importados. Si el commit agrego una constante, el script nuevo se encuentra con
+# el modulo viejo y la app cae con AttributeError antes de dibujar nada. Paso de
+# verdad: `texts.SOURCE_MD` no existia todavia en el `app/texts.py` en memoria.
+#
+# La recarga se hace solo cuando el error ya ocurrio, no en cada corrida: recargar
+# `app.controls` en cada rerun recrearia las funciones de `st.cache_data` y el
+# panel se releeria del disco en cada clic.
+def _stale_module_error(err: BaseException) -> bool:
+    msg = str(err)
+    return "has no attribute" in msg and ("'app" in msg or "'asis" in msg)
+
+
+def _reload_local_modules() -> bool:
+    """Recarga en memoria los modulos propios. `asis` antes que `app`, porque
+    `app` lo importa: al reves quedaria leyendo la version vieja de config."""
+    import importlib
+    import sys
+
+    recargado = False
+    for prefix in ("asis", "app"):
+        nombres = sorted(n for n in list(sys.modules)
+                         if n == prefix or n.startswith(prefix + "."))
+        for name in nombres:
+            mod = sys.modules.get(name)
+            if mod is None:
+                continue
+            try:
+                importlib.reload(mod)
+                recargado = True
+            except Exception:
+                # Si no se puede recargar, se saca de la cache para que el
+                # proximo import lo traiga limpio del disco.
+                sys.modules.pop(name, None)
+                recargado = True
+    return recargado
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except AttributeError as err:
+        if not _stale_module_error(err) or not _reload_local_modules():
+            raise
+        print(f"modulos locales obsoletos en memoria ({err}); recargados y "
+              "reintentando", flush=True)
+        main()
