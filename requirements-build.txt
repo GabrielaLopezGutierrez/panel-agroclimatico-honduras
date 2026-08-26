@@ -1,0 +1,7 @@
+# Dependencias de la construccion: lo de la app mas el acceso a los servicios de
+# FAO y la estadistica zonal.
+-r requirements.txt
+rasterio>=1.3
+geopandas>=1.0
+requests>=2.31
+pytest>=8

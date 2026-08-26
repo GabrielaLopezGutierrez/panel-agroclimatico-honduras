@@ -1,0 +1,21 @@
+# Documentos internos: se mantienen fuera del repositorio publicado.
+CLAUDE.md
+DECISIONES.md
+
+# La cache de rasteres son varios GB y se reconstruye sola desde FAO.
+asis_cache/
+build_historico.log
+construccion.log
+
+# Salidas locales de los cuadernos.
+salidas/
+*.part
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+.DS_Store

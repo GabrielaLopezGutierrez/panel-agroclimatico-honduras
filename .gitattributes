@@ -1,0 +1,18 @@
+# El repo versiona datos binarios. Git detecta binarios por contenido, pero aqui
+# se declara explicito: una conversion de fin de linea sobre un parquet lo
+# corrompe, y en Windows autocrlf esta activo por defecto.
+*.parquet binary
+*.gz       binary
+*.tif      binary
+
+# Codigo y texto con fin de linea normalizado en el repo.
+*.py       text eol=lf
+*.md       text eol=lf
+*.yml      text eol=lf
+*.txt      text eol=lf
+*.json     text eol=lf
+*.geojson  text eol=lf
+*.csv      text eol=lf
+
+# Los cuadernos se distribuyen sin salidas; el diff crudo igual es ilegible.
+*.ipynb    text eol=lf -diff

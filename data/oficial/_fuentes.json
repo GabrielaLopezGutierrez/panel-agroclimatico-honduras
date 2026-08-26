@@ -1,0 +1,20 @@
+{
+  "asi_dekad_s1": {
+    "descargado": "2026-08-26",
+    "url": "https://www.fao.org/giews/earthobservation/asis/data/country/HND/MAP_ASI/DATA/ASI_Dekad_Season1_data.csv",
+    "filas": 24141,
+    "sha256": "74b388a953922dfd8eece36b1e49c8abbdf769f2079a1cbb016b42a88e48c132"
+  },
+  "rain_dekad": {
+    "descargado": "2026-08-26",
+    "url": "https://www.fao.org/giews/earthobservation/asis/data/country/HND/GRAPH_RAIN_AGRI/rain_adm1_data.csv",
+    "filas": 23036,
+    "sha256": "bd46d803ec8d3bc69d8a9bbb8337c75e3373b4de590d950f5fe7e45b3f143a19"
+  },
+  "vci_dekad": {
+    "descargado": "2026-08-26",
+    "url": "https://www.fao.org/giews/earthobservation/asis/data/country/HND/MAP_NDVI_ANOMALY/DATA/vci_adm1_dekad_data.csv",
+    "filas": 27631,
+    "sha256": "f1d6a84875803c104de4bbd9df46c392a904a94537e3dd98b6be8628a08ce4d4"
+  }
+}

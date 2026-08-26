@@ -1,0 +1,142 @@
+name: Actualizar panel
+
+# FAO publica un dekad cada diez dias, con retraso variable. Se corre tres veces
+# al mes, unos dias despues de cada cierre de dekad, y ademas a mano cuando se
+# necesita. Si no hay nada nuevo la corrida no cambia nada y no commitea.
+on:
+  schedule:
+    - cron: "17 9 4,14,24 * *"
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: "Primer dekad a construir (YYYY-MM-Dn). Vacio: sigue desde donde quedo."
+        required: false
+        type: string
+      series:
+        description: "Series separadas por comas. Vacio: todas."
+        required: false
+        type: string
+      aceptar_republicacion:
+        description: "Sobrescribir dekads que FAO republico"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  # Dos corridas a la vez se pisarian escribiendo el mismo parquet.
+  group: actualizar-panel
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias de construccion
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-build.txt
+
+      # La cache de rasteres no se versiona pero si se reutiliza entre corridas:
+      # sin ella cada actualizacion volveria a bajar el historico completo.
+      - name: Restaurar cache de rasteres
+        uses: actions/cache@v4
+        with:
+          path: asis_cache
+          key: asis-cache-${{ github.run_id }}
+          restore-keys: |
+            asis-cache-
+
+      - name: Construir
+        id: construir
+        run: |
+          python -m asis.build \
+            ${{ inputs.desde && format('--desde {0}', inputs.desde) || '' }} \
+            ${{ inputs.series && format('--series {0}', inputs.series) || '' }} \
+            ${{ inputs.aceptar_republicacion && '--aceptar-republicacion' || '' }} \
+            2>&1 | tee construccion.log
+          echo "salida=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Actualizacion del panel"
+            echo '```'
+            tail -60 construccion.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pruebas
+        if: steps.construir.outputs.salida == '0'
+        run: pytest tests/ -q
+
+      - name: Commitear el panel
+        if: steps.construir.outputs.salida == '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "sin cambios en data/: FAO no publico nada nuevo"
+            exit 0
+          fi
+          ultimo=$(python -c "import json;m=json.load(open('data/manifest.json'));print(max((s['ultimo'] or '') for s in m['series'].values()))")
+          git commit -m "datos: panel al dekad ${ultimo}
+
+          Actualizacion automatica desde FAO GIEWS ASIS.
+          Generado por .github/workflows/actualizar-panel.yml"
+          git push
+
+      # Una republicacion (codigo 1) no se resuelve sola: FAO cambio un dekad ya
+      # guardado y alguien tiene que mirarlo antes de sobrescribir una cifra que
+      # pudo haberse citado.
+      - name: Avisar de republicacion
+        if: steps.construir.outputs.salida == '1'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('construccion.log', 'utf8');
+            const detalle = log.split('REPUBLICACION DETECTADA')[1] || log.slice(-3000);
+            const cuerpo = [
+              'La construccion automatica encontro dekads que FAO republico con',
+              'valores distintos a los que ya estaban guardados. No se sobrescribio nada.',
+              '',
+              'Revise el cambio y, si los valores nuevos son los correctos, vuelva a',
+              'lanzar el workflow con `aceptar_republicacion` activado.',
+              '',
+              '```', detalle.slice(0, 4000), '```',
+            ].join('\n');
+            const titulo = 'Republicacion de FAO detectada en el panel';
+            const abiertas = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'republicacion',
+            });
+            if (abiertas.data.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: abiertas.data[0].number, body: cuerpo,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: titulo, body: cuerpo, labels: ['republicacion'],
+              });
+            }
+
+      - name: Fallar si la construccion fallo
+        if: steps.construir.outputs.salida != '0'
+        run: |
+          echo "la construccion termino con codigo ${{ steps.construir.outputs.salida }}"
+          exit 1

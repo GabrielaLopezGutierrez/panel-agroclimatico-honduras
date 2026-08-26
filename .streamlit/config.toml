@@ -1,0 +1,17 @@
+# Tema de la app. Los colores son los mismos de la plantilla de figuras
+# (asis/viz.py), para que el marco y los graficos no se peleen.
+
+[theme]
+primaryColor = "#0b6fa4"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f6f9"
+textColor = "#1f2430"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# Un error de lectura del panel es un problema de despliegue, no del analista:
+# el detalle va al log del servidor y en pantalla queda el aviso de la app.
+showErrorDetails = "none"
