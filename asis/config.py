@@ -181,5 +181,17 @@ def tolerance_for(series: "Series") -> float:
 WORKERS = 6                          # descargas simultaneas de ráster
 GEOJSON_TOL = 0.004                  # ~400 m: mantiene la forma, pesa 10x menos
 
-SOURCE_NOTE = ("Fuente: FAO GIEWS ASIS · rásteres ~1 km agregados a municipio "
-               "(GAUL 2015) · elaboración propia")
+# Portal oficial de FAO GIEWS para Honduras. Toda cita de la fuente en la app,
+# en los cuadernos y en el README apunta aquí: quien lee una cifra tiene que
+# poder llegar al dato original sin buscarlo.
+SOURCE_URL = ("https://www.fao.org/giews/earthobservation/country/index.jsp"
+              "?code=HND&type=11#")
+SOURCE_NAME = "FAO GIEWS ASIS"
+
+# La nota al pie de cada figura. El enlace va en HTML porque es lo que entiende
+# la anotación de Plotly, y el ampersand se escribe escapado para que el atributo
+# quede bien formado.
+SOURCE_NOTE = (
+    f'Fuente: <a href="{SOURCE_URL.replace("&", "&amp;")}" target="_blank">'
+    f'{SOURCE_NAME}</a> · rásteres ~1 km agregados a municipio (GAUL 2015) · '
+    'elaboración propia')

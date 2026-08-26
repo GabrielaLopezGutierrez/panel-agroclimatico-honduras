@@ -65,7 +65,7 @@ def header(mf: dict):
     ultimo = max((s.get("ultimo") or "" for s in mf.get("series", {}).values()),
                  default="")
     st.title(texts.TITLE)
-    st.caption(f"FAO GIEWS ASIS · panel al "
+    st.caption(f"{texts.SOURCE_MD} · panel al "
                f"{dekad_label(ultimo) if ultimo else 'sin datos'}")
 
 
@@ -367,6 +367,7 @@ def view_help(mf: dict):
                     st.caption(cuerpo)
 
     st.subheader("Procedencia y validación")
+    st.caption(texts.PORTAL_MD)
     ultimo = max((s.get("ultimo") or "" for s in mf.get("series", {}).values()),
                  default="")
     st.caption(texts.SOURCE_TEMPLATE.format(

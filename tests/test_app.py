@@ -84,3 +84,39 @@ def test_cada_nivel_termina_en_la_pestana_de_ayuda():
     for level, tabs in app.TABS.items():
         assert tabs[-1] == texts.HELP_TAB, level
         assert "Datos" in tabs, level
+
+
+# --- Cita de la fuente -------------------------------------------------------
+def test_hay_una_sola_url_de_fuente():
+    """El enlace vive en config y de ahi lo toman la app, las figuras y los
+    cuadernos: si se duplicara, una copia quedaria vieja."""
+    assert cfg.SOURCE_URL.startswith("https://www.fao.org/giews/")
+    assert "code=HND" in cfg.SOURCE_URL
+
+
+def test_la_nota_al_pie_de_las_figuras_enlaza_a_fao():
+    """La nota va en cada figura, asi que es la cita mas vista del proyecto."""
+    assert "<a href=" in cfg.SOURCE_NOTE
+    assert cfg.SOURCE_NAME in cfg.SOURCE_NOTE
+    # El ampersand escapado deja el atributo bien formado.
+    assert "&amp;type=11" in cfg.SOURCE_NOTE
+
+
+def test_las_citas_de_la_app_enlazan_a_fao():
+    for nombre in ("SOURCE_MD", "PORTAL_MD", "SOURCE_TEMPLATE",
+                   "VALIDATION_TEMPLATE", "AI_NOTE"):
+        texto = getattr(texts, nombre)
+        assert cfg.SOURCE_URL in texto, f"{nombre} cita FAO sin enlazarla"
+
+
+def test_las_figuras_llevan_la_nota_con_el_enlace():
+    """Se comprueba sobre una figura de verdad: si style_fig dejara de poner la
+    anotacion, la cita desapareceria de todas las vistas a la vez."""
+    import pandas as pd
+    from asis import viz
+    d = pd.DataFrame({"dekad_id": ["2026-08-D1", "2026-08-D2"],
+                      "date": pd.to_datetime(["2026-08-01", "2026-08-11"]),
+                      "mean": [10.0, 12.0]})
+    fig = viz.series_fig(d, "mean", "t", family="ASI")
+    notas = [a.text for a in fig.layout.annotations]
+    assert any(cfg.SOURCE_URL.replace("&", "&amp;") in n for n in notas)

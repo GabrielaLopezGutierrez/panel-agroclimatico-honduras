@@ -1,13 +1,13 @@
 # Panel agroclimático de Honduras
 
 Panel municipal de estrés agrícola y condición de la vegetación a partir de
-FAO GIEWS ASIS, para Sendas. Reconstruye desde las fuentes primarias de FAO un
+[FAO GIEWS ASIS](https://www.fao.org/giews/earthobservation/country/index.jsp?code=HND&type=11#), para Sendas. Reconstruye desde las fuentes primarias de FAO un
 panel municipio × dekad, lo versiona en el repositorio y lo sirve en una app que
 permite verlo, filtrarlo y descargarlo en CSV.
 
 | | |
 |---|---|
-| **Fuentes** | ImageServer ASIS (rásteres ~1 km) y CSV oficiales del portal GIEWS |
+| **Fuentes** | ImageServer ASIS (rásteres ~1 km) y CSV oficiales del [portal GIEWS de Honduras](https://www.fao.org/giews/earthobservation/country/index.jsp?code=HND&type=11#) |
 | **Unidad de análisis** | Municipio (GAUL 2015 nivel 2), 290 municipios |
 | **Resolución temporal** | Dekad (tercios de mes) |
 | **Periodo** | Desde 2005, gobernado por `START_YEAR` |
@@ -24,9 +24,10 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-Tres controles: nivel (municipio, departamento o país), indicador y ventana
-(un dekad o un rango). Cada vista trae la descarga en CSV del corte exacto que
-está en pantalla.
+Tres controles: nivel (país, departamento o municipio), indicador y ventana
+(un dekad o un rango). Cada figura trae la descarga en CSV de sus propios datos,
+y la pestaña de datos, el corte completo del nivel con la definición de cada
+columna.
 
 La app no toca la red ni necesita credenciales: lee el panel ya construido de
 `data/`. Por eso abre en segundos y por eso se puede desplegar en cualquier
@@ -106,7 +107,7 @@ modo que una corrección en la estadística zonal se hace en un solo lugar.
 umbral de severidad. Solo se guarda el nivel municipal; departamento y país se
 derivan al vuelo ponderando por píxeles válidos.
 
-`data/oficial/` trae las series nacionales que publica GIEWS, que son el dato de
+`data/oficial/` trae las series nacionales que publica [GIEWS](https://www.fao.org/giews/earthobservation/country/index.jsp?code=HND&type=11#), que son el dato de
 FAO y no un agregado propio, más la instantánea fechada de los CSV de los que
 salen. `data/geo/` trae la geometría municipal simplificada, para que la app
 dibuje mapas sin geopandas.
@@ -118,8 +119,8 @@ Los rásteres no se versionan: son unos 2,4 GB y se reconstruyen solos.
 
 ## Cómo leerlo sin equivocarse
 
-Estas advertencias también son un panel permanente de la app, porque quien la
-usa no va a leer esto.
+Estas advertencias están también en la app, en la pestaña «Cómo leer», porque
+quien la usa no va a leer esto.
 
 **Sin dato no es cero.** El ASI existe solo dentro de la ventana de cultivo de su
 temporada. Fuera de ella el municipio aparece sin dato, o con el valor congelado
@@ -147,7 +148,8 @@ y déficit hídrico.
 
 ## Estado
 
-El panel se construyó y validó contra la serie departamental oficial de FAO:
+El panel se construyó y validó contra la serie departamental oficial de
+[FAO GIEWS ASIS](https://www.fao.org/giews/earthobservation/country/index.jsp?code=HND&type=11#):
 r = 0,959, error absoluto medio de 0,55 puntos porcentuales y sesgo de
 −0,01 pp sobre 12.280 pares departamento-dekad. La cifra vigente queda
 registrada en `data/manifest.json`, se muestra en el encabezado de la app y la

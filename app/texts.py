@@ -10,8 +10,17 @@ de la selección: fuera de temporada y sin dato. Esos no son contexto general,
 son una advertencia sobre la cifra que se está mirando en ese momento.
 """
 
+from asis import config as cfg
+
 TITLE = "Panel agroclimático de Honduras"
 HELP_TAB = "Cómo leer"
+
+# Toda cita de la fuente enlaza al portal oficial de FAO GIEWS para Honduras.
+# El enlace vive en config.SOURCE_URL, que es de donde lo toman también la nota
+# al pie de cada figura y los cuadernos.
+SOURCE_MD = f"[{cfg.SOURCE_NAME}]({cfg.SOURCE_URL})"
+PORTAL_MD = (f"Portal oficial de FAO GIEWS para Honduras: "
+             f"[indicadores por país]({cfg.SOURCE_URL}).")
 
 # --- Avisos que dependen de la selección -------------------------------------
 # Dos redacciones porque el indicador combinado se evalúa contra las dos
@@ -106,12 +115,13 @@ DOWNLOAD_HELP = ("Descarga el corte exacto que está en pantalla: nivel, "
                  "indicador y ventana seleccionados.")
 
 SOURCE_TEMPLATE = (
-    "Fuente: FAO GIEWS ASIS. Rásteres de ~1 km agregados a municipio "
+    f"Fuente: {SOURCE_MD}. Rásteres de ~1 km agregados a municipio "
     "(GAUL 2015), ponderando por píxeles válidos. Panel construido el "
     "{construido}. Último dekad disponible: {ultimo}.")
 
 VALIDATION_TEMPLATE = (
-    "Contraste contra la serie departamental oficial de FAO: r={r:.3f} "
+    f"Contraste contra la serie departamental oficial de {SOURCE_MD}: "
+    "r={r:.3f} "
     "(R²={r2:.3f}), error absoluto medio {mae:.2f} pp, sesgo {sesgo:+.2f} pp "
     "sobre {pares:,} pares departamento-dekad.")
 
@@ -120,8 +130,8 @@ EMPTY_PANEL = (
     "línea y se versiona en el repositorio: corra "
     "`python -m asis.build --desde 2005-01-D1` y versione la carpeta `data/`.")
 
-AI_NOTE = ("Panel construido con asistencia de IA. Las cifras provienen de las "
-           "fuentes primarias de FAO GIEWS ASIS.")
+AI_NOTE = (f"Panel construido con asistencia de IA. Las cifras provienen de "
+           f"las fuentes primarias de {SOURCE_MD}.")
 
 # --- Ayuda de los controles (tooltips, no texto en pantalla) -----------------
 LEVEL_HELP = ("Cambia el mapa y las vistas. Departamento y país se derivan del "

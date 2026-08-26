@@ -43,7 +43,8 @@ from plotly.subplots import make_subplots
 from asis import client, panel
 from asis.config import (ASI_THRESHOLDS, CACHE, CLASSES, FLAGS, GRID_STEP,
                          HND_BBOX, NODATA, PALETTE, PIX_DEG, PIX_KM2, SEASONS,
-                         SEASON_WINDOW, SERIES, SOURCE_NOTE, START_YEAR,
+                         SEASON_WINDOW, SERIES, SOURCE_NOTE, SOURCE_URL,
+                         START_YEAR,
                          VALID_RANGE, WKID, in_season)
 from asis.calendar import (MONTH_ES, dekad_between, dekad_code, dekad_date,
                            dekad_label, dekad_of_year, dekad_range,
