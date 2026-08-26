@@ -92,6 +92,13 @@ def unit_of(series_id: str) -> str:
     return cfg.SERIES[series_id].unit
 
 
+def unit_short_of(series_id: str) -> str:
+    """Unidad abreviada, para barras de color y ejes donde la larga no cabe."""
+    if series_id == cfg.ASI_COMBINED:
+        return cfg.SERIES["asi_gs1"].unit_short
+    return cfg.SERIES[series_id].unit_short
+
+
 def _read_years(series_id: str, years) -> pd.DataFrame:
     parts = []
     for y in years:

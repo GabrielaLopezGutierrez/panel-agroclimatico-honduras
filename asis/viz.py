@@ -49,24 +49,47 @@ def range_for(family: str):
 
 
 def style_fig(fig, title, subtitle="", source=cfg.SOURCE_NOTE, y_source=-0.14,
-              legend="h", top=100):
-    """Título, subtítulo y nota de fuente, sin repetir código en cada figura."""
+              legend="top", top=90):
+    """Título, subtítulo y nota de fuente, sin repetir código en cada figura.
+
+    Modos de leyenda, elegidos por legibilidad y no por costumbre:
+
+    `top` pone la leyenda horizontal debajo del título. Es el modo por omisión
+    porque no compite con la nota de fuente, que va abajo a la izquierda; la
+    versión anterior las ponía a las dos en el pie y se pisaban.
+
+    `v` la pone vertical a la derecha. Es la única que sirve cuando hay muchas
+    series: dieciocho departamentos en una fila horizontal no se leen.
+
+    `bottom` la deja abajo, que es la convención en los mapas de clases.
+    """
     text = f"<b>{title}</b>"
     if subtitle:
-        text += ("<br><span style='font-size:12.5px;color:#5b6270'>"
+        text += ("<br><span style='font-size:12px;color:#5b6270'>"
                  f"{subtitle}</span>")
-    fig.update_layout(title=dict(text=text, x=0.01, xanchor="left", y=0.97,
-                                 yanchor="top"),
-                      margin=dict(l=70, r=30, t=top, b=80))
-    if legend == "h":
-        fig.update_layout(legend=dict(orientation="h", y=y_source + 0.09, x=0,
-                                      xanchor="left", title_text=""))
+    margin = dict(l=70, r=30, t=top, b=70)
+    if legend == "top":
+        fig.update_layout(legend=dict(
+            orientation="h", y=1.0, yanchor="bottom", x=0, xanchor="left",
+            title_text="", font=dict(size=11)))
+        margin["t"] = top + 26          # espacio para la fila de la leyenda
+    elif legend == "v":
+        fig.update_layout(legend=dict(
+            orientation="v", y=1, yanchor="top", x=1.01, xanchor="left",
+            title_text="", font=dict(size=10)))
+        margin["r"] = 160
+    elif legend == "bottom":
+        fig.update_layout(legend=dict(
+            orientation="h", y=y_source + 0.09, x=0, xanchor="left",
+            title_text="", font=dict(size=10)))
     elif legend == "off":
         fig.update_layout(showlegend=False)
+    fig.update_layout(title=dict(text=text, x=0.01, xanchor="left", y=0.97,
+                                 yanchor="top"), margin=margin)
     if source:
         fig.add_annotation(text=source, xref="paper", yref="paper", x=0,
                            y=y_source, showarrow=False, align="left",
-                           font=dict(size=10, color="#8b93a1"))
+                           font=dict(size=9, color="#9aa1ad"))
     return fig
 
 
@@ -116,11 +139,12 @@ def class_map(df, geojson, family, title, subtitle="", value_col="mean",
         kw["animation_frame"] = animation
     fig = _choropleth(d, **kw)
     fig.update_traces(marker_line_width=0.3, marker_line_color="white")
-    style_fig(fig, title, subtitle, y_source=y_source, top=95)
-    fig.update_layout(margin=dict(l=0, r=0, t=95, b=125),
-                      legend=dict(orientation="h", y=-0.04, x=0.5,
+    style_fig(fig, title, subtitle, y_source=y_source, legend="off", top=88)
+    fig.update_layout(margin=dict(l=0, r=0, t=88, b=104), showlegend=True,
+                      legend=dict(orientation="h", y=-0.02, x=0.5,
                                   xanchor="center", title_text="",
-                                  font=dict(size=11)))
+                                  font=dict(size=10),
+                                  itemsizing="constant"))
     if fig.layout.updatemenus:
         fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = 850
         fig.layout.updatemenus[0].buttons[0].args[1]["transition"]["duration"] = 300
@@ -203,9 +227,9 @@ def heatmap_panel(df, value_col, title, subtitle="", family="ASI", top=30,
         colorbar=dict(title=label or value_col, thickness=14, len=0.8),
         hovertemplate="%{y}<br>%{x}<br>" + (label or value_col)
                       + ": %{z:.2f}<extra></extra>"))
-    fig.update_layout(height=height, xaxis=dict(tickangle=-45),
-                      yaxis=dict(tickfont=dict(size=10)))
-    return style_fig(fig, title, subtitle, y_source=-0.13, legend="off")
+    fig.update_layout(height=height, xaxis=dict(tickangle=-45, tickfont=dict(size=9)),
+                      yaxis=dict(tickfont=dict(size=9.5), automargin=True))
+    return style_fig(fig, title, subtitle, y_source=-0.10, legend="off")
 
 
 def severity_area_fig(df, family, title, subtitle="", value_col="mean",
@@ -229,8 +253,8 @@ def severity_area_fig(df, family, title, subtitle="", value_col="mean",
                             hovertemplate="%{x}<br>" + cl
                                           + ": %{y:,.0f} km2<extra></extra>")
     fig.update_layout(height=height, yaxis_title="km2",
-                      xaxis=dict(tickangle=-45))
-    return style_fig(fig, title, subtitle, y_source=-0.28)
+                      xaxis=dict(tickangle=-45, tickfont=dict(size=9)))
+    return style_fig(fig, title, subtitle, y_source=-0.22, legend="top")
 
 
 def series_fig(df, value_col, title, subtitle="", label="", family="ASI",
@@ -285,8 +309,9 @@ def climatology_fig(national, pctl, n_baseline, years, title, subtitle="",
                    for k in s["dekad_of_year"]],
                 y=s[value_col], name=str(year), mode="lines+markers",
                 line=dict(color=color, width=2.6))
-    fig.update_layout(height=height, yaxis_title=y_title)
-    return style_fig(fig, title, subtitle, y_source=-0.24)
+    fig.update_layout(height=height, yaxis_title=y_title,
+                      xaxis=dict(tickfont=dict(size=9)))
+    return style_fig(fig, title, subtitle, y_source=-0.20, legend="top")
 
 
 def climatology_matrix(national, title, subtitle="", value_col="value",
@@ -338,8 +363,9 @@ def rainfall_fig(rain, title, subtitle="", height=440):
         fig.update_yaxes(title_text="anomalía sobre la LTA (%)",
                          secondary_y=True, showgrid=False)
     fig.update_yaxes(title_text="mm por dekad", secondary_y=False)
-    fig.update_layout(height=height, xaxis=dict(tickangle=-45))
-    return style_fig(fig, title, subtitle, y_source=-0.30)
+    fig.update_layout(height=height,
+                      xaxis=dict(tickangle=-45, tickfont=dict(size=9)))
+    return style_fig(fig, title, subtitle, y_source=-0.24, legend="top")
 
 
 def dashboard_fig(asi, vci, rain, title, subtitle="", height=720):
@@ -434,5 +460,5 @@ def ranking_fig(df, value_col, title, subtitle="", family="ASI", top=20,
         hovertemplate="%{y}<br>" + (label or value_col)
                       + ": %{x:.2f}<extra></extra>"))
     fig.update_layout(height=height, xaxis_title=label or value_col,
-                      yaxis=dict(tickfont=dict(size=10)))
-    return style_fig(fig, title, subtitle, y_source=-0.13, legend="off")
+                      yaxis=dict(tickfont=dict(size=9.5), automargin=True))
+    return style_fig(fig, title, subtitle, y_source=-0.10, legend="off")

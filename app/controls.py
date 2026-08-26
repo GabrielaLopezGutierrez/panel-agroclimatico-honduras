@@ -19,36 +19,19 @@ from dataclasses import dataclass
 import pandas as pd
 import streamlit as st
 
+from app import texts
 from asis import config as cfg, panel
 from asis.calendar import (dekad_index, dekad_label, dekad_of_year,
                            dekad_window)
 
-LEVELS = {"municipio": "Municipio", "departamento": "Departamento",
-          "pais": "País"}
+LEVELS = {"pais": "País", "departamento": "Departamento",
+          "municipio": "Municipio"}
 
 DEFAULT_RANGE = 54      # 18 meses: la ventana con la que se trabaja a diario
 # Un mapa animado con un cuadro por dekad deja de ser legible mucho antes de
 # volverse pesado. Pasado este limite el mapa muestra el extremo de la ventana
 # en vez de la secuencia.
 MAX_FRAMES = 24
-
-SERIES_HELP = {
-    cfg.ASI_COMBINED:
-        "Para cada municipio y cada dekad toma el **mayor** de los dos valores "
-        "del ASI, el de la primera y el de la postrera. No promedia ni mezcla: "
-        "es uno de los dos valores reales, y la app dice de cuál temporada "
-        "viene. Las dos temporadas se solapan en septiembre y octubre, y fuera "
-        "de su ventana el índice queda congelado; tomar el más alto evita "
-        "reportar calma cuando una de las dos sí tiene estrés.",
-    "asi_gs1": "Solo la temporada primera, se siembra entre mayo y junio y se "
-               "cosecha entre agosto y septiembre. Fuera de esa ventana el "
-               "valor está congelado.",
-    "asi_gs2": "Solo la temporada postrera, se siembra en septiembre y se "
-               "cosecha entre diciembre y enero.",
-    "vci": "Condición de la vegetación frente a su propia historia reciente. "
-           "Cubre todo el territorio y todo el año, también fuera del área de "
-           "cultivo. El umbral de alerta de FAO es 0,35.",
-}
 
 
 @dataclass
@@ -74,6 +57,10 @@ class Query:
     @property
     def unit(self) -> str:
         return panel.unit_of(self.series_id)
+
+    @property
+    def unit_short(self) -> str:
+        return panel.unit_short_of(self.series_id)
 
     @property
     def mapped(self) -> bool:
@@ -193,15 +180,12 @@ def sidebar(options: dict[str, str]) -> Query:
 
     level = st.sidebar.radio(
         "Nivel", list(LEVELS), format_func=lambda k: LEVELS[k], key="nivel",
-        help="El nivel cambia el mapa y las vistas disponibles. Departamento y "
-             "país se derivan del panel municipal ponderando por píxeles "
-             "válidos del ráster.")
+        help=texts.LEVEL_HELP)
 
     series_id = st.sidebar.selectbox(
         "Indicador", list(options), format_func=lambda k: options[k],
-        key="serie", help=SERIES_HELP.get(st.session_state.get("serie", "")))
-    if SERIES_HELP.get(series_id):
-        st.sidebar.caption(SERIES_HELP[series_id])
+        key="serie",
+        help=texts.SERIES_HELP.get(st.session_state.get("serie", "")))
 
     available = dekads(series_id)
     if not available:
@@ -211,8 +195,7 @@ def sidebar(options: dict[str, str]) -> Query:
     st.sidebar.divider()
     mode = st.sidebar.radio(
         "Ventana", ["Un dekad", "Rango"], key="modo", horizontal=True,
-        help="Solo se ofrecen dekads que FAO publicó: no se puede pedir uno "
-             "que no exista.")
+        help=texts.WINDOW_HELP)
 
     if mode == "Un dekad":
         default = _clamp(st.session_state.get("dekad", available[-1]), available)
@@ -241,7 +224,7 @@ def sidebar(options: dict[str, str]) -> Query:
         all_dept = sorted(municipios()["adm1_name"].unique())
         departments = st.sidebar.multiselect(
             "Filtrar departamentos", all_dept, default=[], key="departamentos",
-            help="Vacío significa todo el país.")
+            placeholder="Todo el país")
 
     return Query(level=level, series_id=series_id, start=start, end=end,
                  departments=departments)
@@ -270,9 +253,11 @@ def season_status(query: Query) -> dict:
     seasons = seasons_of(query.series_id)
     if not seasons:
         return {"seasonal": False, "outside": 0, "total": 0}
-    if query.series_id == cfg.ASI_COMBINED:
-        name = "primera ni la postrera"
-        window = " / ".join(f"{s}: {season_window_label(s)}" for s in seasons)
+    combinado = query.series_id == cfg.ASI_COMBINED
+    if combinado:
+        name = ""
+        window = " · ".join(f"{cfg.SEASONS[s].split(' (')[0].lower()} "
+                            f"{season_window_label(s)}" for s in seasons)
     else:
         name = cfg.SEASONS[seasons[0]].split(" (")[0].lower()
         window = season_window_label(seasons[0])
@@ -280,8 +265,9 @@ def season_status(query: Query) -> dict:
              if query.start <= d <= query.end]
     outside = [d for d in codes
                if not any(cfg.in_season(s, dekad_of_year(d)) for s in seasons)]
-    return {"seasonal": True, "season_name": name, "outside": len(outside),
-            "total": len(codes), "outside_codes": outside, "window": window}
+    return {"seasonal": True, "season_name": name, "combined": combinado,
+            "outside": len(outside), "total": len(codes),
+            "outside_codes": outside, "window": window}
 
 
 def season_window_label(season: str) -> str:

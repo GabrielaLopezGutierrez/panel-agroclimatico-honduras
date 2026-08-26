@@ -3,10 +3,10 @@ indicadores y registro de series.
 
 Todo lo que se cambia una vez al año y no por corrida vive aquí. Cambiar
 START_YEAR, ISO3 o HND_BBOX y volver a construir es suficiente para mover el
-periodo o el país; no hay anos escritos a maño en el resto del paquete.
+periodo o el país; no hay años escritos a mano en el resto del paquete.
 
-Este modulo no importa nada pesado a propósito: lo cargan tanto la app (que solo
-lee parquet) como el constructor (que necesita rásterio y geopandas).
+Este módulo no importa nada pesado a propósito: lo cargan tanto la app (que solo
+lee parquet) como el constructor (que necesita rasterio y geopandas).
 """
 from __future__ import annotations
 
@@ -40,20 +40,20 @@ START_YEAR = 2005
 # --- Malla nativa ASIS -------------------------------------------------------
 WKID = 4326
 PIX_DEG = 0.00892857143            # 1/112 de grado, malla nativa ASIS (~1 km)
-PIX_KM2 = 0.988                    # área media del pixel a la latitud de Honduras
+PIX_KM2 = 0.988                    # área media del píxel a la latitud de Honduras
 HND_BBOX = (-89.40, 12.90, -83.10, 16.60)
 GRID_X0, GRID_Y0, GRID_STEP = -180.004464, 75.0044643, PIX_DEG
 NODATA = -9999.0
 
-# --- Semantica de los indicadores -------------------------------------------
+# --- Semántica de los indicadores -------------------------------------------
 # Fuera del rango válido los rásteres traen banderas, NO valores del índice.
 # Contarlas como dato es el error más común al hacer estadística zonal.
 VALID_RANGE = {"ASI_D": (0, 100), "ASI_A": (0, 100), "DI_D": (0, 100),
                "DI_A": (0, 100), "VHI_D": (0, 1), "VHI_M": (0, 1),
                "VCI_D": (0, 1), "VCI_M": (0, 1), "MVHI_D": (0, 1),
                "MVHI_A": (0, 1)}
-# FLAGS no se usa en el cálculo (el enmascarado ocurre en el servidor via
-# renderingRule); queda como referencia de que significa cada valor fuera de
+# FLAGS no se usa en el cálculo (el enmascarado ocurre en el servidor vía
+# renderingRule); queda como referencia de qué significa cada valor fuera de
 # rango, y es lo que la app cita cuando un municipio sale en blanco.
 FLAGS = {251: "fuera de temporada", 252: "sin dato", 253: "sin estacionalidad",
          254: "sin cultivo/pasto", 255: "nodata"}
@@ -109,14 +109,15 @@ def in_season(season: str | None, dekad_of_year: int) -> bool:
 
 @dataclass(frozen=True)
 class Series:
-    """Una serie del panel: de que servicio sale, como se llama su ráster y con
-    que umbrales se resume. El id es también el nombre de la carpeta en
+    """Una serie del panel: de qué servicio sale, cómo se llama su ráster y con
+    qué umbrales se resume. El id es también el nombre de la carpeta en
     data/municipal/, de modo que agregar una serie no toca el constructor."""
     id: str
     svc: str
     label: str
     family: str                      # ASI o VCI: gobierna clases y paleta
     unit: str
+    unit_short: str = ""
     suffix: str = ""                 # sufijo del nombre del ráster
     season: str | None = None        # GS1, GS2 o None si no es estacional
     seasonal: bool = False           # si solo existe dentro de la ventana de cultivo
@@ -134,21 +135,21 @@ SERIES: dict[str, Series] = {
         id="asi_gs1", svc="ASI_D", suffix=".GS1.LC-C", season="GS1",
         family="ASI", seasonal=True, thresholds_gt=ASI_THRESHOLDS,
         label="ASI · temporada primera",
-        unit="% del área de cultivo bajo estrés hídrico",
-        note="Índice de estrés agricola acumulado dentro de la ventana de "
+        unit="% del área de cultivo bajo estrés hídrico", unit_short="ASI %",
+        note="Índice de estrés agrícola acumulado dentro de la ventana de "
              "cultivo de la primera. Fuera de temporada no existe."),
     "asi_gs2": Series(
         id="asi_gs2", svc="ASI_D", suffix=".GS2.LC-C", season="GS2",
         family="ASI", seasonal=True, thresholds_gt=ASI_THRESHOLDS,
         label="ASI · temporada postrera",
-        unit="% del área de cultivo bajo estrés hídrico",
+        unit="% del área de cultivo bajo estrés hídrico", unit_short="ASI %",
         note="Mismo índice sobre la ventana de cultivo de la postrera."),
     "vci": Series(
         id="vci", svc="VCI_D", family="VCI", seasonal=False,
         thresholds_lt=VCI_THRESHOLDS,
         label="VCI · condición de la vegetación",
-        unit="índice 0-1",
-        note="Condicion de la vegetación frente a su historia reciente. Cubre "
+        unit="índice 0-1", unit_short="VCI",
+        note="Condición de la vegetación frente a su historia reciente. Cubre "
              "todo el territorio y todo el año, también fuera del área de "
              "cultivo."),
 }
