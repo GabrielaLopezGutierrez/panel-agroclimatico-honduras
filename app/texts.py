@@ -134,3 +134,69 @@ SERIES_HELP = {
     "asi_gs2": "Solo la temporada postrera: septiembre a enero.",
     "vci": "Condición de la vegetación, 0 a 1. Todo el año. Umbral FAO 0,35.",
 }
+
+# --- Transparencia: descarga por figura y diccionario de columnas ------------
+# Todo dato graficado tiene que poder descargarse. La descarga general por nivel
+# no alcanzaba: cada figura muestra un corte propio -otra ventana, otro nivel de
+# agregacion, otra fuente- y una sola descarga no podia corresponder a todas.
+FIG_DOWNLOAD = "Datos de esta figura"
+
+COLUMNS = {
+    "código municipio":
+        "Código GAUL 2015 nivel 2. Identificador estable del municipio.",
+    "municipio": "Nombre del municipio según GAUL 2015.",
+    "código departamento": "Código GAUL 2015 nivel 1.",
+    "departamento": "Nombre del departamento según GAUL 2015.",
+    "dekad":
+        "Tercio de mes, en formato YYYY-MM-Dn. D1 son los días 1 a 10, D2 del "
+        "11 al 20 y D3 del 21 al fin de mes.",
+    "fecha": "Primer día del dekad: 1, 11 o 21.",
+    "temporada":
+        "GS1 es la primera y GS2 la postrera. Vacío en indicadores que no son "
+        "estacionales. En el indicador combinado dice de qué temporada salió el "
+        "valor más alto.",
+    "píxeles válidos":
+        "Píxeles del ráster de ~1 km dentro de la unidad cuyo valor cae en el "
+        "rango del indicador. Es el peso con el que se agrega a departamento y "
+        "a país, y excluye las banderas 251 a 255.",
+    "km2": "Superficie de esos píxeles válidos, a 0,988 km2 por píxel.",
+    "media": "Promedio del indicador sobre los píxeles válidos de la unidad.",
+    "mediana":
+        "Percentil 50 del indicador dentro de la unidad. Solo existe a nivel "
+        "municipal.",
+    "p10": "Percentil 10 dentro de la unidad. Solo a nivel municipal.",
+    "p90": "Percentil 90 dentro de la unidad. Solo a nivel municipal.",
+    "municipios": "Municipios con dato que entran en el agregado.",
+    "value": "Valor de la serie nacional oficial de GIEWS.",
+    "valor": "Valor de la serie nacional oficial de GIEWS.",
+    "obs": "Lluvia observada acumulada en el dekad, en milímetros.",
+    "lta":
+        "Promedio de largo plazo de la lluvia que publica FAO, en milímetros. "
+        "No se recalcula: es la referencia oficial de GIEWS.",
+    "anom_pct": "Anomalía de la lluvia observada sobre el promedio de largo "
+                "plazo, en porcentaje.",
+    "dekad_of_year": "Posición del dekad dentro del año, de 1 a 36.",
+    "Year": "Año.",
+    "weight": "Suma de los pesos usados para ponderar la serie nacional.",
+}
+
+# Las columnas de umbral se generan a partir de ASI_THRESHOLDS y VCI_THRESHOLDS,
+# asi que se describen por patron y no una por una.
+COLUMN_PATTERNS = (
+    ("pct_gt", "Porcentaje del área válida de la unidad con el indicador por "
+               "encima de {v}."),
+    ("km2_gt", "Superficie en km2 con el indicador por encima de {v}."),
+    ("pct_lt", "Porcentaje del área válida de la unidad con el indicador por "
+               "debajo de {v}."),
+    ("km2_lt", "Superficie en km2 con el indicador por debajo de {v}."),
+)
+
+
+def describe_column(name: str) -> str:
+    """Definición de una columna, con los umbrales resueltos por patrón."""
+    if name in COLUMNS:
+        return COLUMNS[name]
+    for prefijo, plantilla in COLUMN_PATTERNS:
+        if name.startswith(prefijo):
+            return plantilla.format(v=name[len(prefijo):])
+    return ""
