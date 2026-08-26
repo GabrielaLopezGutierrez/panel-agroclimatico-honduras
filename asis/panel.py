@@ -22,6 +22,17 @@ from asis.calendar import dekad_year
 MANIFEST = cfg.DATA / "manifest.json"
 GEOJSON_PATH = cfg.GEO_DIR / "municipios.geojson"
 MUNI_PATH = cfg.GEO_DIR / "municipios.csv"
+DEPT_GEOJSON_PATH = cfg.GEO_DIR / "departamentos.geojson"
+DEPT_PATH = cfg.GEO_DIR / "departamentos.csv"
+
+# Cómo se dibuja y se agrupa cada nivel. La app no vuelve a decidir esto en
+# cada vista: pregunta aquí.
+LEVEL_GEO = {
+    "municipio": dict(geojson=GEOJSON_PATH, code="adm2_code",
+                      name="adm2_name", label="municipio"),
+    "departamento": dict(geojson=DEPT_GEOJSON_PATH, code="adm1_code",
+                         name="adm1_name", label="departamento"),
+}
 
 
 class PanelVacio(RuntimeError):
@@ -59,8 +70,7 @@ def available_series() -> dict[str, str]:
     ASI, que se deriva y no se guarda."""
     out = {s: cfg.SERIES[s].label for s in stored_series()}
     if {"asi_gs1", "asi_gs2"} <= set(out):
-        out = {cfg.ASI_COMBINED: "ASI · peor caso de las dos temporadas",
-               **out}
+        out = {cfg.ASI_COMBINED: cfg.ASI_COMBINED_LABEL, **out}
     return out
 
 
@@ -72,7 +82,7 @@ def family_of(series_id: str) -> str:
 
 def label_of(series_id: str) -> str:
     if series_id == cfg.ASI_COMBINED:
-        return "ASI · peor caso de las dos temporadas"
+        return cfg.ASI_COMBINED_LABEL
     return cfg.SERIES[series_id].label
 
 
@@ -137,10 +147,18 @@ def municipios() -> pd.DataFrame:
     return pd.read_csv(MUNI_PATH, dtype={"adm2_code": str, "adm1_code": str})
 
 
-def geojson() -> dict:
-    if not GEOJSON_PATH.exists():
-        raise PanelVacio(f"falta {GEOJSON_PATH}; reconstruya con asis.build")
-    return json.loads(GEOJSON_PATH.read_text(encoding="utf-8"))
+def geojson(level: str = "municipio") -> dict:
+    """Geometría del nivel pedido, ya simplificada y versionada."""
+    p = LEVEL_GEO[level]["geojson"]
+    if not p.exists():
+        raise PanelVacio(f"falta {p}; reconstruya con asis.build")
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def departamentos() -> pd.DataFrame:
+    if not DEPT_PATH.exists():
+        raise PanelVacio(f"falta {DEPT_PATH}; reconstruya con asis.build")
+    return pd.read_csv(DEPT_PATH, dtype={"adm1_code": str})
 
 
 def national(name: str) -> pd.DataFrame:

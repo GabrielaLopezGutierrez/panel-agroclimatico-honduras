@@ -154,9 +154,13 @@ SERIES: dict[str, Series] = {
 }
 
 # Serie derivada que combina las dos temporadas del ASI. No se guarda en disco:
-# se arma al vuelo tomando el peor caso vigente, criterio conservador para
-# alerta temprana. Ver aggregate.worst_case().
+# se arma al vuelo tomando, para cada municipio y dekad, el mayor de los dos
+# valores. Criterio conservador para alerta temprana. Ver aggregate.worst_case().
+#
+# El id no cambia porque es el nombre de una carpeta y de una columna; la
+# etiqueta sí, porque "peor caso" no le dice a nadie qué está viendo.
 ASI_COMBINED = "asi_peor_caso"
+ASI_COMBINED_LABEL = "ASI · el más alto de las dos temporadas"
 
 # --- Construcción ------------------------------------------------------------
 # FAO republica dekads. El constructor falla ruidosamente si un dekad ya

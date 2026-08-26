@@ -4,6 +4,10 @@ Tres controles y nada más: nivel, indicador y ventana. `START_YEAR`, el país y
 el bbox viven en `asis/config.py` porque se cambian una vez al año, no por
 corrida.
 
+El nivel no es solo un filtro: decide qué vistas tienen sentido y con qué
+geometría se dibuja el mapa. Esa decisión vive en `panel.LEVEL_GEO` y aquí se
+consulta, para que la app no la repita en cada vista.
+
 El panel se cachea por proceso, que es lo correcto: no contiene información de
 ningún usuario. El estado de la consulta vive en `st.session_state`, porque ese
 sí es de cada quien.
@@ -16,10 +20,35 @@ import pandas as pd
 import streamlit as st
 
 from asis import config as cfg, panel
-from asis.calendar import dekad_index, dekad_label, dekad_of_year, dekad_window
+from asis.calendar import (dekad_index, dekad_label, dekad_of_year,
+                           dekad_window)
 
 LEVELS = {"municipio": "Municipio", "departamento": "Departamento",
           "pais": "País"}
+
+DEFAULT_RANGE = 54      # 18 meses: la ventana con la que se trabaja a diario
+# Un mapa animado con un cuadro por dekad deja de ser legible mucho antes de
+# volverse pesado. Pasado este limite el mapa muestra el extremo de la ventana
+# en vez de la secuencia.
+MAX_FRAMES = 24
+
+SERIES_HELP = {
+    cfg.ASI_COMBINED:
+        "Para cada municipio y cada dekad toma el **mayor** de los dos valores "
+        "del ASI, el de la primera y el de la postrera. No promedia ni mezcla: "
+        "es uno de los dos valores reales, y la app dice de cuál temporada "
+        "viene. Las dos temporadas se solapan en septiembre y octubre, y fuera "
+        "de su ventana el índice queda congelado; tomar el más alto evita "
+        "reportar calma cuando una de las dos sí tiene estrés.",
+    "asi_gs1": "Solo la temporada primera, se siembra entre mayo y junio y se "
+               "cosecha entre agosto y septiembre. Fuera de esa ventana el "
+               "valor está congelado.",
+    "asi_gs2": "Solo la temporada postrera, se siembra en septiembre y se "
+               "cosecha entre diciembre y enero.",
+    "vci": "Condición de la vegetación frente a su propia historia reciente. "
+           "Cubre todo el territorio y todo el año, también fuera del área de "
+           "cultivo. El umbral de alerta de FAO es 0,35.",
+}
 
 
 @dataclass
@@ -39,14 +68,30 @@ class Query:
         return panel.family_of(self.series_id)
 
     @property
-    def season(self) -> str | None:
-        if self.series_id == cfg.ASI_COMBINED:
-            return None
-        return cfg.SERIES[self.series_id].season
-
-    @property
     def label(self) -> str:
         return panel.label_of(self.series_id)
+
+    @property
+    def unit(self) -> str:
+        return panel.unit_of(self.series_id)
+
+    @property
+    def mapped(self) -> bool:
+        """Si el nivel se dibuja en un mapa. El país es un solo valor: un mapa
+        de una sola clase no dice nada que el número no diga mejor."""
+        return self.level in panel.LEVEL_GEO
+
+    @property
+    def code_col(self) -> str:
+        return panel.LEVEL_GEO.get(self.level, {}).get("code", "adm2_code")
+
+    @property
+    def name_col(self) -> str:
+        return panel.LEVEL_GEO.get(self.level, {}).get("name", "adm2_name")
+
+    @property
+    def unit_name(self) -> str:
+        return LEVELS[self.level].lower()
 
     @property
     def window_label(self) -> str:
@@ -60,11 +105,10 @@ class Query:
 
 
 # --- Acceso cacheado ---------------------------------------------------------
-# La caché es por proceso y eso es lo correcto para el panel, que no contiene
-# información de ningún usuario. Pero el panel se reconstruye por debajo: la
-# actualización automática commitea datos nuevos mientras el proceso sigue vivo.
-# Por eso todo lo cacheado se indexa por la versión del panel, y un panel nuevo
-# invalida las entradas viejas en vez de servir cifras de la semana pasada.
+# Todo lo cacheado se indexa por la versión del panel: la actualización
+# automática commitea datos nuevos mientras el proceso sigue vivo, y un panel
+# nuevo debe invalidar las entradas viejas en vez de servir cifras de la semana
+# pasada.
 def data_version() -> str:
     try:
         return str(panel.MANIFEST.stat().st_mtime_ns)
@@ -78,8 +122,8 @@ def _manifest(version: str) -> dict:
 
 
 @st.cache_data(show_spinner=False)
-def _geojson(version: str) -> dict:
-    return panel.geojson()
+def _geojson(version: str, level: str) -> dict:
+    return panel.geojson(level)
 
 
 @st.cache_data(show_spinner=False)
@@ -111,8 +155,8 @@ def manifest() -> dict:
     return _manifest(data_version())
 
 
-def geojson() -> dict:
-    return _geojson(data_version())
+def geojson(level: str = "municipio") -> dict:
+    return _geojson(data_version(), level)
 
 
 def dekads(series_id: str) -> list[str]:
@@ -135,24 +179,6 @@ def municipios() -> pd.DataFrame:
     return _municipios(data_version())
 
 
-# --- Atajos de ventana -------------------------------------------------------
-def presets(available: list[str]) -> dict[str, tuple[str, str]]:
-    """Ventanas de uso frecuente. Se recortan a lo que existe en el panel: un
-    atajo no debe ofrecer un dekad que FAO no publicó."""
-    last = available[-1]
-    out: dict[str, tuple[str, str]] = {
-        "Último dekad": (last, last),
-        "Últimos 18 meses": (max(dekad_window(last, 54)[0], available[0]), last),
-    }
-    for name, (a, b) in (("Sequía de 2019", ("2019-05-D1", "2019-10-D3")),
-                         ("Eta e Iota 2020", ("2020-10-D1", "2021-02-D3"))):
-        lo = max(a, available[0])
-        hi = min(b, last)
-        if dekad_index(lo) <= dekad_index(hi):
-            out[name] = (lo, hi)
-    return out
-
-
 def _clamp(code: str, available: list[str]) -> str:
     """Lleva un código al dekad disponible más cercano hacia atrás."""
     if code in available:
@@ -166,14 +192,16 @@ def sidebar(options: dict[str, str]) -> Query:
     st.sidebar.header("Consulta")
 
     level = st.sidebar.radio(
-        "Nivel", list(LEVELS), format_func=lambda k: LEVELS[k],
-        key="nivel", horizontal=False,
-        help="Departamento y país se derivan del panel municipal ponderando "
-             "por píxeles válidos.")
+        "Nivel", list(LEVELS), format_func=lambda k: LEVELS[k], key="nivel",
+        help="El nivel cambia el mapa y las vistas disponibles. Departamento y "
+             "país se derivan del panel municipal ponderando por píxeles "
+             "válidos del ráster.")
 
     series_id = st.sidebar.selectbox(
         "Indicador", list(options), format_func=lambda k: options[k],
-        key="serie")
+        key="serie", help=SERIES_HELP.get(st.session_state.get("serie", "")))
+    if SERIES_HELP.get(series_id):
+        st.sidebar.caption(SERIES_HELP[series_id])
 
     available = dekads(series_id)
     if not available:
@@ -181,28 +209,22 @@ def sidebar(options: dict[str, str]) -> Query:
         st.stop()
 
     st.sidebar.divider()
-    quick = presets(available)
-    st.sidebar.caption("Atajos")
-    cols = st.sidebar.columns(2)
-    for i, (name, (a, b)) in enumerate(quick.items()):
-        if cols[i % 2].button(name, use_container_width=True,
-                              key=f"atajo_{i}"):
-            st.session_state["modo"] = "Un dekad" if a == b else "Rango"
-            st.session_state["desde"] = a
-            st.session_state["hasta"] = b
-            st.session_state["dekad"] = b
-
-    mode = st.sidebar.radio("Ventana", ["Un dekad", "Rango"], key="modo",
-                            horizontal=True)
+    mode = st.sidebar.radio(
+        "Ventana", ["Un dekad", "Rango"], key="modo", horizontal=True,
+        help="Solo se ofrecen dekads que FAO publicó: no se puede pedir uno "
+             "que no exista.")
 
     if mode == "Un dekad":
-        default = st.session_state.get("dekad", available[-1])
-        idx = available.index(_clamp(default, available))
+        default = _clamp(st.session_state.get("dekad", available[-1]), available)
         start = end = st.sidebar.selectbox(
-            "Dekad", available, index=idx, format_func=dekad_label,
-            key="dekad")
+            "Dekad", available, index=available.index(default),
+            format_func=dekad_label, key="dekad")
     else:
-        d_from = _clamp(st.session_state.get("desde", available[0]), available)
+        # Por omisión, los últimos 18 meses y no la historia completa: veintiún
+        # años de dekads hacen ilegible cualquier vista y pesan de más en el
+        # navegador. Quien quiera todo el periodo lo pide moviendo "Desde".
+        inicio = _clamp(dekad_window(available[-1], DEFAULT_RANGE)[0], available)
+        d_from = _clamp(st.session_state.get("desde", inicio), available)
         d_to = _clamp(st.session_state.get("hasta", available[-1]), available)
         start = st.sidebar.selectbox(
             "Desde", available, index=available.index(d_from),
@@ -226,6 +248,14 @@ def sidebar(options: dict[str, str]) -> Query:
 
 
 # --- Estado de la temporada --------------------------------------------------
+def seasons_of(series_id: str) -> list[str]:
+    """Temporadas que gobiernan el aviso de fuera de temporada."""
+    if series_id == cfg.ASI_COMBINED:
+        return [s.season for s in cfg.SERIES.values() if s.season]
+    season = cfg.SERIES[series_id].season
+    return [season] if season else []
+
+
 def season_status(query: Query) -> dict:
     """Cuántos dekads de la ventana caen fuera de la ventana de cultivo.
 
@@ -233,21 +263,19 @@ def season_status(query: Query) -> dict:
     porque el ráster del ASI trae valores los 36 dekads del año: fuera de
     temporada el índice está congelado, que no es lo mismo que ausente.
 
-    El peor caso combinado se evalúa contra las dos temporadas a la vez: está
-    fuera de temporada solo cuando ninguna de las dos está activa, que en
-    Honduras ocurre entre febrero y abril.
+    El indicador combinado se evalúa contra las dos temporadas a la vez: está
+    fuera de temporada solo cuando ninguna está activa, que en Honduras ocurre
+    entre febrero y abril.
     """
+    seasons = seasons_of(query.series_id)
+    if not seasons:
+        return {"seasonal": False, "outside": 0, "total": 0}
     if query.series_id == cfg.ASI_COMBINED:
-        seasons = [s.season for s in cfg.SERIES.values() if s.season]
         name = "primera ni la postrera"
         window = " / ".join(f"{s}: {season_window_label(s)}" for s in seasons)
-    elif query.season:
-        seasons = [query.season]
-        name = cfg.SEASONS.get(query.season, query.season).split(" (")[0].lower()
-        window = season_window_label(query.season)
     else:
-        return {"seasonal": False, "outside": 0, "total": 0}
-
+        name = cfg.SEASONS[seasons[0]].split(" (")[0].lower()
+        window = season_window_label(seasons[0])
     codes = [d for d in dekads(query.series_id)
              if query.start <= d <= query.end]
     outside = [d for d in codes

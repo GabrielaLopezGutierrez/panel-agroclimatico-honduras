@@ -2,37 +2,67 @@
 
 Lee el panel ya construido de `data/` y no toca la red. Punto de entrada del
 despliegue: `streamlit run streamlit_app.py`.
+
+El nivel gobierna la navegación. Cada nivel ofrece solo las vistas que tienen
+sentido en él y todas traen contenido: no hay pestañas que terminen en un
+mensaje pidiendo cambiar el nivel o la ventana, que es lo que hacía parecer
+ordenada una navegación que no servía para navegar.
 """
 from __future__ import annotations
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from app import texts
-from app.controls import (LEVELS, Query, load, geojson, manifest, national,
-                          season_status, sidebar, series_options)
+from app.controls import (LEVELS, MAX_FRAMES, Query, dekads, geojson, load,
+                          manifest, national, season_status, sidebar,
+                          series_options)
 from asis import config as cfg, panel, viz
-from asis.aggregate import at_level, climatology
-from asis.calendar import dekad_label, dekad_year
+from asis.aggregate import at_level, climatology, to_country
+from asis.calendar import dekad_index, dekad_label, dekad_window, dekad_year
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 
+# Vistas de cada nivel, en el orden en que se muestran.
+TABS = {
+    "municipio": ["Mapa", "Ranking municipal", "Contexto nacional", "Datos"],
+    "departamento": ["Mapa", "Series por departamento", "Contexto nacional",
+                     "Datos"],
+    "pais": ["Serie nacional", "Contexto nacional", "Datos"],
+}
+DASHBOARD_WINDOW = 54          # 18 meses, la ventana que usa el cuaderno
+# El plural no se arma agregando una "s": "Paiss" no es una palabra.
+PLURAL = {"municipio": "Municipios", "departamento": "Departamentos",
+          "pais": "Series"}
+
 
 # --- Encabezado --------------------------------------------------------------
-def header(mf: dict):
+def header(mf: dict, query: Query):
     st.title(texts.TITLE)
     st.caption(texts.SUBTITLE)
+
     ultimo = max((s.get("ultimo") or "" for s in mf.get("series", {}).values()),
                  default="")
-    st.caption(texts.SOURCE_TEMPLATE.format(
-        construido=(mf.get("actualizado") or "")[:10],
-        ultimo=dekad_label(ultimo) if ultimo else "sin datos"))
     v = mf.get("validacion") or {}
-    if v.get("r") is not None:
-        st.caption(texts.VALIDATION_TEMPLATE.format(
-            r=v["r"], r2=v["r2"], mae=v["mae_pp"], sesgo=v["sesgo_pp"],
-            pares=v["pares"]))
-    st.info(texts.HOW_TO_READ)
+    with st.expander(f"Procedencia y validación · panel al "
+                     f"{dekad_label(ultimo) if ultimo else 'sin datos'}"):
+        st.caption(texts.SOURCE_TEMPLATE.format(
+            construido=(mf.get("actualizado") or "")[:10],
+            ultimo=dekad_label(ultimo) if ultimo else "sin datos"))
+        if v.get("r") is not None:
+            st.caption(texts.VALIDATION_TEMPLATE.format(
+                r=v["r"], r2=v["r2"], mae=v["mae_pp"], sesgo=v["sesgo_pp"],
+                pares=v["pares"]))
+        st.caption(texts.WEIGHTING)
+        src = panel.sources()
+        vintages = ", ".join(f"{k} ({d.get('descargado')})"
+                             for k, d in sorted(src.items())
+                             if d.get("descargado"))
+        if vintages:
+            st.caption(f"Instantáneas de los CSV oficiales de GIEWS: "
+                       f"{vintages}.")
+    st.caption(texts.HOW_TO_READ_SHORT)
 
 
 def season_notice(query: Query):
@@ -49,6 +79,56 @@ def season_notice(query: Query):
         st.warning(texts.PARTIAL_SEASON.format(
             n=status["outside"], total=status["total"],
             temporada=status["season_name"]))
+
+
+def season_origin(query: Query, muni: pd.DataFrame):
+    """De qué temporada sale cada valor del indicador combinado.
+
+    Responde en pantalla la pregunta que el nombre del indicador no contesta:
+    qué se está seleccionando cuando se toma el más alto de las dos temporadas.
+    """
+    if query.series_id != cfg.ASI_COMBINED or "season" not in muni:
+        return
+    d = muni[muni["dekad_id"] == query.end].dropna(subset=["mean"])
+    if d.empty:
+        return
+    counts = d["season"].value_counts()
+    partes = [f"**{cfg.SEASONS.get(k, k).split(' (')[0].lower()}** en "
+              f"{n} municipios" for k, n in counts.items()]
+    st.caption(f"En {dekad_label(query.end)} el valor más alto viene de la "
+               + " y de la ".join(partes) + ".")
+
+
+def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
+    """Cifras de encabezado del último dekad de la ventana.
+
+    El promedio se toma siempre del agregado ponderado por píxeles válidos, no
+    del promedio de las medias municipales: promediar municipios sin ponderar le
+    daría a uno diminuto el mismo peso que a uno con diez veces más área de
+    cultivo, y son más de tres puntos de diferencia.
+    """
+    with_data = cut.dropna(subset=["mean"])
+    if with_data.empty:
+        return
+    last = to_country(muni)
+    last = last[last["dekad_id"] == query.end]
+    scope = "del área seleccionada" if query.departments else "nacional"
+    c1, c2, c3 = st.columns(3)
+    if len(last):
+        c1.metric(f"Promedio {scope} · {dekad_label(query.end)}",
+                  f"{last['mean'].iloc[0]:.2f}",
+                  help=f"{query.unit}. Ponderado por píxeles válidos.")
+    at_last = with_data[with_data["dekad_id"] == query.end]
+    if query.level == "pais":
+        # Contar "países con dato" no informa nada. Lo que importa es cuántos
+        # municipios sostienen la cifra nacional de ese dekad.
+        aportan = int(at_last["n_muni"].iloc[0]) if len(at_last) else 0
+        c2.metric("Municipios que aportan", f"{aportan:,}",
+                  help="Municipios con dato válido que entran en el promedio "
+                       "ponderado de ese dekad.")
+    else:
+        c2.metric(f"{PLURAL[query.level]} con dato", f"{len(at_last):,}")
+    c3.metric("Dekads en la ventana", f"{with_data['dekad_id'].nunique():,}")
 
 
 # --- Preparación del corte ---------------------------------------------------
@@ -81,116 +161,192 @@ def for_display(df: pd.DataFrame) -> pd.DataFrame:
 
 # --- Vistas ------------------------------------------------------------------
 def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
-    if query.level == "pais":
-        st.info(texts.COUNTRY_MAP)
-        return
-    gj = geojson()
-    if query.level == "departamento":
-        st.caption(texts.DEPARTMENT_MAP)
-        # Se reparte el valor departamental sobre sus municipios: la geometría
-        # versionada es municipal y basta para mostrar el reparto territorial.
-        base = muni[["adm2_code", "adm2_name", "adm1_code", "adm1_name",
-                     "dekad_id"]].drop_duplicates()
-        data = base.merge(cut[["adm1_code", "dekad_id", "mean", "km2"]],
-                          on=["adm1_code", "dekad_id"], how="inner")
-    else:
-        data = muni
+    """Coropleta del nivel seleccionado, con su propia geometría.
+
+    Con una ventana corta el mapa se anima, un cuadro por dekad. Con una larga
+    no: una animación de cientos de cuadros no se puede leer y además obliga al
+    navegador a cargar la geometría una vez por dekad. En ese caso se muestra el
+    peor valor que cada unidad alcanzó en la ventana, que es la pregunta que uno
+    le hace a un periodo largo.
+    """
+    data = muni if query.level == "municipio" else cut
     if data.empty:
         st.info(texts.NO_DATA)
         return
-    extra = {}
-    for c in ("pct_gt40", "pct_lt0.35", "p90"):
-        if c in data:
-            extra[c] = ":.0f"
+    extra = {c: ":.0f" for c in ("pct_gt40", "pct_lt0.35", "p90")
+             if c in data.columns}
+    n_dekads = data["dekad_id"].nunique()
+    resumen = not query.single and n_dekads > MAX_FRAMES
+
+    if resumen:
+        peor = "max" if query.family == "ASI" else "min"
+        claves = [query.code_col, query.name_col]
+        if query.name_col != "adm1_name" and "adm1_name" in data:
+            claves.append("adm1_name")
+        data = (data.groupby(claves, as_index=False, observed=True)
+                .agg(**{"mean": ("mean", peor), "km2": ("km2", "max")}))
+        titulo = (f"{query.label} · {'mayor' if peor == 'max' else 'menor'} "
+                  f"valor de la ventana")
+        subtitulo = (f"{query.window_label}, {n_dekads} dekads. Cada "
+                     f"{query.unit_name} se pinta con el "
+                     f"{'mayor' if peor == 'max' else 'menor'} valor que "
+                     f"alcanzó en ese periodo, no con el del último dekad.")
+        extra = {}
+    else:
+        titulo = f"{query.label} · {query.window_label}"
+        subtitulo = texts.MAP_SUBTITLE.format(unidad=query.unit_name)
+
     fig = viz.class_map(
-        data, gj, query.family,
-        f"{query.label} · {query.window_label}",
-        "Clases y colores oficiales de FAO. En blanco, municipios sin dato: "
-        "fuera de temporada o sin área de cultivo, que no es lo mismo que sin "
-        "estrés.",
-        animation="dekad_id" if not query.single else None,
-        hover_extra=extra)
+        data, geojson(query.level), query.family, titulo, subtitulo,
+        animation=None if (query.single or resumen) else "dekad_id",
+        hover_extra=extra, code_col=query.code_col, name_col=query.name_col)
     if fig is None:
         st.info(texts.NO_DATA)
         return
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
+    if resumen:
+        st.caption(f"Para ver la secuencia dekad por dekad, acorte la ventana a "
+                   f"{MAX_FRAMES} dekads o menos, o elija un dekad único.")
+    elif not query.single:
+        st.caption("Cada cuadro de la animación es un dekad. El control de "
+                   "abajo recorre la ventana seleccionada.")
+    if query.level == "departamento":
+        st.caption(texts.DEPARTMENT_MAP)
 
 
-def view_series(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
-    if query.single:
-        st.caption("La serie de tiempo necesita un rango. Cambie la ventana a "
-                   "«Rango» en el panel de la izquierda.")
-        return
-    unit = panel.unit_of(query.series_id)
-    if query.level == "pais":
-        fig = viz.series_fig(
-            cut, "mean", f"{query.label} · nacional",
-            f"Ponderado por píxeles válidos. {query.window_label}.",
-            label=unit, family=query.family,
-            threshold=0.35 if query.family == "VCI" else None,
-            threshold_label="umbral FAO VCI 0,35" if query.family == "VCI" else "")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-    elif query.level == "departamento":
-        import plotly.express as px
-        d = cut.dropna(subset=["mean"]).sort_values("dekad_id")
-        fig = px.line(d, x="date", y="mean", color="adm1_name",
-                      labels={"mean": unit, "date": "", "adm1_name": ""},
-                      height=520)
-        viz.style_fig(fig, f"{query.label} · por departamento",
-                      f"{query.window_label}. Cada línea es un departamento, "
-                      "ponderado por píxeles válidos.", y_source=-0.16)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        top = st.slider("Municipios a mostrar", 10, 60, 30, 5,
-                        key="top_matriz")
-        fig = viz.heatmap_panel(
-            muni, "mean", f"{query.label} · municipio por dekad",
-            f"Los {top} municipios más afectados en el último dekad de la "
-            f"ventana. {query.window_label}.",
-            family=query.family, top=top, ref_dekad=query.end,
-            label=unit)
-        if fig is None:
-            st.info(texts.NO_DATA)
-        else:
-            st.plotly_chart(fig, use_container_width=True)
+def view_municipal_ranking(query: Query, muni: pd.DataFrame):
+    """Los municipios en el extremo, seguidos en el tiempo.
 
-    area = viz.severity_area_fig(
-        muni, query.family, "Superficie por clase de severidad",
-        "km2 en cada clase, dekad por dekad. Responde cuánta superficie y no "
-        "solo cuán intenso.")
-    if area:
-        st.plotly_chart(area, use_container_width=True)
-
-
-def view_ranking(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
-    if query.level == "pais":
-        st.info("El ranking compara unidades territoriales. Cambie el nivel a "
-                "departamento o municipio.")
-        return
-    last = query.end
-    unit = panel.unit_of(query.series_id)
-    d = cut[cut["dekad_id"] == last]
-    if d.empty:
+    Con un rango es una matriz municipio por dekad: muestra a la vez el cuándo y
+    el dónde, y ordena por el peor valor que cada municipio alcanzó en la
+    ventana, no por el del último dekad, que dejaría fuera a quien tuvo el pico
+    a mitad del periodo. Con un solo dekad la matriz sería una columna, así que
+    la vista es un ranking ordenado.
+    """
+    if muni.empty:
         st.info(texts.NO_DATA)
         return
-    name_col = "adm2_name" if query.level == "municipio" else "adm1_name"
-    d = d.copy()
-    if query.level == "departamento":
-        d["adm2_name"] = d["adm1_name"]
-    fig = viz.ranking_fig(
-        d, "mean",
-        f"{query.label} · {LEVELS[query.level].lower()}s en el extremo",
-        f"{dekad_label(last)}. "
-        + ("Mayor estrés arriba." if query.family == "ASI"
-           else "Peor condición de la vegetación arriba."),
-        family=query.family, top=20, label=unit)
+    top = st.slider("Municipios en el ranking", 10, 100, 50, 10,
+                    key="top_ranking")
+    peor = "mayor" if query.family == "ASI" else "menor"
+    if query.single:
+        fig = viz.ranking_fig(
+            muni[muni["dekad_id"] == query.end], "mean",
+            f"Los {top} municipios con {peor} {query.label}",
+            f"{dekad_label(query.end)}.", family=query.family, top=top,
+            label=query.unit, height=max(420, 18 * top))
+    else:
+        fig = viz.heatmap_panel(
+            muni, "mean", f"Los {top} municipios con {peor} valor de la ventana",
+            f"{query.window_label}. Cada fila es un municipio y cada columna un "
+            f"dekad; el orden va del {peor} valor alcanzado en el periodo.",
+            family=query.family, top=top, ref_dekad=None,
+            label=query.unit, height=max(480, 15 * top))
+    if fig is None:
+        st.info(texts.NO_DATA)
+        return
+    st.plotly_chart(fig, width="stretch")
+
+    if not query.single:
+        area = viz.severity_area_fig(
+            muni, query.family, "Superficie por clase de severidad",
+            "km2 en cada clase, dekad por dekad. Responde cuánta superficie y "
+            "no solo cuán intenso, que es la pregunta de quien reparte "
+            "recursos.")
+        if area:
+            st.plotly_chart(area, width="stretch")
+
+
+def view_department_series(query: Query, cut: pd.DataFrame):
+    """Una línea por departamento, o el ranking si la ventana es un dekad."""
+    if cut.empty:
+        st.info(texts.NO_DATA)
+        return
+    if query.single:
+        d = cut[cut["dekad_id"] == query.end].copy()
+        d["adm2_name"] = d["adm1_name"]        # ranking_fig etiqueta con este
+        fig = viz.ranking_fig(
+            d, "mean", f"{query.label} por departamento",
+            f"{dekad_label(query.end)}. Ponderado por píxeles válidos.",
+            family=query.family, top=18, label=query.unit, height=520)
+        if fig:
+            st.plotly_chart(fig, width="stretch")
+        st.caption("Con un rango de fechas esta vista pasa a ser una serie de "
+                   "tiempo por departamento.")
+        return
+
+    d = cut.dropna(subset=["mean"]).sort_values("dekad_id")
+    fig = px.line(d, x="date", y="mean", color="adm1_name",
+                  labels={"mean": query.unit, "date": "", "adm1_name": ""},
+                  height=540)
+    fig.update_traces(hovertemplate="%{x|%d %b %Y}<br>%{y:.2f}<extra>"
+                                    "%{fullData.name}</extra>")
+    viz.style_fig(fig, f"{query.label} por departamento",
+                  f"{query.window_label}. Cada línea es un departamento, "
+                  "ponderado por píxeles válidos del ráster.", y_source=-0.16)
+    st.plotly_chart(fig, width="stretch")
+    st.caption("Haga clic en un departamento de la leyenda para aislarlo, o "
+               "doble clic para ver solo ese.")
+
+
+def _dashboard_window(query: Query) -> tuple[str, str]:
+    """Ventana del tablero nacional.
+
+    Con un solo dekad seleccionado no hay serie que dibujar, así que se muestran
+    los 18 meses que terminan en ese dekad. Es la ventana del cuaderno y se dice
+    en el subtítulo, para que nadie lea el gráfico como si fuera el dekad.
+    """
+    if not query.single:
+        return query.start, query.end
+    available = dekads(query.series_id)
+    inicio = dekad_window(query.end, DASHBOARD_WINDOW)[0]
+    return max(inicio, available[0]), query.end
+
+
+def view_country(query: Query, cut: pd.DataFrame):
+    """Serie nacional: primero la línea del indicador, después los tres
+    indicadores sobre el mismo eje temporal."""
+    start, end = _dashboard_window(query)
+    ampliada = (start, end) != (query.start, query.end)
+    serie = to_country(load(query.series_id, start, end))
+    if serie.empty:
+        st.info(texts.NO_DATA)
+        return
+    nota = (f"Ventana ampliada a los últimos 18 meses hasta "
+            f"{dekad_label(end)}: una serie necesita más de un dekad."
+            if ampliada else f"{query.window_label}.")
+    fig = viz.series_fig(
+        serie, "mean", f"{query.label} · nacional", nota,
+        label=query.unit, family=query.family,
+        threshold=0.35 if query.family == "VCI" else None,
+        threshold_label="umbral FAO 0,35" if query.family == "VCI" else "")
     if fig:
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
+
+    st.divider()
+    asi_id = query.series_id if query.family == "ASI" else cfg.ASI_COMBINED
+    asi = to_country(load(asi_id, start, end))
+    vci = to_country(load("vci", start, end)) if "vci" in panel.stored_series() \
+        else pd.DataFrame()
+    rain = national("serie_nacional_lluvia")
+    if len(rain):
+        rain = rain[(rain["dekad_id"] >= start) & (rain["dekad_id"] <= end)]
+    tablero = viz.dashboard_fig(
+        asi, vci, rain, "Estrés, vegetación y lluvia en el mismo eje",
+        "Tres indicadores independientes: déficit hídrico acumulado en el "
+        "cultivo (ASI), estado de la vegetación (VCI) y lluvia observada frente "
+        "a su normal. Leerlos juntos evita confundir un exceso de agua con una "
+        "sequía.")
+    if tablero:
+        st.plotly_chart(tablero, width="stretch")
 
 
 def view_context(query: Query):
-    """Contexto nacional oficial de FAO: climatología, lluvia y tablero."""
+    """Contexto nacional oficial de FAO: climatología y lluvia.
+
+    Es el dato que publica GIEWS, no un agregado propio, y es la referencia
+    contra la cual se valida el panel.
+    """
     asi_nat = national("serie_nacional_asi")
     rain = national("serie_nacional_lluvia")
     if asi_nat.empty and rain.empty:
@@ -204,32 +360,31 @@ def view_context(query: Query):
         years = [y for y in (year, 2019, 2020) if y in set(asi_nat["Year"])]
         fig = viz.climatology_fig(
             asi_nat, pctl, n_base, years,
-            "El año seleccionado frente a la norma histórica",
-            f"ASI nacional de la temporada primera, mayo a octubre. Franja "
-            f"azul: rango habitual p10-p90 sobre {n_base} años previos a "
-            f"{year}. Serie oficial de GIEWS ponderada por área de cultivo.")
+            f"{year} frente a la norma histórica",
+            f"ASI nacional de la temporada primera, mayo a octubre. La franja "
+            f"azul es el rango habitual (p10-p90) de los {n_base} años previos "
+            f"a {year}. Serie oficial de GIEWS ponderada por área de cultivo.")
         if fig:
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         matrix = viz.climatology_matrix(
             asi_nat, "Climatología del estrés agrícola",
             "ASI nacional por dekad de la temporada primera. Cada franja roja "
             "horizontal es una sequía agrícola.")
         if matrix:
-            st.plotly_chart(matrix, use_container_width=True)
+            st.plotly_chart(matrix, width="stretch")
 
     if not rain.empty:
-        window = rain[(rain["dekad_id"] >= query.start)
-                      & (rain["dekad_id"] <= query.end)]
+        start, end = _dashboard_window(query)
+        window = rain[(rain["dekad_id"] >= start) & (rain["dekad_id"] <= end)]
         if len(window) < 3:
-            window = rain.tail(54)
+            window = rain.tail(DASHBOARD_WINDOW)
         fig = viz.rainfall_fig(
             window, "Lluvia observada frente a su promedio histórico",
-            "Lluvia dekadal nacional ponderada por área de cultivo. La LTA es "
-            "la que publica FAO y no se recalcula.")
+            "Lluvia dekadal nacional ponderada por área de cultivo. El promedio "
+            "de largo plazo es el que publica FAO y no se recalcula.")
         if fig:
-            st.plotly_chart(fig, use_container_width=True)
-    st.caption(texts.WEIGHTING)
+            st.plotly_chart(fig, width="stretch")
 
 
 def view_data(query: Query, cut: pd.DataFrame):
@@ -237,43 +392,18 @@ def view_data(query: Query, cut: pd.DataFrame):
         st.info(texts.NO_DATA)
         return
     shown = for_display(cut)
-    st.caption(f"{len(shown):,} filas · {LEVELS[query.level].lower()} · "
-               f"{query.label} · {query.window_label}")
-    st.dataframe(shown, use_container_width=True, hide_index=True,
-                 height=460)
+    st.caption(f"{len(shown):,} filas · {query.unit_name} · {query.label} · "
+               f"{query.window_label}")
+    st.dataframe(shown, width="stretch", hide_index=True, height=460)
     csv = shown.to_csv(index=False).encode("utf-8-sig")
     st.download_button(
         "Descargar CSV del corte en pantalla", csv,
         file_name=f"asis_{query.slug()}.csv", mime="text/csv",
         help=texts.DOWNLOAD_HELP, type="primary")
-    st.caption(texts.WEIGHTING)
-
-
-def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
-    """Cifras de encabezado del último dekad de la ventana.
-
-    El promedio se toma siempre del agregado ponderado por píxeles válidos, no
-    del promedio de las medias municipales: promediar municipios sin ponderar
-    le daría a un municipio diminuto el mismo peso que a uno con diez veces más
-    área de cultivo.
-    """
-    from asis.aggregate import to_country
-
-    with_data = cut.dropna(subset=["mean"])
-    if with_data.empty:
-        return
-    last = to_country(muni)
-    last = last[last["dekad_id"] == query.end]
-    scope = ("del área seleccionada" if query.departments else "nacional")
-    c1, c2, c3 = st.columns(3)
-    if len(last):
-        c1.metric(f"Promedio {scope} · {dekad_label(query.end)}",
-                  f"{last['mean'].iloc[0]:.2f}",
-                  help=f"{panel.unit_of(query.series_id)}. Ponderado por "
-                       "píxeles válidos.")
-    at_last = with_data[with_data["dekad_id"] == query.end]
-    c2.metric(f"{LEVELS[query.level]}s con dato", f"{len(at_last):,}")
-    c3.metric("Dekads en la ventana", f"{with_data['dekad_id'].nunique():,}")
+    if query.level != "municipio":
+        st.caption("Los percentiles (p10, mediana, p90) existen solo a nivel "
+                   "municipal: el p90 de un departamento no es el promedio de "
+                   "los p90 de sus municipios, así que no se publica.")
 
 
 def limits_panel():
@@ -287,17 +417,25 @@ def limits_panel():
             with st.container(border=True):
                 st.markdown(f"**{title}**")
                 st.caption(body)
-    src = panel.sources()
-    if src:
-        vintages = ", ".join(
-            f"{k} ({v.get('descargado', '?')})" for k, v in sorted(src.items())
-            if v.get("descargado"))
-        if vintages:
-            st.caption(f"Instantáneas de los CSV oficiales de GIEWS: {vintages}.")
     st.caption(texts.AI_NOTE)
 
 
 # --- Página ------------------------------------------------------------------
+def render(query: Query, muni: pd.DataFrame, cut: pd.DataFrame, name: str):
+    if name == "Mapa":
+        view_map(query, muni, cut)
+    elif name == "Ranking municipal":
+        view_municipal_ranking(query, muni)
+    elif name == "Series por departamento":
+        view_department_series(query, cut)
+    elif name == "Serie nacional":
+        view_country(query, cut)
+    elif name == "Contexto nacional":
+        view_context(query)
+    elif name == "Datos":
+        view_data(query, cut)
+
+
 def main():
     try:
         mf = manifest()
@@ -311,8 +449,8 @@ def main():
         st.error(texts.EMPTY_PANEL)
         return
 
-    header(mf)
     query = sidebar(options)
+    header(mf, query)
     season_notice(query)
     muni, cut = slice_for(query)
 
@@ -322,18 +460,12 @@ def main():
         return
 
     summary(query, muni, cut)
+    season_origin(query, muni)
 
-    tabs = st.tabs(["Mapa", "Serie", "Ranking", "Contexto nacional", "Datos"])
-    with tabs[0]:
-        view_map(query, muni, cut)
-    with tabs[1]:
-        view_series(query, muni, cut)
-    with tabs[2]:
-        view_ranking(query, muni, cut)
-    with tabs[3]:
-        view_context(query)
-    with tabs[4]:
-        view_data(query, cut)
+    names = TABS[query.level]
+    for tab, name in zip(st.tabs(names), names):
+        with tab:
+            render(query, muni, cut, name)
 
     limits_panel()
 

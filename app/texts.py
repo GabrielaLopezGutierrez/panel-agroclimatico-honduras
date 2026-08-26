@@ -9,6 +9,15 @@ TITLE = "Panel agroclimático de Honduras"
 SUBTITLE = ("Índice de estrés agrícola y condición de la vegetación por "
             "municipio, a partir de FAO GIEWS ASIS.")
 
+HOW_TO_READ_SHORT = (
+    "Los indicadores miden condición de la vegetación y déficit hídrico, no "
+    "producción ni pérdida de cosecha. Una unidad en blanco no tiene dato, que "
+    "no es lo mismo que no tener estrés: **sin dato no es cero.**")
+
+MAP_SUBTITLE = (
+    "Clases y colores oficiales de FAO. En blanco, {unidad}s sin dato: fuera de "
+    "temporada o sin área de cultivo, que no es lo mismo que sin estrés.")
+
 HOW_TO_READ = (
     "Los indicadores miden **condición de la vegetación y déficit hídrico**, no "
     "producción ni pérdida de cosecha. Un municipio en blanco no tiene dato: "
@@ -38,8 +47,10 @@ COUNTRY_MAP = (
     "el nivel a departamento o municipio.")
 
 DEPARTMENT_MAP = (
-    "Cada municipio aparece pintado con el valor de **su departamento**, no con "
-    "el propio. Para el detalle municipal cambie el nivel.")
+    "El mapa usa los límites departamentales, sin las fronteras municipales: "
+    "el valor es del departamento entero y dibujar la división interna "
+    "insinuaría un detalle que este nivel no tiene. Para el detalle municipal, "
+    "cambie el nivel.")
 
 WEIGHTING = (
     "Los agregados departamentales y nacionales ponderan por píxeles válidos "

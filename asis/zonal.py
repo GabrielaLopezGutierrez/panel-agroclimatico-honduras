@@ -205,19 +205,33 @@ def municipal_series(series: cfg.Series, dekads, workers=None, verbose=True,
                .reset_index(drop=True))
 
 
-def export_geometry(tol=cfg.GEOJSON_TOL) -> tuple[dict, pd.DataFrame]:
-    """Geometría municipal simplificada y tabla de referencia de municipios.
+def export_geometry(level=2, tol=cfg.GEOJSON_TOL) -> tuple[dict, pd.DataFrame]:
+    """Geometría simplificada y tabla de referencia del nivel pedido.
 
     Se versiona en data/geo/ para que la app dibuje coropletas sin geopandas ni
     red. A 0,004 grados (~400 m) la forma se mantiene y el archivo pesa unas
     diez veces menos.
+
+    El nivel 1 se exporta aparte en vez de disolver municipios en la app: un
+    mapa departamental con las fronteras municipales dibujadas encima muestra
+    una división que el dato de ese nivel no tiene.
     """
     g = grid()
-    gj = g.muni[["adm2_code", "adm2_name", "adm1_code", "adm1_name",
-                 "geometry"]].copy()
-    gj["geometry"] = gj.geometry.simplify(tol, preserve_topology=True)
-    geojson = json.loads(gj.to_json())
-    ref = (g.muni[["adm2_code", "adm2_name", "adm1_code", "adm1_name",
-                   "area_km2", "zone_px"]]
-           .sort_values(["adm1_name", "adm2_name"]).reset_index(drop=True))
-    return geojson, ref
+    if level == 2:
+        gj = g.muni[["adm2_code", "adm2_name", "adm1_code", "adm1_name",
+                     "geometry"]].copy()
+        gj["geometry"] = gj.geometry.simplify(tol, preserve_topology=True)
+        ref = (g.muni[["adm2_code", "adm2_name", "adm1_code", "adm1_name",
+                       "area_km2", "zone_px"]]
+               .sort_values(["adm1_name", "adm2_name"]).reset_index(drop=True))
+        return json.loads(gj.to_json()), ref
+
+    dept = g.dept[["adm1_code", "adm1_name", "geometry"]].copy()
+    dept["geometry"] = dept.geometry.simplify(tol, preserve_topology=True)
+    per_dept = (g.muni.groupby(["adm1_code"], as_index=False)
+                .agg(area_km2=("area_km2", "sum"), zone_px=("zone_px", "sum"),
+                     n_muni=("adm2_code", "nunique")))
+    ref = (dept[["adm1_code", "adm1_name"]]
+           .merge(per_dept, on="adm1_code", how="left")
+           .sort_values("adm1_name").reset_index(drop=True))
+    return json.loads(dept.to_json()), ref

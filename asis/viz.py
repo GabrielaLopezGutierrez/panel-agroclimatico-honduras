@@ -78,11 +78,16 @@ def _choropleth(d, **kw):
 
 def class_map(df, geojson, family, title, subtitle="", value_col="mean",
               animation="dekad_id", hover_extra=None, height=620,
-              y_source=-0.16):
-    """Coropleta municipal con las clases y colores oficiales de FAO.
+              y_source=-0.16, code_col="adm2_code", name_col="adm2_name"):
+    """Coropleta con las clases y colores oficiales de FAO.
 
-    Con animation='dekad_id' produce la secuencia temporal del evento. Los
-    municipios sin dato quedan en blanco y eso no es lo mismo que sin estrés:
+    `code_col` decide el nivel: adm2_code dibuja municipios y adm1_code
+    departamentos, con la geometría que corresponda. Un mapa departamental con
+    las fronteras municipales encima insinuaría un detalle que el dato agregado
+    no tiene.
+
+    Con animation='dekad_id' produce la secuencia temporal del evento. Las
+    unidades sin dato quedan en blanco y eso no es lo mismo que sin estrés:
     puede ser fuera de temporada o sin área de cultivo.
     """
     _, labels, _ = cfg.CLASSES[family]
@@ -95,14 +100,17 @@ def class_map(df, geojson, family, title, subtitle="", value_col="mean",
     orders = {"severidad": labels}
     if animation and animation in d:
         orders[animation] = sorted(d[animation].unique())
-    hover = {"adm1_name": True, value_col: ":.2f", "km2": ":.0f",
-             "adm2_code": False}
+    hover = {value_col: ":.2f", code_col: False}
+    if "km2" in d:
+        hover["km2"] = ":.0f"
+    if name_col != "adm1_name" and "adm1_name" in d:
+        hover["adm1_name"] = True
     hover.update(hover_extra or {})
-    kw = dict(geojson=geojson, locations="adm2_code",
-              featureidkey="properties.adm2_code", color="severidad",
+    kw = dict(geojson=geojson, locations=code_col,
+              featureidkey=f"properties.{code_col}", color="severidad",
               labels={"severidad": "clase"},
               color_discrete_map=cfg.PALETTE[family], category_orders=orders,
-              center=MAP_CENTER, zoom=5.7, hover_name="adm2_name",
+              center=MAP_CENTER, zoom=5.7, hover_name=name_col,
               hover_data=hover, opacity=0.88, height=height)
     if animation and animation in d:
         kw["animation_frame"] = animation
@@ -162,18 +170,31 @@ def heatmap_panel(df, value_col, title, subtitle="", family="ASI", top=30,
     if d.empty or "dekad_id" not in d:
         return None
     d["etiqueta"] = d["adm2_name"] + " · " + d["adm1_name"]
-    ref = ref_dekad or d.loc[d[value_col].idxmax(), "dekad_id"]
-    if ref not in set(d["dekad_id"]):
-        ref = sorted(d["dekad_id"].unique())[-1]
     # En el ASI interesan los peores por arriba; en el VCI, por abajo.
-    at_ref = d[d["dekad_id"] == ref]
-    selected = (at_ref.nlargest(top, value_col)["adm2_code"] if family == "ASI"
-                else at_ref.nsmallest(top, value_col)["adm2_code"])
+    peor = "max" if family == "ASI" else "min"
+    if ref_dekad and ref_dekad in set(d["dekad_id"]):
+        # Ranking de un dekad concreto: es la foto de ese momento.
+        at_ref = d[d["dekad_id"] == ref_dekad]
+        orden = at_ref.set_index("adm2_code")[value_col]
+        selected = (at_ref.nlargest(top, value_col)["adm2_code"]
+                    if family == "ASI"
+                    else at_ref.nsmallest(top, value_col)["adm2_code"])
+    else:
+        # Ranking de toda la ventana: se ordena por el peor valor que cada
+        # municipio alcanzo en el periodo, no por el del ultimo dekad, que
+        # dejaria fuera a quien tuvo el pico a mitad del rango.
+        orden = d.groupby("adm2_code", observed=True)[value_col].agg(peor)
+        selected = (orden.nlargest(top).index if family == "ASI"
+                    else orden.nsmallest(top).index)
     matrix = (d[d["adm2_code"].isin(selected)]
               .pivot_table(index="etiqueta", columns="dekad_id",
                            values=value_col))
-    if ref in matrix.columns:
-        matrix = matrix.sort_values(ref, ascending=(family == "ASI"))
+    # Las filas se ordenan por el mismo criterio con el que se eligieron.
+    clave = (d[d["adm2_code"].isin(selected)]
+             .drop_duplicates("adm2_code").set_index("etiqueta")["adm2_code"]
+             .map(orden))
+    matrix = matrix.reindex(clave.sort_values(
+        ascending=(family == "ASI")).index).dropna(how="all")
     lo, hi = value_range or range_for(family)
     fig = go.Figure(go.Heatmap(
         z=matrix.values, x=[dekad_label(c) for c in matrix.columns],

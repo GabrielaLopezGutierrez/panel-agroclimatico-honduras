@@ -87,3 +87,43 @@ def test_dekads_del_manifiesto_coinciden_con_el_disco():
         assert declared == on_disk, (
             f"{sid}: el manifiesto declara {len(declared)} dekads y en disco "
             f"hay {len(on_disk)}")
+
+
+def test_geometria_departamental_versionada():
+    """El nivel departamental se dibuja con sus propios limites, no disolviendo
+    municipios en la app."""
+    gj = panel.geojson("departamento")
+    assert gj["type"] == "FeatureCollection"
+    assert len(gj["features"]) == 18            # Honduras tiene 18
+    props = gj["features"][0]["properties"]
+    assert "adm1_code" in props and "adm1_name" in props
+    # La geometria departamental NO debe traer codigos municipales: si los
+    # trajera, el mapa dibujaria la division interna que el nivel no tiene.
+    assert "adm2_code" not in props
+
+
+def test_codigos_departamentales_empatan_con_el_panel():
+    if not panel.stored_series():
+        pytest.skip("no hay panel construido")
+    from asis.aggregate import to_department
+    gj = panel.geojson("departamento")
+    geo = {f["properties"]["adm1_code"] for f in gj["features"]}
+    sid = panel.stored_series()[0]
+    last = panel.dekads(sid)[-1]
+    dept = to_department(panel.load(sid, last, last))
+    faltan = set(dept["adm1_code"]) - geo
+    assert not faltan, f"departamentos del panel sin geometria: {faltan}"
+
+
+def test_cada_nivel_declara_como_se_dibuja():
+    for level, spec in panel.LEVEL_GEO.items():
+        assert spec["geojson"].exists(), f"falta la geometria de {level}"
+        for key in ("code", "name", "label"):
+            assert spec[key]
+
+
+def test_tabla_de_referencia_departamental():
+    ref = panel.departamentos()
+    assert len(ref) == 18
+    assert ref["adm1_code"].is_unique
+    assert int(ref["n_muni"].sum()) == len(panel.municipios())

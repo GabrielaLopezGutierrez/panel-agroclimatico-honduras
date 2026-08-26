@@ -292,17 +292,26 @@ def validate(panel: pd.DataFrame) -> dict:
 
 # --- Geometría y manifiesto --------------------------------------------------
 def build_geometry():
+    """Exporta la geometría de los dos niveles que dibuja la app."""
     from asis.zonal import export_geometry
-    from asis.panel import GEOJSON_PATH, MUNI_PATH
+    from asis.panel import (DEPT_GEOJSON_PATH, DEPT_PATH, GEOJSON_PATH,
+                            MUNI_PATH)
 
     cfg.GEO_DIR.mkdir(parents=True, exist_ok=True)
-    geojson, ref = export_geometry()
-    GEOJSON_PATH.write_text(json.dumps(geojson, ensure_ascii=False),
-                            encoding="utf-8", newline="\n")
-    ref.to_csv(MUNI_PATH, index=False, lineterminator="\n")
-    log(f"\ngeometria: {len(ref)} municipios -> {GEOJSON_PATH.name} "
-        f"({GEOJSON_PATH.stat().st_size // 1024} KB)")
-    return len(ref)
+    log("")
+    n_muni = 0
+    for level, gj_path, ref_path, etiqueta in (
+            (2, GEOJSON_PATH, MUNI_PATH, "municipios"),
+            (1, DEPT_GEOJSON_PATH, DEPT_PATH, "departamentos")):
+        geojson, ref = export_geometry(level)
+        gj_path.write_text(json.dumps(geojson, ensure_ascii=False),
+                           encoding="utf-8", newline="\n")
+        ref.to_csv(ref_path, index=False, lineterminator="\n")
+        log(f"geometria: {len(ref)} {etiqueta} -> {gj_path.name} "
+            f"({gj_path.stat().st_size // 1024} KB)")
+        if level == 2:
+            n_muni = len(ref)
+    return n_muni
 
 
 def write_manifest(series_info: dict, official: dict, validation: dict,
