@@ -96,4 +96,4 @@ def test_area_de_severidad_reparte_la_superficie_por_clase():
     d = panel({"Verde": [5, 5, 5, 5], "Rojo": [90, 90, 90, 90]})
     fig = viz.severity_area_fig(d, "ASI", "t")
     nombres = {t.name for t in fig.data}
-    assert "<10" in nombres and ">=85" in nombres
+    assert "<10" in nombres and ">=40" in nombres

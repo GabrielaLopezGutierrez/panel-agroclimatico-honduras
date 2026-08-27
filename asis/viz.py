@@ -30,9 +30,17 @@ pio.templates.default = "asis"
 
 # Escalas continuas coherentes con la semántica del indicador: en el ASI el rojo
 # es más estrés, en el VCI el rojo es peor vegetación.
-SCALE_ASI = [[0.00, "#2fcd00"], [0.10, "#9ae713"], [0.25, "#ffff30"],
-             [0.40, "#ffba20"], [0.55, "#ff7510"], [0.70, "#ff2a02"],
-             [0.85, "#c40000"], [1.00, "#7d0000"]]
+#
+# La del ASI sigue los umbrales de alerta (10/25/40, ver config.ASI_ALERT_*): el
+# color cambia de familia justo en el umbral (por eso hay dos paradas casi
+# juntas en 0.10, 0.25 y 0.40, una a cada lado del corte) y dentro de cada banda
+# el tono se degrada de claro a oscuro a medida que se acerca al siguiente
+# umbral. Así un valor apenas sobre 10% sale amarillo claro y uno cerca de 25%
+# sale amarillo oscuro, a punto de cruzar a naranja.
+SCALE_ASI = [[0.00, "#1b7a1b"], [0.08, "#4fc93f"],
+             [0.10, "#fff59d"], [0.24, "#ffb300"],
+             [0.25, "#ffcc80"], [0.39, "#ff6f00"],
+             [0.40, "#f4511e"], [1.00, "#7a0000"]]
 SCALE_VCI = [[0.0, "#9a0000"], [0.15, "#ff0000"], [0.30, "#ff8900"],
              [0.45, "#ffff00"], [0.60, "#66ff00"], [0.80, "#009a00"],
              [1.0, "#217400"]]
@@ -156,8 +164,15 @@ def class_map(df, geojson, family, title, subtitle="", value_col="mean",
 
 def continuous_map(df, geojson, value_col, title, subtitle="", family="ASI",
                    value_range=None, bar_label="", animation=None, height=620,
-                   hover_extra=None, scale=None):
-    """Coropleta continua: útil para anomalías, cambios y promedios de periodo.
+                   hover_extra=None, scale=None, code_col="adm2_code",
+                   name_col="adm2_name"):
+    """Coropleta continua: útil para anomalías, cambios y promedios de periodo,
+    y es la que usa el ASI para que el color refleje qué tan cerca está un valor
+    del siguiente umbral de alerta, en vez de una clase plana.
+
+    `code_col`/`name_col` deciden el nivel, igual que en `class_map`: adm2_code
+    dibuja municipios y adm1_code departamentos, con la geometría que
+    corresponda.
 
     `scale` permite pasar una escala distinta a la del indicador. Un cambio o una
     anomalía necesita una escala divergente, con el cero en el centro y un color
@@ -167,13 +182,15 @@ def continuous_map(df, geojson, value_col, title, subtitle="", family="ASI",
     d = df.dropna(subset=[value_col]).copy()
     if d.empty:
         return None
-    hover = {"adm1_name": True, value_col: ":.2f", "adm2_code": False}
+    hover = {value_col: ":.2f", code_col: False}
+    if name_col != "adm1_name" and "adm1_name" in d:
+        hover["adm1_name"] = True
     hover.update(hover_extra or {})
-    kw = dict(geojson=geojson, locations="adm2_code",
-              featureidkey="properties.adm2_code", color=value_col,
+    kw = dict(geojson=geojson, locations=code_col,
+              featureidkey=f"properties.{code_col}", color=value_col,
               color_continuous_scale=scale or scale_for(family),
               range_color=value_range or range_for(family),
-              center=MAP_CENTER, zoom=5.7, hover_name="adm2_name",
+              center=MAP_CENTER, zoom=5.7, hover_name=name_col,
               hover_data=hover, opacity=0.88, height=height)
     if animation and animation in d:
         kw["animation_frame"] = animation
@@ -316,7 +333,8 @@ def climatology_fig(national, pctl, n_baseline, years, title, subtitle="",
 
 def climatology_matrix(national, title, subtitle="", value_col="value",
                        dekad_from=13, dekad_to=30, height=600):
-    """Año x dekad: cada franja roja horizontal es una sequía agrícola."""
+    """Año x dekad: cada franja roja horizontal es una alerta roja de ASI
+    (estrés extremo), no una declaratoria oficial de sequía."""
     d = national[national["dekad_of_year"].between(dekad_from, dekad_to)]
     if d.empty:
         return None

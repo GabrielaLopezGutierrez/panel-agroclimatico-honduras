@@ -58,12 +58,26 @@ VALID_RANGE = {"ASI_D": (0, 100), "ASI_A": (0, 100), "DI_D": (0, 100),
 FLAGS = {251: "fuera de temporada", 252: "sin dato", 253: "sin estacionalidad",
          254: "sin cultivo/pasto", 255: "nodata"}
 
-# Clases y paleta oficiales de FAO: se reutilizan en todas las figuras.
+# Umbrales de alerta del ASI que se muestran en la app: verde/amarillo/naranja/
+# rojo. Son distintos de ASI_THRESHOLDS (30, 40, 55, 70), que son los que ya
+# vienen calculados en el panel de datos (columnas pct_gt30/40/55/70) y no se
+# tocan aquí; estos cuatro son solo para la clasificación visual, la leyenda y
+# el texto de alerta que ve la persona que usa la app.
+ASI_ALERT_THRESHOLDS = (10, 25, 40)
+ASI_ALERT_DESCRIPTIONS = {
+    "<10": "Sin estrés hídrico",
+    "10-25": "Estrés leve/moderado",
+    "25-40": "Estrés severo",
+    ">=40": "Estrés extremo",
+}
+
+# Clases y paleta que se usan en todas las figuras. El ASI usa la clasificación
+# de alerta de arriba (4 clases); el VCI conserva las 9 clases oficiales de FAO,
+# que no cambian con esto.
 CLASSES = {
-    "ASI": ([0, 10, 25, 40, 55, 70, 85, 100.01],
-            ["<10", "10-25", "25-40", "40-55", "55-70", "70-85", ">=85"],
-            ["#2fcd00", "#9ae713", "#ffff30", "#ffba20", "#ff7510",
-             "#ff2a02", "#c40000"]),
+    "ASI": ([0, 10, 25, 40, 100.01],
+            ["<10", "10-25", "25-40", ">=40"],
+            ["#2fcd00", "#ffd400", "#ff8c00", "#d7263d"]),
     "VCI": ([0, .15, .25, .35, .45, .55, .65, .75, .85, 1.0001],
             ["<0.15", "0.15-0.25", "0.25-0.35", "0.35-0.45", "0.45-0.55",
              "0.55-0.65", "0.65-0.75", "0.75-0.85", ">=0.85"],

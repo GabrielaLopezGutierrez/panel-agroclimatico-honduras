@@ -19,3 +19,8 @@ __pycache__/
 venv/
 .env
 .DS_Store
+
+# Destinatarios de alertas y cualquier credencial futura de envio: nunca se
+# committean. En Streamlit Community Cloud van en la seccion Secrets de la app,
+# no en este archivo.
+.streamlit/secrets.toml

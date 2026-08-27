@@ -28,7 +28,7 @@ from app.controls import (LEVELS, MAX_FRAMES, Query, dekads, geojson, load,
                           series_options)
 from asis import config as cfg, panel, viz
 from asis.aggregate import at_level, severity_area, to_country
-from asis.calendar import dekad_label, dekad_window
+from asis.calendar import dekad_label, dekad_window, dekad_year
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 
@@ -117,6 +117,20 @@ def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
     c3.metric("Dekads en la ventana", f"{with_data['dekad_id'].nunique():,}")
 
 
+def indicator_definition(query: Query):
+    """Definición del indicador activo, junto a las cifras de encabezado.
+
+    Vivía en la pestaña "Cómo leer"; se movió aquí porque es lo primero que
+    hace falta para interpretar el número que se acaba de ver arriba, y para
+    no obligar a salir de la vista para entenderlo.
+    """
+    familias = (("ASI", "VCI") if query.series_id == cfg.ASI_COMBINED
+               else (query.family,))
+    for familia in familias:
+        _, definicion = texts.INDICATOR_DEFINITIONS[familia]
+        st.caption(f"**{familia}** — {definicion}")
+
+
 # --- Preparación del corte ---------------------------------------------------
 def slice_for(query: Query) -> tuple[pd.DataFrame, pd.DataFrame]:
     muni = load(query.series_id, query.start, query.end)
@@ -196,10 +210,22 @@ def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
         titulo = f"{query.label} · {query.window_label}"
         subtitulo = ""
 
-    fig = viz.class_map(
-        data, geojson(query.level), query.family, titulo, subtitulo,
-        animation=None if (query.single or resumen) else "dekad_id",
-        hover_extra=extra, code_col=query.code_col, name_col=query.name_col)
+    if query.family == "ASI":
+        # El ASI usa un degradado continuo: un valor apenas sobre un umbral se
+        # ve apenas distinto del umbral, en vez de saltar a un color plano
+        # nuevo. El VCI sigue con las clases discretas de FAO, sin cambios.
+        fig = viz.continuous_map(
+            data, geojson(query.level), "mean", titulo, subtitulo,
+            family="ASI", bar_label=query.unit_short,
+            animation=None if (query.single or resumen) else "dekad_id",
+            hover_extra=extra, code_col=query.code_col,
+            name_col=query.name_col)
+    else:
+        fig = viz.class_map(
+            data, geojson(query.level), query.family, titulo, subtitulo,
+            animation=None if (query.single or resumen) else "dekad_id",
+            hover_extra=extra, code_col=query.code_col,
+            name_col=query.name_col)
     figure(fig, data, f"mapa_{query.slug()}", "dl_mapa")
 
 
@@ -275,8 +301,51 @@ def view_department_series(query: Query, cut: pd.DataFrame):
     figure(fig, d, f"departamentos_{query.slug()}", "dl_dept")
 
 
+def _climatology_window(asi_nat: pd.DataFrame, query: Query) -> pd.DataFrame:
+    """Recorta la climatología oficial a los años de la ventana seleccionada.
+
+    Antes se ignoraba el selector de tiempo por completo: el mapa de calor
+    mostraba siempre 2005-2026 sin importar si se había elegido "Un dekad" o un
+    rango. Ahora responde igual que el resto de las figuras de país: "Un dekad"
+    (ampliado a 18 meses por `effective()`) o "Rango" acotan los mismos años que
+    ve cualquier otra vista de la pestaña.
+    """
+    y0, y1 = dekad_year(query.start), dekad_year(query.end)
+    return asi_nat[(asi_nat["Year"] >= y0) & (asi_nat["Year"] <= y1)]
+
+
+def _climatology_section(query: Query, asi_nat: pd.DataFrame, slug: str):
+    if asi_nat.empty:
+        return
+    ventana_nat = _climatology_window(asi_nat, query)
+    fig = viz.climatology_matrix(
+        ventana_nat, "Climatología del estrés agrícola",
+        "ASI nacional oficial de FAO por dekad de la temporada primera · "
+        "cada franja roja es una alerta roja de ASI (estrés extremo)")
+    figure(fig, ventana_nat[ventana_nat["dekad_of_year"].between(13, 30)]
+           [["Year", "dekad_id", "dekad_of_year", "value"]],
+           slug, "dl_clima")
+    if fig is not None:
+        st.caption(texts.ALERT_DISCLAIMER)
+
+
 # --- Vista: panorama nacional ------------------------------------------------
 def view_country(query: Query, cut: pd.DataFrame):
+    """Resumen general (todos los indicadores) o el detalle de uno solo.
+
+    El resumen general es el que abre por omisión a nivel país: climatología,
+    los tres indicadores sobre el mismo eje y lluvia. Si se elige un indicador
+    específico (ASI primera, ASI postrera o VCI) se muestran solo las figuras
+    de ese indicador; el tablero de los tres y la lluvia sola pertenecen al
+    resumen y no a la vista de un indicador único.
+    """
+    if query.series_id == cfg.ASI_COMBINED:
+        _view_country_overview(query)
+    else:
+        _view_country_indicator(query)
+
+
+def _view_country_overview(query: Query):
     """Del encuadre histórico al detalle de la ventana.
 
     Primero la climatología, que sitúa el año dentro de veintiún años; después
@@ -286,17 +355,13 @@ def view_country(query: Query, cut: pd.DataFrame):
     asi_nat = national("serie_nacional_asi")
     rain = national("serie_nacional_lluvia")
 
-    if not asi_nat.empty:
-        fig = viz.climatology_matrix(
-            asi_nat, "Climatología del estrés agrícola",
-            "ASI nacional oficial de FAO por dekad de la temporada primera · "
-            "cada franja roja horizontal es una sequía agrícola")
-        figure(fig, asi_nat[asi_nat["dekad_of_year"].between(13, 30)]
-               [["Year", "dekad_id", "dekad_of_year", "value"]],
-               "climatologia_asi_nacional", "dl_clima")
+    _climatology_section(query, asi_nat, "climatologia_asi_nacional")
 
-    asi_id = query.series_id if query.family == "ASI" else cfg.ASI_COMBINED
-    asi = to_country(load(asi_id, query.start, query.end))
+    # El panel de ASI del tablero usa el indicador combinado (el más alto de
+    # las dos temporadas), igual que antes de separar esta vista en resumen e
+    # indicador único: no cambia qué serie alimenta el tablero, solo cuándo se
+    # muestra.
+    asi = to_country(load(cfg.ASI_COMBINED, query.start, query.end))
     vci = (to_country(load("vci", query.start, query.end))
            if "vci" in panel.stored_series() else pd.DataFrame())
     ventana = pd.DataFrame()
@@ -314,6 +379,29 @@ def view_country(query: Query, cut: pd.DataFrame):
             "Ponderada por área de cultivo · el promedio de largo plazo es el "
             "que publica FAO y no se recalcula")
         figure(fig, ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
+
+
+def _view_country_indicator(query: Query):
+    """Solo las figuras del indicador elegido, nada del resumen general.
+
+    ASI primera tiene climatología oficial propia (el CSV que publica FAO es
+    justamente el de la temporada primera). ASI postrera no tiene un CSV
+    oficial separado en GIEWS, así que se queda con la serie de tiempo del
+    panel propio. VCI tampoco tiene climatología matricial aquí; su serie de
+    tiempo ya trae la línea de umbral FAO 0,35.
+    """
+    serie = to_country(load(query.series_id, query.start, query.end))
+    fig = viz.series_fig(
+        serie, "mean", f"{query.label} · nacional", query.window_label,
+        label=query.unit_short, family=query.family,
+        threshold=0.35 if query.family == "VCI" else None,
+        threshold_label="umbral FAO 0,35" if query.family == "VCI" else "")
+    figure(fig, serie, f"serie_nacional_{query.slug()}", "dl_serie_pais")
+
+    if query.series_id == "asi_gs1":
+        asi_nat = national("serie_nacional_asi")
+        _climatology_section(query, asi_nat,
+                             f"climatologia_asi_nacional_{query.slug()}")
 
 
 def _merge_dashboard(asi, vci, rain) -> pd.DataFrame:
@@ -427,6 +515,7 @@ def main():
         return
 
     summary(query, muni, cut)
+    indicator_definition(query)
     names = TABS[query.level]
     for tab, name in zip(st.tabs(names), names):
         with tab:

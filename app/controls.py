@@ -28,6 +28,15 @@ LEVELS = {"pais": "País", "departamento": "Departamento",
           "municipio": "Municipio"}
 
 DEFAULT_RANGE = 54      # 18 meses: la ventana con la que se trabaja a diario
+# El modo de ventana que conviene por omisión no es el mismo en todos los
+# niveles: a nivel país un solo dekad no dice mucho sin su serie de tiempo
+# (por eso "Rango" es la que se muestra al abrir); a nivel departamento y
+# municipio la vista de uso diario es la foto de un dekad, así que "Un dekad"
+# es el que se ve primero. Esto es solo el valor inicial: cada nivel guarda su
+# propia elección aparte, así que cambiarlo en un nivel no toca los otros.
+DEFAULT_MODE = {"pais": "Rango", "departamento": "Un dekad",
+                "municipio": "Un dekad"}
+WINDOW_MODES = ["Un dekad", "Rango"]
 # Un mapa animado con un cuadro por dekad deja de ser legible mucho antes de
 # volverse pesado. Pasado este limite el mapa muestra el extremo de la ventana
 # en vez de la secuencia.
@@ -174,6 +183,21 @@ def _clamp(code: str, available: list[str]) -> str:
     return earlier[-1] if earlier else available[0]
 
 
+def indicator_options(level: str, options: dict[str, str]) -> dict[str, str]:
+    """Opciones de indicador mostradas según el nivel.
+
+    El indicador combinado (`ASI_COMBINED`) no aparece como una opción más en
+    ningún nivel: en departamento y municipio no se ofrece, porque esos
+    niveles siempre trabajan con un indicador específico; a nivel país es el
+    resumen general por omisión, con su propia etiqueta y sin la explicación
+    de "el más alto de las dos temporadas" que tenía antes.
+    """
+    reales = {k: v for k, v in options.items() if k != cfg.ASI_COMBINED}
+    if level != "pais" or cfg.ASI_COMBINED not in options:
+        return reales
+    return {cfg.ASI_COMBINED: texts.OVERVIEW_LABEL, **reales}
+
+
 # --- Panel de control --------------------------------------------------------
 def sidebar(options: dict[str, str]) -> Query:
     st.sidebar.header("Consulta")
@@ -182,9 +206,15 @@ def sidebar(options: dict[str, str]) -> Query:
         "Nivel", list(LEVELS), format_func=lambda k: LEVELS[k], key="nivel",
         help=texts.LEVEL_HELP)
 
+    opts = indicator_options(level, options)
+    # Cambiar de nivel puede dejar en session_state un indicador que ya no es
+    # una opción válida (el resumen general solo existe a nivel país): se
+    # corrige antes de crear el selectbox, porque Streamlit no acepta un valor
+    # guardado que no está entre las opciones nuevas.
+    if st.session_state.get("serie") not in opts:
+        st.session_state["serie"] = next(iter(opts))
     series_id = st.sidebar.selectbox(
-        "Indicador", list(options), format_func=lambda k: options[k],
-        key="serie",
+        "Indicador", list(opts), format_func=lambda k: opts[k], key="serie",
         help=texts.SERIES_HELP.get(st.session_state.get("serie", "")))
 
     available = dekads(series_id)
@@ -193,9 +223,13 @@ def sidebar(options: dict[str, str]) -> Query:
         st.stop()
 
     st.sidebar.divider()
+    # Una llave de estado por nivel: así "Rango" a nivel país e "Un dekad" a
+    # nivel municipio no se pisan entre sí, y cada uno recuerda lo último que
+    # se eligió ahí la próxima vez que se vuelve a ese nivel.
+    modo_key = f"modo_{level}"
     mode = st.sidebar.radio(
-        "Ventana", ["Un dekad", "Rango"], key="modo", horizontal=True,
-        help=texts.WINDOW_HELP)
+        "Ventana", WINDOW_MODES, key=modo_key, horizontal=True,
+        index=WINDOW_MODES.index(DEFAULT_MODE[level]), help=texts.WINDOW_HELP)
 
     if mode == "Un dekad":
         default = _clamp(st.session_state.get("dekad", available[-1]), available)

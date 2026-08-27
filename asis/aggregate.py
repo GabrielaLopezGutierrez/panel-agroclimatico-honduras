@@ -22,7 +22,8 @@ NON_AGGREGABLE = ["p10", "median", "p90"]
 
 
 def classify(values, family="ASI"):
-    """Clase de severidad según los cortes oficiales de FAO."""
+    """Clase de severidad: cortes de alerta propios para el ASI (ver
+    config.ASI_ALERT_THRESHOLDS), cortes oficiales de FAO para el VCI."""
     cuts, labels, _ = cfg.CLASSES[family]
     return pd.cut(values, cuts, labels=labels, right=False)
 

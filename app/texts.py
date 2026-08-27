@@ -22,6 +22,34 @@ SOURCE_MD = f"[{cfg.SOURCE_NAME}]({cfg.SOURCE_URL})"
 PORTAL_MD = (f"Portal oficial de FAO GIEWS para Honduras: "
              f"[indicadores por país]({cfg.SOURCE_URL}).")
 
+# --- Definiciones de indicador, junto a las cifras de encabezado -------------
+# Se muestran cerca de las métricas principales, no en la pestaña "Cómo leer":
+# es lo primero que alguien necesita para interpretar el número que acaba de
+# ver. No se duplican en "Cómo leer".
+INDICATOR_DEFINITIONS = {
+    "ASI": ("ASI", "Porcentaje del área de cultivo que estuvo bajo condiciones "
+                   "de estrés hídrico durante la temporada."),
+    "VCI": ("VCI", "Indica qué tan saludable está la vegetación actualmente en "
+                   "comparación con su rango histórico para la misma época del "
+                   "año. Valores altos indican condiciones relativamente "
+                   "favorables; valores bajos indican mayor estrés de la "
+                   "vegetación."),
+}
+
+# Etiqueta del indicador combinado cuando se ofrece a nivel país como la vista
+# general por omisión. No se muestra como "ASI - el más alto de las dos
+# temporadas": ese nombre y su explicación se retiraron del selector.
+OVERVIEW_LABEL = "Resumen nacional (todos los indicadores)"
+OVERVIEW_HELP = ("Vista general con el ASI, el VCI y la lluvia sobre el mismo "
+                 "eje de tiempo. Para ver un solo indicador, selecciónelo "
+                 "arriba.")
+
+# Aclaración sobre las alertas de ASI, para no insinuar que son una
+# declaratoria oficial de sequía.
+ALERT_DISCLAIMER = ("Las alertas reflejan condiciones de estrés/sequía "
+                    "agrícola identificadas por FAO GIEWS/ASIS y no "
+                    "necesariamente una declaratoria oficial de sequía.")
+
 # --- Avisos que dependen de la selección -------------------------------------
 # Dos redacciones porque el indicador combinado se evalúa contra las dos
 # temporadas y una sola plantilla daba "fuera de la temporada primera ni la
@@ -48,26 +76,17 @@ NO_DATA = ("Sin dato para esta selección. No es un cero: el panel no inventa "
            "filas. Pruebe otra ventana u otro indicador.")
 
 # --- Pestaña "Cómo leer" -----------------------------------------------------
+# ASI y VCI ya no tienen ficha aquí: su definición se muestra junto a las
+# cifras de encabezado (ver INDICATOR_DEFINITIONS), para no repetirla dos
+# veces. La ficha del indicador combinado tampoco: ese indicador se retiró del
+# selector visible.
 READING = [
     ("Sin dato no es cero",
      "Una unidad en blanco no tiene dato en ese dekad: puede estar fuera de la "
      "ventana de cultivo o no tener área agrícola. Tratarlo como cero fabrica "
      "una calma que el índice no afirma."),
-    ("ASI · índice de estrés agrícola",
-     "Porcentaje del área de cultivo que estuvo bajo estrés hídrico durante la "
-     "temporada, de 0 a 100. Es acumulativo dentro de la temporada y se "
-     "reinicia con la siguiente. Mide déficit: por construcción no puede "
-     "detectar un exceso de agua."),
-    ("VCI · condición de la vegetación",
-     "Posición del vigor de la vegetación frente a su propio historial "
-     "reciente, de 0 a 1. Cubre todo el territorio y todo el año, también "
-     "fuera del área de cultivo. El umbral de alerta de FAO es 0,35."),
-    ("El más alto de las dos temporadas",
-     "Para cada municipio y cada dekad toma el mayor de los dos valores del "
-     "ASI, el de la primera y el de la postrera. No promedia ni mezcla: es uno "
-     "de los dos valores reales. Las temporadas se solapan en septiembre y "
-     "octubre, y fuera de su ventana el índice queda congelado; tomar el más "
-     "alto evita reportar calma cuando una de las dos sí tiene estrés."),
+    ("Alertas de ASI, no declaratoria de sequía",
+     ALERT_DISCLAIMER),
     ("Temporadas agrícolas",
      "La primera se siembra entre mayo y junio y se cosecha entre agosto y "
      "septiembre. La postrera se siembra en septiembre y se cosecha entre "
@@ -138,8 +157,7 @@ LEVEL_HELP = ("Cambia el mapa y las vistas. Departamento y país se derivan del 
               "panel municipal ponderando por píxeles válidos.")
 WINDOW_HELP = "Solo se ofrecen dekads que FAO publicó."
 SERIES_HELP = {
-    "asi_peor_caso": "El mayor de los dos valores del ASI, primera y postrera, "
-                     "para cada municipio y dekad. Ver «Cómo leer».",
+    cfg.ASI_COMBINED: OVERVIEW_HELP,
     "asi_gs1": "Solo la temporada primera: mayo a octubre.",
     "asi_gs2": "Solo la temporada postrera: septiembre a enero.",
     "vci": "Condición de la vegetación, 0 a 1. Todo el año. Umbral FAO 0,35.",

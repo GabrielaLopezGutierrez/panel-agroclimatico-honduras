@@ -89,13 +89,17 @@ def test_peor_caso_conserva_la_temporada_de_origen():
     assert out.loc["2", "season"] == "GS1"
 
 
-def test_clases_usan_los_cortes_oficiales():
-    s = pd.Series([0.0, 9.9, 10.0, 84.9, 85.0, 100.0])
+def test_clases_asi_usan_los_umbrales_de_alerta():
+    """El ASI clasifica con los umbrales de alerta de la app (10/25/40), no con
+    las siete clases oficiales de FAO que se usaban antes: esas siguen vigentes
+    solo para el VCI."""
+    s = pd.Series([0.0, 9.9, 10.0, 24.9, 25.0, 39.9, 40.0, 100.0])
     out = classify(s, "ASI").astype(str).tolist()
-    assert out == ["<10", "<10", "10-25", "70-85", ">=85", ">=85"]
+    assert out == ["<10", "<10", "10-25", "10-25", "25-40", "25-40",
+                   ">=40", ">=40"]
 
 
 def test_area_por_severidad_suma_el_area_no_los_municipios():
     g = severity_area(panel(), "ASI")
     assert g.loc["2019-09-D1", "10-25"] == pytest.approx(900.0)
-    assert g.loc["2019-09-D1", ">=85"] == pytest.approx(10.0)
+    assert g.loc["2019-09-D1", ">=40"] == pytest.approx(10.0)
