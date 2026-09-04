@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-08-26T16:26:34+00:00",
+  "actualizado": "2026-09-04T15:45:30+00:00",
   "start_year": 2005,
   "pais": "Honduras",
   "municipios": 290,
@@ -12,8 +12,8 @@
       "estacional": false,
       "unidad": "índice 0-1",
       "primero": "2005-01-D1",
-      "ultimo": "2026-08-D2",
-      "n_dekads": 779,
+      "ultimo": "2026-08-D3",
+      "n_dekads": 780,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -793,7 +793,8 @@
         "2026-07-D2",
         "2026-07-D3",
         "2026-08-D1",
-        "2026-08-D2"
+        "2026-08-D2",
+        "2026-08-D3"
       ]
     },
     "asi_gs1": {
@@ -803,8 +804,8 @@
       "estacional": true,
       "unidad": "% del área de cultivo bajo estrés hídrico",
       "primero": "2005-01-D1",
-      "ultimo": "2026-08-D2",
-      "n_dekads": 779,
+      "ultimo": "2026-08-D3",
+      "n_dekads": 780,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -1584,7 +1585,8 @@
         "2026-07-D2",
         "2026-07-D3",
         "2026-08-D1",
-        "2026-08-D2"
+        "2026-08-D2",
+        "2026-08-D3"
       ]
     },
     "asi_gs2": {
@@ -1594,8 +1596,8 @@
       "estacional": true,
       "unidad": "% del área de cultivo bajo estrés hídrico",
       "primero": "2005-01-D1",
-      "ultimo": "2026-08-D2",
-      "n_dekads": 779,
+      "ultimo": "2026-08-D3",
+      "n_dekads": 780,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -2375,7 +2377,8 @@
         "2026-07-D2",
         "2026-07-D3",
         "2026-08-D1",
-        "2026-08-D2"
+        "2026-08-D2",
+        "2026-08-D3"
       ]
     }
   },
@@ -2383,24 +2386,24 @@
     "asi_dekad_s1": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-08-26"
+      "descargado": "2026-09-04"
     },
     "rain_dekad": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-08-26"
+      "descargado": "2026-09-04"
     },
     "vci_dekad": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-08-26"
+      "descargado": "2026-09-04"
     }
   },
   "validacion": {
-    "pares": 12280,
-    "r": 0.9594,
-    "r2": 0.9205,
-    "mae_pp": 0.551,
-    "sesgo_pp": -0.012
+    "pares": 12297,
+    "r": 0.9603,
+    "r2": 0.9221,
+    "mae_pp": 0.554,
+    "sesgo_pp": -0.014
   }
 }
