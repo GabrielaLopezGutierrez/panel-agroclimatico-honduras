@@ -49,16 +49,20 @@ OVERVIEW_HELP = ("Las dos temporadas del ASI por separado, cada una con su "
 # pregunta responde cada una y no repiten el nombre del indicador, que ya está
 # en el encabezado de la sección. Sin eso, dos figuras tituladas casi igual se
 # leen como dos indicadores distintos, que es lo que pasaba antes.
-SEASON_MATRIX_TITLE = "Año contra año"
+SEASON_MATRIX_TITLE = "Matriz temporada × dekad · codificada en color"
 SEASON_MATRIX_SUBTITLE = (
-    "Cada fila es una temporada y cada columna el mismo dekad del calendario: "
-    "dice si la temporada va peor o mejor que las anteriores en esa fecha")
-SEASON_LINE_TITLE = "A lo largo del tiempo"
+    "Una fila por temporada y una columna por dekad de la ventana de cultivo; "
+    "la intensidad del color es el valor del índice")
+SEASON_LINE_TITLE = "Matriz temporada × dekad · codificada en posición"
 SEASON_LINE_SUBTITLE = (
-    "La misma serie en orden cronológico, una línea por temporada: dice cómo "
-    "evolucionó dentro de cada una")
+    "Una línea por temporada sobre el mismo eje de dekads; la altura del punto "
+    "es el valor del índice, y la temporada más reciente va destacada")
+OVERVIEW_KPI_NOTE = (
+    "Promedios nacionales ponderados por píxeles válidos. Cada cifra es el "
+    "último dekad con dato dentro de la temporada del indicador, que es el "
+    "mismo con el que cierran sus figuras.")
 SEASON_PAIR_NOTE = (
-    "Las dos figuras muestran el mismo dato: {indicador}, promedio nacional "
+    "Las dos figuras son la misma matriz: {indicador}, promedio nacional "
     "ponderado por píxeles válidos, {ventana}. Solo se grafican los dekads "
     "dentro de la ventana de cultivo ({temporada}); fuera de ella el índice "
     "queda congelado en el valor con que cerró la temporada y no describe esa "

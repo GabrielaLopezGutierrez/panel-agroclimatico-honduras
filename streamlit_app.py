@@ -142,18 +142,28 @@ def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
     promedio de las medias municipales: sin ponderar, un municipio diminuto
     pesaría igual que uno con diez veces más área de cultivo, y son más de tres
     puntos de diferencia.
+
+    A nivel país con un indicador estacional, la cifra es la del último dekad
+    **dentro de la temporada**, que es el que cierran sus figuras. En los otros
+    niveles se conserva el último dekad de la ventana, porque ahí las figuras sí
+    muestran los valores congelados de fuera de temporada.
     """
     with_data = cut.dropna(subset=["mean"])
     if with_data.empty:
         return
+    estacional = (query.level == "pais"
+                  and cfg.SERIES.get(query.series_id)
+                  and cfg.SERIES[query.series_id].season)
+    ultimo = season_kpi(query, query.series_id) if estacional else None
+    referencia = ultimo[0] if ultimo else query.end
     nacional = to_country(muni)
-    nacional = nacional[nacional["dekad_id"] == query.end]
-    at_last = with_data[with_data["dekad_id"] == query.end]
+    nacional = nacional[nacional["dekad_id"] == referencia]
+    at_last = with_data[with_data["dekad_id"] == referencia]
     c1, c2, c3 = st.columns(3)
     if len(nacional):
         etiqueta = ("Promedio del área filtrada" if query.departments
                     else "Promedio nacional")
-        c1.metric(f"{etiqueta} · {dekad_label(query.end)}",
+        c1.metric(f"{etiqueta} · {dekad_label(referencia)}",
                   f"{nacional['mean'].iloc[0]:.2f}",
                   help=f"{query.unit}. Ponderado por píxeles válidos.")
     if query.level == "pais":
@@ -161,7 +171,15 @@ def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
         c2.metric("Municipios que aportan", f"{aportan:,}")
     else:
         c2.metric(f"{PLURAL[query.level]} con dato", f"{len(at_last):,}")
-    c3.metric("Dekads en la ventana", f"{with_data['dekad_id'].nunique():,}")
+    if estacional:
+        # Los que se grafican, no los de la ventana: fuera de la temporada no
+        # se dibuja nada, y contarlos aquí prometería puntos que no están.
+        graficados = _season_frame(query, query.series_id)
+        c3.metric("Dekads en la temporada",
+                  f"{graficados['dekad_id'].nunique():,}")
+    else:
+        c3.metric("Dekads en la ventana",
+                  f"{with_data['dekad_id'].nunique():,}")
 
 
 def indicator_definition(query: Query):
@@ -413,11 +431,42 @@ def _season_frame(query: Query, series_id: str) -> pd.DataFrame:
 
 
 def _matrix_fig(frame: pd.DataFrame, series_id: str, height: int):
-    """Mapa de calor anio x dekad de la temporada."""
+    """La matriz temporada x dekad codificada en color."""
     season = cfg.SERIES[series_id].season
     return viz.climatology_matrix(
         frame, texts.SEASON_MATRIX_TITLE, texts.SEASON_MATRIX_SUBTITLE,
         value_col="mean", columns=season_columns(season), height=height)
+
+
+def _lines_fig(frame: pd.DataFrame, series_id: str, height: int):
+    """La misma matriz codificada en posicion: una linea por temporada.
+
+    Antes era una serie cronologica con la linea cortada en los meses fuera de
+    la ventana de cultivo. Superponer las temporadas sobre el eje de dekads
+    quita el corte y, de paso, deja las dos figuras con el mismo eje horizontal:
+    la fila de un anio en el mapa de calor es una linea aqui.
+    """
+    season = cfg.SERIES[series_id].season
+    return viz.season_lines_fig(
+        frame, season_columns(season), texts.SEASON_LINE_TITLE,
+        texts.SEASON_LINE_SUBTITLE, label=panel.unit_short_of(series_id),
+        family=panel.family_of(series_id), height=height)
+
+
+def season_kpi(query: Query, series_id: str) -> tuple[str, float] | None:
+    """El ultimo dato de la temporada que las figuras realmente grafican.
+
+    El KPI mostraba el ultimo dekad de la ventana sin mirar si caia dentro de
+    la temporada. En 2026-08-D3 eso daba 13,22 para la postrera, un valor
+    congelado del cierre de la temporada anterior, mientras sus figuras
+    terminaban en 8,97 el 2026-01-D3: la cifra de titular y los graficos
+    hablaban de fechas distintas.
+    """
+    frame = _season_frame(query, series_id)
+    if frame.empty:
+        return None
+    ultimo = frame.sort_values("dekad_id").iloc[-1]
+    return str(ultimo["dekad_id"]), float(ultimo["mean"])
 
 
 # --- Vista: panorama nacional ------------------------------------------------
@@ -483,7 +532,7 @@ def _country_indicator_block(query: Query, series_id: str):
         else:
             st.plotly_chart(matriz, width="stretch")
     with derecha:
-        linea = _country_series_fig(query, series_id, frame, alto)
+        linea = _lines_fig(frame, series_id, alto)
         if linea is None:
             st.info(texts.NO_DATA)
         else:
@@ -567,21 +616,22 @@ def overview_table(query: Query) -> pd.DataFrame:
 def summary_overview(query: Query):
     """Una cifra por indicador, nunca una sola cifra para las dos temporadas.
 
-    El promedio sale del agregado ponderado por píxeles válidos, igual que en
-    el resto de la app.
+    Cada una cita su propio dekad, y es el último que su sección grafica. En un
+    indicador estacional el último dekad de la ventana puede caer fuera de la
+    temporada, y ahí el índice está congelado en el cierre de la anterior: la
+    cifra de titular y las figuras hablaban de fechas distintas.
     """
     disponibles = [s for s in OVERVIEW_SERIES if s in panel.stored_series()]
     if not disponibles:
         return
     for col, series_id in zip(st.columns(len(disponibles)), disponibles):
-        df = load(series_id, query.end, query.end)
-        nacional = to_country(df) if len(df) else pd.DataFrame()
-        valor = (f"{nacional['mean'].iloc[0]:.2f}" if len(nacional)
-                 else "sin dato")
-        col.metric(panel.label_of(series_id), valor,
+        ultimo = season_kpi(query, series_id)
+        col.metric(panel.label_of(series_id),
+                   "sin dato" if ultimo is None else f"{ultimo[1]:.2f}",
                    help=f"{panel.unit_of(series_id)}. Ponderado por píxeles "
                         f"válidos.")
-    st.caption(f"Promedios nacionales · {dekad_label(query.end)}")
+        col.caption("" if ultimo is None else dekad_label(ultimo[0]))
+    st.caption(texts.OVERVIEW_KPI_NOTE)
 
 
 # --- Vista: datos ------------------------------------------------------------

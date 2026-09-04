@@ -344,6 +344,59 @@ def climatology_fig(national, pctl, n_baseline, years, title, subtitle="",
     return style_fig(fig, title, subtitle, y_source=-0.20, legend="top")
 
 
+def dekad_labels(codes) -> list[str]:
+    """Etiquetas de dekad del año: 13 -> "may D1". Las comparte el mapa de calor
+    con las líneas por temporada, para que el mismo dekad se lea igual en las
+    dos figuras."""
+    return [f"{MONTH_ES[(k - 1) // 3 + 1]} D{(k - 1) % 3 + 1}" for k in codes]
+
+
+def season_lines_fig(frame, columns, title, subtitle="", label="",
+                     value_col="mean", season_col="Year",
+                     dekad_col="dekad_of_year", family="ASI", height=420):
+    """Una línea por temporada sobre el eje de dekads de la temporada.
+
+    Es la misma matriz que dibuja `climatology_matrix()`, codificada en posición
+    en vez de color. Al compartir el eje horizontal, las dos figuras se leen en
+    paralelo: la fila de un año en el mapa de calor es una línea aquí.
+
+    Superponer las temporadas, en lugar de encadenarlas en un eje de fechas
+    continuo, evita el corte que aparecía entre el cierre de una y la apertura
+    de la siguiente: entre ellas no hay dato, y una línea continua afirmaba una
+    evolución que nadie midió.
+
+    La temporada más reciente va en el color del indicador y el resto en gris:
+    con veinte años en pantalla, todas del mismo color no se distinguen, y la
+    pregunta casi siempre es cómo va esta contra las anteriores.
+    """
+    d = frame.dropna(subset=[value_col])
+    if d.empty:
+        return None
+    orden = [c for c in columns if c in set(d[dekad_col])]
+    if not orden:
+        return None
+    etiquetas = dekad_labels(orden)
+    temporadas = sorted(d[season_col].unique())
+    reciente = temporadas[-1]
+    color = "#b0413e" if family == "ASI" else "#2f8f4e"
+    fig = go.Figure()
+    for anio in temporadas:
+        serie = (d[d[season_col] == anio].set_index(dekad_col)[value_col]
+                 .reindex(orden))
+        ultima = anio == reciente
+        fig.add_scatter(
+            x=etiquetas, y=serie.values, mode="lines+markers",
+            name=str(int(anio)), connectgaps=False,
+            line=dict(color=color if ultima else "#b9c0c7",
+                      width=2.8 if ultima else 1.4),
+            marker=dict(size=6 if ultima else 4),
+            hovertemplate="%{x}<br>" + (label or value_col)
+                          + ": %{y:.2f}<extra>%{fullData.name}</extra>")
+    fig.update_layout(height=height, yaxis_title=label or value_col,
+                      xaxis=dict(tickangle=-45))
+    return style_fig(fig, title, subtitle, y_source=-0.13, legend="v")
+
+
 def climatology_matrix(national, title, subtitle="", value_col="value",
                        dekad_from=13, dekad_to=30, height=600, columns=None):
     """Año x dekad: cada franja roja horizontal es una alerta roja de ASI
@@ -361,8 +414,7 @@ def climatology_matrix(national, title, subtitle="", value_col="value",
     matrix = d.pivot_table(index="Year", columns="dekad_of_year",
                            values=value_col)
     matrix = matrix.reindex(columns=[c for c in orden if c in matrix.columns])
-    labels = [f"{MONTH_ES[(k - 1) // 3 + 1]} D{(k - 1) % 3 + 1}"
-              for k in matrix.columns]
+    labels = dekad_labels(matrix.columns)
     top = float(np.nanpercentile(matrix.values, 99.5))
     fig = go.Figure(go.Heatmap(
         z=matrix.values, x=labels, y=matrix.index.astype(int),

@@ -296,7 +296,7 @@ def _frame_y_figuras(series_id, last):
     alto = min(600, max(app.SIDE_BY_SIDE_HEIGHT,
                         130 + 26 * frame["Year"].nunique()))
     return (query, frame, app._matrix_fig(frame, series_id, alto),
-            app._country_series_fig(query, series_id, frame, alto))
+            app._lines_fig(frame, series_id, alto))
 
 
 def test_las_dos_figuras_de_la_temporada_grafican_el_mismo_dato(last):
@@ -310,9 +310,30 @@ def test_las_dos_figuras_de_la_temporada_grafican_el_mismo_dato(last):
         _query, frame, matriz, linea = _frame_y_figuras(series_id, last)
         assert not frame.empty
         celdas = int(np.isfinite(matriz.data[0].z).sum())
-        puntos = sum(len(t.x) for t in linea.data)
+        puntos = sum(int(np.isfinite(np.array(t.y, dtype=float)).sum())
+                     for t in linea.data)
         assert celdas == len(frame), series_id
         assert puntos == len(frame), series_id
+
+
+def test_las_dos_figuras_comparten_el_eje_de_dekads(last):
+    """Son la misma matriz en dos codificaciones, color y posicion: si el eje
+    horizontal no coincide, no se pueden leer en paralelo."""
+    for series_id in ("asi_gs1", "asi_gs2"):
+        _query, _frame, matriz, linea = _frame_y_figuras(series_id, last)
+        assert list(matriz.data[0].x) == list(linea.data[0].x), series_id
+
+
+def test_el_kpi_es_el_ultimo_dekad_que_la_temporada_grafica(last):
+    """El KPI mostraba el ultimo dekad de la ventana sin mirar si caia dentro
+    de la temporada. En 2026-08-D3 eso daba un valor congelado del cierre de la
+    postrera anterior mientras sus figuras terminaban en enero."""
+    for series_id in ("asi_gs1", "asi_gs2"):
+        query, frame, _m, _l = _frame_y_figuras(series_id, last)
+        dekad, valor = app.season_kpi(query, series_id)
+        ultimo = frame.sort_values("dekad_id").iloc[-1]
+        assert dekad == ultimo["dekad_id"], series_id
+        assert valor == pytest.approx(ultimo["mean"]), series_id
 
 
 def test_la_temporada_no_grafica_dekads_congelados(last):
@@ -326,8 +347,9 @@ def test_la_temporada_no_grafica_dekads_congelados(last):
         assert set(frame["dekad_of_year"]) <= propios, series_id
 
 
-def test_la_linea_se_corta_entre_temporadas(last):
-    """Una linea continua uniria el cierre de una temporada con la apertura de
-    la siguiente, como si el indice hubiera evolucionado entremedio."""
+def test_hay_una_linea_entera_por_temporada(last):
+    """Antes las temporadas se encadenaban en un eje de fechas continuo y la
+    linea quedaba cortada en los meses fuera de la ventana de cultivo.
+    Superpuestas sobre el eje de dekads, cada temporada es una linea entera."""
     _query, frame, _m, linea = _frame_y_figuras("asi_gs1", last)
     assert len(linea.data) == frame["Year"].nunique() > 1
