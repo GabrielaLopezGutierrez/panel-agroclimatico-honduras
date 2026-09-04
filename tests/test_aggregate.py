@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 
 from asis import config as cfg
-from asis.aggregate import (classify, severity_area, to_country, to_department,
+from asis.aggregate import (classify, climatology_frame, season_columns,
+                            severity_area, to_country, to_department,
                             worst_case)
 
 
@@ -103,3 +104,38 @@ def test_area_por_severidad_suma_el_area_no_los_municipios():
     g = severity_area(panel(), "ASI")
     assert g.loc["2019-09-D1", "10-25"] == pytest.approx(900.0)
     assert g.loc["2019-09-D1", ">=40"] == pytest.approx(10.0)
+
+
+# --- Temporadas que cruzan el año --------------------------------------------
+def test_las_columnas_de_la_primera_van_en_orden():
+    assert season_columns("GS1") == list(range(13, 31))
+
+
+def test_las_columnas_de_la_postrera_cruzan_el_anio():
+    """La postrera va de septiembre a enero (SEASON_WINDOW = (25, 3)). Un rango
+    creciente daría vacío y el mapa de calor saldría en blanco."""
+    assert season_columns("GS2") == list(range(25, 37)) + [1, 2, 3]
+
+
+def test_sin_temporada_estan_todos_los_dekads():
+    assert season_columns(None) == list(range(1, 37))
+
+
+def test_enero_pertenece_a_la_postrera_que_arranco_el_anio_anterior():
+    """Si no, media temporada quedaría en una fila del mapa de calor y la otra
+    media en la siguiente, como si fueran dos temporadas distintas."""
+    pais = pd.DataFrame({"dekad_id": ["2025-09-D1", "2025-12-D3", "2026-01-D2"],
+                         "mean": [10.0, 20.0, 30.0]})
+    out = climatology_frame(pais, "GS2").set_index("dekad_id")
+    assert out.loc["2025-09-D1", "Year"] == 2025
+    assert out.loc["2025-12-D3", "Year"] == 2025
+    assert out.loc["2026-01-D2", "Year"] == 2025      # misma temporada
+
+
+def test_en_la_primera_el_anio_es_el_del_calendario():
+    pais = pd.DataFrame({"dekad_id": ["2026-05-D1", "2026-08-D3"],
+                         "mean": [5.0, 25.0]})
+    out = climatology_frame(pais, "GS1").set_index("dekad_id")
+    assert out.loc["2026-05-D1", "Year"] == 2026
+    assert out.loc["2026-08-D3", "Year"] == 2026
+    assert out.loc["2026-08-D3", "dekad_of_year"] == 24

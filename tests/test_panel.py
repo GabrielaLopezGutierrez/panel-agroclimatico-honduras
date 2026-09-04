@@ -61,12 +61,14 @@ def test_corte_por_ventana_respeta_los_limites():
     assert out["dekad_id"].max() <= end
 
 
-def test_serie_derivada_no_se_guarda_en_disco():
-    """El peor caso se deriva al vuelo. Si apareciera en disco habría dos
-    verdades para la misma cifra."""
+def test_no_se_ofrece_ninguna_serie_derivada():
+    """El panel solo ofrece series reales. Hubo un indicador que combinaba las
+    dos temporadas del ASI tomando la mayor por municipio; se retiró porque
+    cada temporada se mide sobre su propia máscara de cultivo, y al agregar a
+    país ponderando por píxeles válidos el combinado quedaba por debajo de la
+    primera sola."""
     assert not (cfg.PANEL_DIR / cfg.ASI_COMBINED).exists()
-    if {"asi_gs1", "asi_gs2"} <= set(panel.stored_series()):
-        assert cfg.ASI_COMBINED in panel.available_series()
+    assert set(panel.available_series()) == set(panel.stored_series())
 
 
 def test_particion_por_anio_coincide_con_el_contenido():

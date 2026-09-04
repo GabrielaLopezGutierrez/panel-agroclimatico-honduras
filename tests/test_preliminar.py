@@ -59,8 +59,8 @@ def test_sin_consultar_el_catalogo_se_conserva_la_lista_anterior(
     assert panel.is_preliminary("vci", "2026-08-D3")
 
 
-def test_indicador_combinado_es_preliminar_si_alguna_temporada_lo_es(
-        tmp_path, monkeypatch):
+def test_cada_serie_responde_por_su_cuenta(tmp_path, monkeypatch):
+    """Ya no hay indicador combinado: cada temporada lleva su propia marca."""
     _rutas(tmp_path, monkeypatch)
     info = {
         "asi_gs1": _series_info(["2026-08-D2"], ["2026-08-D2"]),
@@ -68,5 +68,5 @@ def test_indicador_combinado_es_preliminar_si_alguna_temporada_lo_es(
     }
     build.write_manifest(info, {}, {}, n_muni=290)
 
-    assert panel.is_preliminary(cfg.ASI_COMBINED, "2026-08-D2")
-    assert not panel.is_preliminary(cfg.ASI_COMBINED, "2026-07-D3")
+    assert panel.is_preliminary("asi_gs1", "2026-08-D2")
+    assert not panel.is_preliminary("asi_gs2", "2026-07-D3")

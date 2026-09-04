@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from asis import config as cfg
-from asis.calendar import dekad_date, dekad_of_year
+from asis.calendar import dekad_date, dekad_of_year, dekad_year
 
 KEY_COLS = ["adm2_code", "adm2_name", "adm1_code", "adm1_name"]
 # Los percentiles municipales no se pueden promediar: el p90 de un departamento
@@ -159,6 +159,42 @@ def national_from_csv(csv: pd.DataFrame, weights: pd.Series,
     return (g.drop(columns=drop)
              .sort_values(["Year", "dekad_of_year"])
              .reset_index(drop=True))
+
+
+def season_columns(season: str | None) -> list[int]:
+    """Dekads del año que abarca una temporada, en orden de temporada.
+
+    La postrera cruza el año (`SEASON_WINDOW["GS2"] == (25, 3)`), así que sus
+    columnas van de septiembre a diciembre y siguen en enero. Un `range` simple
+    devolvería vacío.
+    """
+    if not season or season not in cfg.SEASON_WINDOW:
+        return list(range(1, 37))
+    lo, hi = cfg.SEASON_WINDOW[season]
+    if lo <= hi:
+        return list(range(lo, hi + 1))
+    return list(range(lo, 37)) + list(range(1, hi + 1))
+
+
+def climatology_frame(country: pd.DataFrame, season: str | None = None,
+                      value_col="mean") -> pd.DataFrame:
+    """Serie nacional del panel propio en la forma que espera el mapa de calor.
+
+    Agrega `Year` y `dekad_of_year`. En una temporada que cruza el año, los
+    dekads de enero pertenecen a la temporada que arrancó el año anterior, y
+    por eso se les resta uno: si no, media postrera aparecería en una fila y la
+    otra media en la siguiente, como si fueran dos temporadas distintas.
+    """
+    d = country.dropna(subset=[value_col]).copy()
+    if d.empty:
+        return d
+    d["dekad_of_year"] = d["dekad_id"].map(dekad_of_year)
+    d["Year"] = d["dekad_id"].map(dekad_year)
+    if season and season in cfg.SEASON_WINDOW:
+        lo, hi = cfg.SEASON_WINDOW[season]
+        if lo > hi:
+            d.loc[d["dekad_of_year"] <= hi, "Year"] -= 1
+    return d.sort_values(["Year", "dekad_of_year"]).reset_index(drop=True)
 
 
 def climatology(national: pd.DataFrame, dekad_from=13, dekad_to=30,

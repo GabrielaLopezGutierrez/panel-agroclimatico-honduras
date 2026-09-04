@@ -16,7 +16,6 @@ from pathlib import Path
 import pandas as pd
 
 from asis import config as cfg
-from asis.aggregate import worst_case
 from asis.calendar import dekad_year
 
 MANIFEST = cfg.DATA / "manifest.json"
@@ -66,36 +65,27 @@ def stored_series() -> list[str]:
 
 
 def available_series() -> dict[str, str]:
-    """Series ofrecidas al usuario, incluida la combinación de temporadas del
-    ASI, que se deriva y no se guarda."""
-    out = {s: cfg.SERIES[s].label for s in stored_series()}
-    if {"asi_gs1", "asi_gs2"} <= set(out):
-        out = {cfg.ASI_COMBINED: cfg.ASI_COMBINED_LABEL, **out}
-    return out
+    """Series ofrecidas al usuario. Cada una es una serie real del panel: las
+    dos temporadas del ASI nunca se mezclan en un solo indicador, porque cada
+    una se mide sobre su propia máscara de cultivo y combinarlas obligaba a
+    elegir un ponderador entre denominadores distintos."""
+    return {s: cfg.SERIES[s].label for s in stored_series()}
 
 
 def family_of(series_id: str) -> str:
-    if series_id == cfg.ASI_COMBINED:
-        return "ASI"
     return cfg.SERIES[series_id].family
 
 
 def label_of(series_id: str) -> str:
-    if series_id == cfg.ASI_COMBINED:
-        return cfg.ASI_COMBINED_LABEL
     return cfg.SERIES[series_id].label
 
 
 def unit_of(series_id: str) -> str:
-    if series_id == cfg.ASI_COMBINED:
-        return cfg.SERIES["asi_gs1"].unit
     return cfg.SERIES[series_id].unit
 
 
 def unit_short_of(series_id: str) -> str:
     """Unidad abreviada, para barras de color y ejes donde la larga no cabe."""
-    if series_id == cfg.ASI_COMBINED:
-        return cfg.SERIES["asi_gs1"].unit_short
     return cfg.SERIES[series_id].unit_short
 
 
@@ -113,9 +103,6 @@ def _read_years(series_id: str, years) -> pd.DataFrame:
 def load(series_id: str, start: str | None = None,
          end: str | None = None) -> pd.DataFrame:
     """Corte del panel municipal de una serie entre dos dekads, inclusive."""
-    if series_id == cfg.ASI_COMBINED:
-        return worst_case(load("asi_gs1", start, end),
-                          load("asi_gs2", start, end))
     years = years_on_disk(series_id)
     if start:
         years = [y for y in years if y >= dekad_year(start)]
@@ -134,8 +121,6 @@ def load(series_id: str, start: str | None = None,
 def dekads(series_id: str) -> list[str]:
     """Dekads con dato en disco. Es lo que la app ofrece como ventana: nunca se
     ofrece un dekad que FAO no publicó."""
-    if series_id == cfg.ASI_COMBINED:
-        return sorted(set(dekads("asi_gs1")) | set(dekads("asi_gs2")))
     info = manifest().get("series", {}).get(series_id)
     if info and info.get("dekads"):
         return list(info["dekads"])
@@ -151,20 +136,9 @@ def last_dekad(series_id: str) -> str | None:
 def is_preliminary(series_id: str, dekad_id: str) -> bool:
     """Si `dekad_id` cae en la ventana que FAO todavía puede revisar, según lo
     que el catálogo decía la última vez que se construyó el panel.
-
-    Para el indicador combinado basta con que una de las dos temporadas lo
-    tenga como preliminar: el peor caso toma, por municipio, el mayor entre
-    primera y postrera, así que si una de las dos todavía puede cambiar, el
-    resultado también.
     """
     info = manifest().get("series", {})
-
-    def flagged(sid: str) -> bool:
-        return dekad_id in set(info.get(sid, {}).get("preliminares", []))
-
-    if series_id == cfg.ASI_COMBINED:
-        return any(flagged(s) for s in ("asi_gs1", "asi_gs2"))
-    return flagged(series_id)
+    return dekad_id in set(info.get(series_id, {}).get("preliminares", []))
 
 
 def municipios() -> pd.DataFrame:

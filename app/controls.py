@@ -27,6 +27,18 @@ from asis.calendar import (dekad_index, dekad_label, dekad_of_year,
 LEVELS = {"pais": "País", "departamento": "Departamento",
           "municipio": "Municipio"}
 
+# El resumen nacional es un modo de vista, no una serie: muestra las dos
+# temporadas del ASI una al lado de la otra, cada una con su propia cifra. No
+# existe como serie del panel a propósito. Antes había aquí un indicador
+# combinado que tomaba el mayor de las dos temporadas por municipio; se retiró
+# porque cada temporada se mide sobre su propia máscara de cultivo, y al
+# agregar a país ponderando por píxeles válidos el combinado terminaba por
+# debajo de la primera sola: los municipios donde mandaba la postrera perdían
+# el 95% de su peso justo por ser los peores. Ver DECISIONES.md.
+OVERVIEW = "resumen"
+# Las series que componen el resumen, en el orden en que se muestran.
+OVERVIEW_SERIES = ["asi_gs1", "asi_gs2", "vci"]
+
 DEFAULT_RANGE = 54      # 18 meses: la ventana con la que se trabaja a diario
 # El modo de ventana que conviene por omisión no es el mismo en todos los
 # niveles: a nivel país un solo dekad no dice mucho sin su serie de tiempo
@@ -56,20 +68,28 @@ class Query:
         return self.start == self.end
 
     @property
+    def overview(self) -> bool:
+        """El resumen nacional no es una serie: no tiene familia ni unidad
+        propias, y las vistas que lo reciben trabajan serie por serie."""
+        return self.series_id == OVERVIEW
+
+    @property
     def family(self) -> str:
-        return panel.family_of(self.series_id)
+        return "ASI" if self.overview else panel.family_of(self.series_id)
 
     @property
     def label(self) -> str:
-        return panel.label_of(self.series_id)
+        return (texts.OVERVIEW_LABEL if self.overview
+                else panel.label_of(self.series_id))
 
     @property
     def unit(self) -> str:
-        return panel.unit_of(self.series_id)
+        return panel.unit_of("asi_gs1" if self.overview else self.series_id)
 
     @property
     def unit_short(self) -> str:
-        return panel.unit_short_of(self.series_id)
+        return panel.unit_short_of(
+            "asi_gs1" if self.overview else self.series_id)
 
     @property
     def mapped(self) -> bool:
@@ -161,6 +181,10 @@ def geojson(level: str = "municipio") -> dict:
 
 
 def dekads(series_id: str) -> list[str]:
+    # El eje de tiempo del resumen es el de la primera: es la temporada de
+    # ventana más ancha, así que ninguna de las otras series se queda fuera.
+    if series_id == OVERVIEW:
+        series_id = "asi_gs1"
     return _dekads(data_version(), series_id)
 
 
@@ -181,6 +205,9 @@ def municipios() -> pd.DataFrame:
 
 
 def is_preliminary(series_id: str, dekad_id: str) -> bool:
+    if series_id == OVERVIEW:
+        return any(_is_preliminary(data_version(), s, dekad_id)
+                   for s in OVERVIEW_SERIES)
     return _is_preliminary(data_version(), series_id, dekad_id)
 
 
@@ -195,16 +222,13 @@ def _clamp(code: str, available: list[str]) -> str:
 def indicator_options(level: str, options: dict[str, str]) -> dict[str, str]:
     """Opciones de indicador mostradas según el nivel.
 
-    El indicador combinado (`ASI_COMBINED`) no aparece como una opción más en
-    ningún nivel: en departamento y municipio no se ofrece, porque esos
-    niveles siempre trabajan con un indicador específico; a nivel país es el
-    resumen general por omisión, con su propia etiqueta y sin la explicación
-    de "el más alto de las dos temporadas" que tenía antes.
+    Todas las opciones son series reales del panel. A nivel país se antepone
+    el resumen, que no es una serie sino la vista que muestra las dos
+    temporadas del ASI por separado, cada una con su cifra y su mapa de calor.
     """
-    reales = {k: v for k, v in options.items() if k != cfg.ASI_COMBINED}
-    if level != "pais" or cfg.ASI_COMBINED not in options:
-        return reales
-    return {cfg.ASI_COMBINED: texts.OVERVIEW_LABEL, **reales}
+    if level != "pais" or not {"asi_gs1", "asi_gs2"} <= set(options):
+        return dict(options)
+    return {OVERVIEW: texts.OVERVIEW_LABEL, **options}
 
 
 # --- Panel de control --------------------------------------------------------
@@ -276,7 +300,7 @@ def sidebar(options: dict[str, str]) -> Query:
 # --- Estado de la temporada --------------------------------------------------
 def seasons_of(series_id: str) -> list[str]:
     """Temporadas que gobiernan el aviso de fuera de temporada."""
-    if series_id == cfg.ASI_COMBINED:
+    if series_id == OVERVIEW:
         return [s.season for s in cfg.SERIES.values() if s.season]
     season = cfg.SERIES[series_id].season
     return [season] if season else []
@@ -289,14 +313,14 @@ def season_status(query: Query) -> dict:
     porque el ráster del ASI trae valores los 36 dekads del año: fuera de
     temporada el índice está congelado, que no es lo mismo que ausente.
 
-    El indicador combinado se evalúa contra las dos temporadas a la vez: está
+    El resumen nacional se evalúa contra las dos temporadas a la vez: está
     fuera de temporada solo cuando ninguna está activa, que en Honduras ocurre
     entre febrero y abril.
     """
     seasons = seasons_of(query.series_id)
     if not seasons:
         return {"seasonal": False, "outside": 0, "total": 0}
-    combinado = query.series_id == cfg.ASI_COMBINED
+    combinado = query.series_id == OVERVIEW
     if combinado:
         name = ""
         window = " · ".join(f"{cfg.SEASONS[s].split(' (')[0].lower()} "

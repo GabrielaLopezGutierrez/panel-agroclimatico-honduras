@@ -332,14 +332,22 @@ def climatology_fig(national, pctl, n_baseline, years, title, subtitle="",
 
 
 def climatology_matrix(national, title, subtitle="", value_col="value",
-                       dekad_from=13, dekad_to=30, height=600):
+                       dekad_from=13, dekad_to=30, height=600, columns=None):
     """Año x dekad: cada franja roja horizontal es una alerta roja de ASI
-    (estrés extremo), no una declaratoria oficial de sequía."""
-    d = national[national["dekad_of_year"].between(dekad_from, dekad_to)]
+    (estrés extremo), no una declaratoria oficial de sequía.
+
+    `columns` permite pasar el orden de dekads de una temporada que cruza el
+    año, como la postrera: ahí la ventana va de septiembre a enero y un rango
+    creciente dejaría la matriz vacía.
+    """
+    orden = (list(columns) if columns is not None
+             else list(range(dekad_from, dekad_to + 1)))
+    d = national[national["dekad_of_year"].isin(orden)]
     if d.empty:
         return None
     matrix = d.pivot_table(index="Year", columns="dekad_of_year",
                            values=value_col)
+    matrix = matrix.reindex(columns=[c for c in orden if c in matrix.columns])
     labels = [f"{MONTH_ES[(k - 1) // 3 + 1]} D{(k - 1) % 3 + 1}"
               for k in matrix.columns]
     top = float(np.nanpercentile(matrix.values, 99.5))

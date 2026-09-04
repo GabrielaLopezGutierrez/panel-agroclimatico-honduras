@@ -36,13 +36,13 @@ INDICATOR_DEFINITIONS = {
                    "vegetación."),
 }
 
-# Etiqueta del indicador combinado cuando se ofrece a nivel país como la vista
-# general por omisión. No se muestra como "ASI - el más alto de las dos
-# temporadas": ese nombre y su explicación se retiraron del selector.
+# El resumen nacional es un modo de vista, no un indicador: muestra las dos
+# temporadas del ASI una al lado de la otra, cada una con su cifra y su mapa de
+# calor, más el VCI y la lluvia. Nunca resume las dos temporadas en un número.
 OVERVIEW_LABEL = "Resumen nacional (todos los indicadores)"
-OVERVIEW_HELP = ("Vista general con el ASI, el VCI y la lluvia sobre el mismo "
-                 "eje de tiempo. Para ver un solo indicador, selecciónelo "
-                 "arriba.")
+OVERVIEW_HELP = ("Las dos temporadas del ASI por separado, cada una con su "
+                 "cifra y su mapa de calor, más el VCI y la lluvia. Para ver "
+                 "un solo indicador, selecciónelo arriba.")
 
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.
@@ -51,7 +51,7 @@ ALERT_DISCLAIMER = ("Las alertas reflejan condiciones de estrés/sequía "
                     "necesariamente una declaratoria oficial de sequía.")
 
 # --- Avisos que dependen de la selección -------------------------------------
-# Dos redacciones porque el indicador combinado se evalúa contra las dos
+# Dos redacciones porque el resumen nacional se evalúa contra las dos
 # temporadas y una sola plantilla daba "fuera de la temporada primera ni la
 # postrera", que no es gramatical.
 OUT_OF_SEASON = (
@@ -85,8 +85,8 @@ PRELIMINARY_NOTICE = (
 # --- Pestaña "Cómo leer" -----------------------------------------------------
 # ASI y VCI ya no tienen ficha aquí: su definición se muestra junto a las
 # cifras de encabezado (ver INDICATOR_DEFINITIONS), para no repetirla dos
-# veces. La ficha del indicador combinado tampoco: ese indicador se retiró del
-# selector visible.
+# veces. El indicador combinado ya no existe: las dos temporadas del ASI se
+# muestran siempre por separado.
 READING = [
     ("Sin dato no es cero",
      "Una unidad en blanco no tiene dato en ese dekad: puede estar fuera de la "
@@ -172,7 +172,7 @@ LEVEL_HELP = ("Cambia el mapa y las vistas. Departamento y país se derivan del 
               "panel municipal ponderando por píxeles válidos.")
 WINDOW_HELP = "Solo se ofrecen dekads que FAO publicó."
 SERIES_HELP = {
-    cfg.ASI_COMBINED: OVERVIEW_HELP,
+    "resumen": OVERVIEW_HELP,
     "asi_gs1": "Solo la temporada primera: mayo a octubre.",
     "asi_gs2": "Solo la temporada postrera: septiembre a enero.",
     "vci": "Condición de la vegetación, 0 a 1. Todo el año. Umbral FAO 0,35.",
@@ -196,8 +196,7 @@ COLUMNS = {
     "fecha": "Primer día del dekad: 1, 11 o 21.",
     "temporada":
         "GS1 es la primera y GS2 la postrera. Vacío en indicadores que no son "
-        "estacionales. En el indicador combinado dice de qué temporada salió el "
-        "valor más alto.",
+        "estacionales.",
     "píxeles válidos":
         "Píxeles del ráster de ~1 km dentro de la unidad cuyo valor cae en el "
         "rango del indicador. Es el peso con el que se agrega a departamento y "
@@ -235,10 +234,33 @@ COLUMN_PATTERNS = (
 )
 
 
+# En el resumen nacional cada indicador es una columna con su propia etiqueta,
+# porque las dos temporadas del ASI nunca se colapsan en un solo número. Las
+# definiciones se arman desde el registro de series para que una serie nueva no
+# aparezca en la tabla sin explicación.
+SERIES_COLUMNS = {
+    s.label: (f"{s.label}. Promedio nacional ponderado por píxeles válidos, "
+              f"en {s.unit.lower()}.")
+    for s in cfg.SERIES.values()
+}
+RAIN_COLUMNS = {
+    "lluvia (mm)": "Lluvia observada acumulada en el dekad, en milímetros, "
+                   "ponderada por área de cultivo.",
+    "lluvia LTA (mm)": "Promedio de largo plazo de la lluvia que publica FAO, "
+                       "en milímetros. No se recalcula.",
+    "anomalía de lluvia (%)": "Diferencia porcentual entre la lluvia observada "
+                              "y su promedio de largo plazo.",
+}
+
+
 def describe_column(name: str) -> str:
     """Definición de una columna, con los umbrales resueltos por patrón."""
     if name in COLUMNS:
         return COLUMNS[name]
+    if name in SERIES_COLUMNS:
+        return SERIES_COLUMNS[name]
+    if name in RAIN_COLUMNS:
+        return RAIN_COLUMNS[name]
     for prefijo, plantilla in COLUMN_PATTERNS:
         if name.startswith(prefijo):
             return plantilla.format(v=name[len(prefijo):])

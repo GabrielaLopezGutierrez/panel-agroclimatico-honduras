@@ -168,12 +168,17 @@ SERIES: dict[str, Series] = {
              "cultivo."),
 }
 
-# Serie derivada que combina las dos temporadas del ASI. No se guarda en disco:
-# se arma al vuelo tomando, para cada municipio y dekad, el mayor de los dos
-# valores. Criterio conservador para alerta temprana. Ver aggregate.worst_case().
+# Etiqueta de la serie derivada que combina las dos temporadas del ASI tomando,
+# por municipio y dekad, el mayor de los dos valores. Ver aggregate.worst_case().
 #
-# El id no cambia porque es el nombre de una carpeta y de una columna; la
-# etiqueta sí, porque "peor caso" no le dice a nadie qué está viendo.
+# El panel y la app ya no la ofrecen: a nivel municipal el criterio es
+# defendible para alerta temprana, pero al agregar a país ponderando por
+# píxeles válidos se rompe, porque `worst_case` conserva el `n_px` de la
+# temporada ganadora y la máscara de cultivo de la postrera es mucho más chica.
+# En 2026-08-D3 los 13 municipios donde mandaba la postrera pasaban de 7.214 a
+# 393 píxeles, y el "peor caso" nacional (25,23) quedaba por debajo de la
+# primera sola (25,71). Ver DECISIONES.md. Se conserva aquí porque los cuadernos
+# usan `worst_case`, que etiqueta sus filas con este id.
 ASI_COMBINED = "asi_peor_caso"
 ASI_COMBINED_LABEL = "ASI · el más alto de las dos temporadas"
 

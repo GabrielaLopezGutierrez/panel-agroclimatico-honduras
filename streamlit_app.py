@@ -23,12 +23,13 @@ import plotly.express as px
 import streamlit as st
 
 from app import texts
-from app.controls import (LEVELS, MAX_FRAMES, Query, dekads, geojson,
-                          is_preliminary, load, manifest, national,
+from app.controls import (LEVELS, MAX_FRAMES, OVERVIEW_SERIES, Query, dekads,
+                          geojson, is_preliminary, load, manifest, national,
                           season_status, sidebar, series_options)
 from asis import config as cfg, panel, viz
-from asis.aggregate import at_level, severity_area, to_country
-from asis.calendar import dekad_label, dekad_window, dekad_year
+from asis.aggregate import (at_level, climatology_frame, season_columns,
+                            severity_area, to_country)
+from asis.calendar import dekad_label, dekad_window
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 
@@ -126,8 +127,7 @@ def indicator_definition(query: Query):
     hace falta para interpretar el número que se acaba de ver arriba, y para
     no obligar a salir de la vista para entenderlo.
     """
-    familias = (("ASI", "VCI") if query.series_id == cfg.ASI_COMBINED
-               else (query.family,))
+    familias = ("ASI", "VCI") if query.overview else (query.family,)
     for familia in familias:
         _, definicion = texts.INDICATOR_DEFINITIONS[familia]
         st.caption(f"**{familia}** — {definicion}")
@@ -303,79 +303,82 @@ def view_department_series(query: Query, cut: pd.DataFrame):
     figure(fig, d, f"departamentos_{query.slug()}", "dl_dept")
 
 
-def _climatology_window(asi_nat: pd.DataFrame, query: Query) -> pd.DataFrame:
-    """Recorta la climatología oficial a los años de la ventana seleccionada.
+def _climatology_section(query: Query, series_id: str, slug: str, key: str):
+    """Mapa de calor año x dekad de una temporada, desde el panel propio.
 
-    Antes se ignoraba el selector de tiempo por completo: el mapa de calor
-    mostraba siempre 2005-2026 sin importar si se había elegido "Un dekad" o un
-    rango. Ahora responde igual que el resto de las figuras de país: "Un dekad"
-    (ampliado a 18 meses por `effective()`) o "Rango" acotan los mismos años que
-    ve cualquier otra vista de la pestaña.
+    Antes esta figura leía la serie nacional oficial de FAO mientras el resto
+    de la pantalla leía el panel propio, y las dos decían "ASI nacional" con
+    cifras distintas para el mismo dekad: 27,0 contra 25,2 en 2026-08-D3. La
+    brecha era la esperable entre la agregación de FAO y la nuestra (0,76 pp en
+    promedio durante 2025-2026), pero no hay forma de que quien lee dos números
+    distintos sepa eso. Ahora toda la pantalla habla de una sola fuente.
     """
-    y0, y1 = dekad_year(query.start), dekad_year(query.end)
-    return asi_nat[(asi_nat["Year"] >= y0) & (asi_nat["Year"] <= y1)]
-
-
-def _climatology_section(query: Query, asi_nat: pd.DataFrame, slug: str):
-    if asi_nat.empty:
+    df = load(series_id, query.start, query.end)
+    if df.empty:
         return
-    ventana_nat = _climatology_window(asi_nat, query)
+    season = cfg.SERIES[series_id].season
+    frame = climatology_frame(to_country(df), season)
+    if frame.empty:
+        return
     fig = viz.climatology_matrix(
-        ventana_nat, "Climatología del estrés agrícola",
-        "ASI nacional oficial de FAO por dekad de la temporada primera · "
-        "cada franja roja es una alerta roja de ASI (estrés extremo)")
-    figure(fig, ventana_nat[ventana_nat["dekad_of_year"].between(13, 30)]
-           [["Year", "dekad_id", "dekad_of_year", "value"]],
-           slug, "dl_clima")
+        frame, f"Climatología · {panel.label_of(series_id)}",
+        "Panel propio por dekad de la temporada · cada franja roja es una "
+        "alerta roja de ASI (estrés extremo)",
+        value_col="mean", columns=season_columns(season))
+    figure(fig, frame[["Year", "dekad_id", "dekad_of_year", "mean"]], slug, key)
     if fig is not None:
         st.caption(texts.ALERT_DISCLAIMER)
 
 
 # --- Vista: panorama nacional ------------------------------------------------
 def view_country(query: Query, cut: pd.DataFrame):
-    """Resumen general (todos los indicadores) o el detalle de uno solo.
-
-    El resumen general es el que abre por omisión a nivel país: climatología,
-    los tres indicadores sobre el mismo eje y lluvia. Si se elige un indicador
-    específico (ASI primera, ASI postrera o VCI) se muestran solo las figuras
-    de ese indicador; el tablero de los tres y la lluvia sola pertenecen al
-    resumen y no a la vista de un indicador único.
-    """
-    if query.series_id == cfg.ASI_COMBINED:
+    """Resumen nacional o el detalle de un indicador."""
+    if query.overview:
         _view_country_overview(query)
     else:
         _view_country_indicator(query)
 
 
+def _country_series_fig(query: Query, series_id: str, serie: pd.DataFrame):
+    familia = panel.family_of(series_id)
+    return viz.series_fig(
+        serie, "mean", f"{panel.label_of(series_id)} · nacional",
+        query.window_label, label=panel.unit_short_of(series_id),
+        family=familia, threshold=0.35 if familia == "VCI" else None,
+        threshold_label="umbral FAO 0,35" if familia == "VCI" else "")
+
+
 def _view_country_overview(query: Query):
-    """Del encuadre histórico al detalle de la ventana.
+    """Las dos temporadas del ASI en paralelo, después el VCI y la lluvia.
 
-    Primero la climatología, que sitúa el año dentro de veintiún años; después
-    los tres indicadores sobre el mismo eje temporal; al final la lluvia contra
-    su promedio de largo plazo.
+    Cada temporada trae su serie nacional y su mapa de calor, y ninguna cifra
+    mezcla las dos. Antes había aquí un indicador combinado que tomaba el mayor
+    de las dos por municipio; se retiró porque al agregar a país ponderando por
+    píxeles válidos terminaba por debajo de la primera sola. Ver DECISIONES.md.
     """
-    asi_nat = national("serie_nacional_asi")
+    for series_id in OVERVIEW_SERIES:
+        if series_id not in panel.stored_series():
+            continue
+        df = load(series_id, query.start, query.end)
+        if df.empty:
+            continue
+        serie = to_country(df)
+        st.subheader(panel.label_of(series_id))
+        figure(_country_series_fig(query, series_id, serie), serie,
+               f"serie_nacional_{series_id}_{query.slug()}",
+               f"dl_serie_{series_id}")
+        if cfg.SERIES[series_id].season:
+            _climatology_section(query, series_id,
+                                 f"climatologia_{series_id}_{query.slug()}",
+                                 f"dl_clima_{series_id}")
+
     rain = national("serie_nacional_lluvia")
-
-    _climatology_section(query, asi_nat, "climatologia_asi_nacional")
-
-    # El panel de ASI del tablero usa el indicador combinado (el más alto de
-    # las dos temporadas), igual que antes de separar esta vista en resumen e
-    # indicador único: no cambia qué serie alimenta el tablero, solo cuándo se
-    # muestra.
-    asi = to_country(load(cfg.ASI_COMBINED, query.start, query.end))
-    vci = (to_country(load("vci", query.start, query.end))
-           if "vci" in panel.stored_series() else pd.DataFrame())
     ventana = pd.DataFrame()
     if len(rain):
         ventana = rain[(rain["dekad_id"] >= query.start)
                        & (rain["dekad_id"] <= query.end)]
-    tablero = viz.dashboard_fig(
-        asi, vci, ventana, "Estrés, vegetación y lluvia", query.window_label)
-    figure(tablero, _merge_dashboard(asi, vci, ventana),
-           f"tablero_nacional_{query.slug()}", "dl_tablero")
-
     if len(ventana):
+        st.subheader("Lluvia")
         fig = viz.rainfall_fig(
             ventana, "Lluvia observada y su promedio histórico",
             "Ponderada por área de cultivo · el promedio de largo plazo es el "
@@ -384,42 +387,67 @@ def _view_country_overview(query: Query):
 
 
 def _view_country_indicator(query: Query):
-    """Solo las figuras del indicador elegido, nada del resumen general.
-
-    ASI primera tiene climatología oficial propia (el CSV que publica FAO es
-    justamente el de la temporada primera). ASI postrera no tiene un CSV
-    oficial separado en GIEWS, así que se queda con la serie de tiempo del
-    panel propio. VCI tampoco tiene climatología matricial aquí; su serie de
-    tiempo ya trae la línea de umbral FAO 0,35.
-    """
+    """Solo las figuras del indicador elegido, nada del resumen."""
     serie = to_country(load(query.series_id, query.start, query.end))
-    fig = viz.series_fig(
-        serie, "mean", f"{query.label} · nacional", query.window_label,
-        label=query.unit_short, family=query.family,
-        threshold=0.35 if query.family == "VCI" else None,
-        threshold_label="umbral FAO 0,35" if query.family == "VCI" else "")
-    figure(fig, serie, f"serie_nacional_{query.slug()}", "dl_serie_pais")
+    figure(_country_series_fig(query, query.series_id, serie), serie,
+           f"serie_nacional_{query.slug()}", "dl_serie_pais")
 
-    if query.series_id == "asi_gs1":
-        asi_nat = national("serie_nacional_asi")
-        _climatology_section(query, asi_nat,
-                             f"climatologia_asi_nacional_{query.slug()}")
+    if cfg.SERIES[query.series_id].season:
+        _climatology_section(query, query.series_id,
+                             f"climatologia_{query.slug()}", "dl_clima")
 
 
-def _merge_dashboard(asi, vci, rain) -> pd.DataFrame:
-    """Los tres indicadores del tablero en una tabla, para la descarga."""
+def overview_table(query: Query) -> pd.DataFrame:
+    """Una fila por dekad con la cifra nacional de cada indicador.
+
+    Cada indicador es su propia columna. Las dos temporadas del ASI nunca se
+    resumen en un solo número: son mediciones sobre máscaras de cultivo
+    distintas, y colapsarlas obligaba a elegir un ponderador entre
+    denominadores que no son comparables.
+    """
     out = pd.DataFrame()
-    if len(asi):
-        out = asi[["dekad_id", "date", "mean"]].rename(columns={"mean": "asi"})
-    if len(vci):
-        v = vci[["dekad_id", "mean"]].rename(columns={"mean": "vci"})
-        out = v if out.empty else out.merge(v, on="dekad_id", how="outer")
+    for series_id in OVERVIEW_SERIES:
+        if series_id not in panel.stored_series():
+            continue
+        df = load(series_id, query.start, query.end)
+        if df.empty:
+            continue
+        serie = (to_country(df)[["dekad_id", "mean"]]
+                 .rename(columns={"mean": panel.label_of(series_id)}))
+        out = serie if out.empty else out.merge(serie, on="dekad_id",
+                                                how="outer")
+    rain = national("serie_nacional_lluvia")
     if len(rain):
-        cols = [c for c in ("dekad_id", "obs", "lta", "anom_pct")
-                if c in rain.columns]
-        out = (rain[cols] if out.empty
-               else out.merge(rain[cols], on="dekad_id", how="outer"))
-    return out.sort_values("dekad_id") if len(out) else out
+        v = rain[(rain["dekad_id"] >= query.start)
+                 & (rain["dekad_id"] <= query.end)]
+        cols = [c for c in ("dekad_id", "value", "lta", "anom_pct")
+                if c in v.columns]
+        if len(v):
+            v = v[cols].rename(columns={"value": "lluvia (mm)",
+                                        "lta": "lluvia LTA (mm)",
+                                        "anom_pct": "anomalía de lluvia (%)"})
+            out = v if out.empty else out.merge(v, on="dekad_id", how="outer")
+    return out.sort_values("dekad_id").reset_index(drop=True) if len(out) else out
+
+
+def summary_overview(query: Query):
+    """Una cifra por indicador, nunca una sola cifra para las dos temporadas.
+
+    El promedio sale del agregado ponderado por píxeles válidos, igual que en
+    el resto de la app.
+    """
+    disponibles = [s for s in OVERVIEW_SERIES if s in panel.stored_series()]
+    if not disponibles:
+        return
+    for col, series_id in zip(st.columns(len(disponibles)), disponibles):
+        df = load(series_id, query.end, query.end)
+        nacional = to_country(df) if len(df) else pd.DataFrame()
+        valor = (f"{nacional['mean'].iloc[0]:.2f}" if len(nacional)
+                 else "sin dato")
+        col.metric(panel.label_of(series_id), valor,
+                   help=f"{panel.unit_of(series_id)}. Ponderado por píxeles "
+                        f"válidos.")
+    st.caption(f"Promedios nacionales · {dekad_label(query.end)}")
 
 
 # --- Vista: datos ------------------------------------------------------------
@@ -510,6 +538,27 @@ def main():
     query, ampliada = effective(sidebar(options))
     header(mf)
     notices(query, ampliada)
+
+    # El resumen nacional no es una serie, así que no pasa por slice_for: cada
+    # indicador se carga por su cuenta y ninguna cifra mezcla temporadas.
+    if query.overview:
+        tabla = overview_table(query)
+        if tabla.empty:
+            st.info(texts.NO_DATA)
+            return
+        summary_overview(query)
+        indicator_definition(query)
+        names = TABS[query.level]
+        for tab, name in zip(st.tabs(names), names):
+            with tab:
+                if name == "Panorama nacional":
+                    view_country(query, tabla)
+                elif name == "Datos":
+                    view_data(query, tabla)
+                elif name == texts.HELP_TAB:
+                    view_help(mf)
+        return
+
     muni, cut = slice_for(query)
 
     if muni.empty:
