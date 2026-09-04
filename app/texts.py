@@ -171,6 +171,8 @@ AI_NOTE = (f"Panel construido con asistencia de IA. Las cifras provienen de "
 LEVEL_HELP = ("Cambia el mapa y las vistas. Departamento y país se derivan del "
               "panel municipal ponderando por píxeles válidos.")
 WINDOW_HELP = "Solo se ofrecen dekads que FAO publicó."
+RANGE_HELP = ("Atajos para las ventanas de uso corriente. Mover el deslizador "
+              "pasa el atajo a Personalizado.")
 SERIES_HELP = {
     "resumen": OVERVIEW_HELP,
     "asi_gs1": "Solo la temporada primera: mayo a octubre.",

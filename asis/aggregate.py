@@ -161,6 +161,23 @@ def national_from_csv(csv: pd.DataFrame, weights: pd.Series,
              .reset_index(drop=True))
 
 
+def over_window(df: pd.DataFrame, keys, how="mean", value_col="mean"):
+    """Colapsa una ventana de dekads a un valor por unidad.
+
+    `how="mean"` responde cómo le fue a la unidad en el periodo; `"max"` o
+    `"min"`, cuánto llegó a apretar en su peor dekad. Cada dekad pesa igual: la
+    pregunta es por el periodo, no por el área, y el área ya está ponderada
+    dentro de cada dekad por `to_department()` y `to_country()`.
+    """
+    # Sin repetir: a nivel departamento el nombre de la unidad y el del
+    # departamento son la misma columna, y groupby no acepta la clave dos veces.
+    claves = list(dict.fromkeys(k for k in keys if k in df.columns))
+    if df.empty or not claves:
+        return df
+    return (df.groupby(claves, as_index=False, observed=True)
+              .agg(**{value_col: (value_col, how), "km2": ("km2", "max")}))
+
+
 def season_columns(season: str | None) -> list[int]:
     """Dekads del año que abarca una temporada, en orden de temporada.
 

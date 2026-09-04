@@ -182,3 +182,50 @@ def test_un_modulo_local_viejo_en_memoria_no_tumba_el_arranque():
                        capture_output=True, text=True)
     assert r.returncode == 0, f"la app no arranco:\n{r.stderr[-2000:]}"
     assert "arranco" in r.stdout
+
+
+# --- Controles de rango ------------------------------------------------------
+def test_el_atajo_toma_los_ultimos_dekads(last):
+    from app.controls import preset_range
+    disponibles = panel.dekads("asi_gs1")
+    desde, hasta = preset_range(disponibles, 36)
+    assert hasta == disponibles[-1]
+    assert len([d for d in disponibles if desde <= d <= hasta]) <= 36
+
+
+def test_el_atajo_todo_cubre_la_serie_completa():
+    from app.controls import preset_range
+    disponibles = panel.dekads("asi_gs1")
+    assert preset_range(disponibles, None) == (disponibles[0], disponibles[-1])
+
+
+def test_los_atajos_no_se_salen_de_la_serie():
+    """Pedir cinco anios sobre una serie mas corta debe quedarse en el primer
+    dekad que existe, no inventar uno anterior."""
+    from app.controls import preset_range
+    corta = ["2026-08-D1", "2026-08-D2", "2026-08-D3"]
+    assert preset_range(corta, 180) == ("2026-08-D1", "2026-08-D3")
+
+
+# --- Figuras de departamento -------------------------------------------------
+def test_la_cuadricula_trae_un_recuadro_por_departamento(last):
+    """Una sola figura con todos los departamentos, y por eso una sola
+    descarga."""
+    query = q("departamento", "asi_gs1", "2026-01-D1", last)
+    _muni, cut = app.slice_for(query)
+    d = cut.dropna(subset=["mean"]).sort_values(["adm1_name", "dekad_id"])
+    fig = app._department_grid_fig(query, d)
+    assert fig is not None
+    assert len(fig.data) == d["adm1_name"].nunique()
+
+
+def test_el_mapa_de_departamento_con_rango_muestra_el_promedio(last):
+    """Lo que el mapa pinta tiene que ser el promedio de la ventana y no el
+    ultimo dekad ni el peor valor."""
+    from asis.aggregate import over_window
+    query = q("departamento", "asi_gs1", "2026-01-D1", last)
+    _muni, cut = app.slice_for(query)
+    promedio = over_window(cut, ["adm1_code", "adm1_name"], how="mean")
+    esperado = cut.groupby("adm1_code")["mean"].mean()
+    obtenido = promedio.set_index("adm1_code")["mean"]
+    assert obtenido.round(6).equals(esperado.reindex(obtenido.index).round(6))

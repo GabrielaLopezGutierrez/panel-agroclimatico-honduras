@@ -49,6 +49,21 @@ DEFAULT_RANGE = 54      # 18 meses: la ventana con la que se trabaja a diario
 DEFAULT_MODE = {"pais": "Rango", "departamento": "Un dekad",
                 "municipio": "Un dekad"}
 WINDOW_MODES = ["Un dekad", "Rango"]
+
+# Atajos del rango, en dekads. Antes el rango se elegía con dos desplegables de
+# 779 opciones cada uno: para ver los últimos doce meses había que buscar un
+# código a mano en una lista de veintiún años. Casi siempre se quiere una
+# ventana reciente de largo redondo, así que eso se resuelve con un clic y el
+# deslizador queda para el caso que no cubre ningún atajo.
+CUSTOM_RANGE = "Personalizado"
+RANGE_PRESETS = {
+    "12 meses": 36,
+    "18 meses": 54,
+    "3 años": 108,
+    "5 años": 180,
+    "Todo": None,
+    CUSTOM_RANGE: None,
+}
 # Un mapa animado con un cuadro por dekad deja de ser legible mucho antes de
 # volverse pesado. Pasado este limite el mapa muestra el extremo de la ventana
 # en vez de la secuencia.
@@ -219,6 +234,51 @@ def _clamp(code: str, available: list[str]) -> str:
     return earlier[-1] if earlier else available[0]
 
 
+def preset_range(available: list[str], n: int | None) -> tuple[str, str]:
+    """Extremos de un atajo: los últimos `n` dekads, o todo si `n` es None."""
+    if n is None:
+        return available[0], available[-1]
+    return _clamp(dekad_window(available[-1], n)[0], available), available[-1]
+
+
+def range_controls(available: list[str]) -> tuple[str, str]:
+    """Selección del rango: un atajo y un deslizador de dos extremos.
+
+    El deslizador reemplaza dos desplegables de 779 opciones. Además de ser
+    menos clics, quita el estado imposible que tenían: eran dos controles
+    independientes, así que "Hasta" había que recortarlo a mano para que no
+    quedara antes de "Desde". Un deslizador de dos extremos no puede cruzarse.
+    """
+    if not available:
+        return "", ""
+    por_omision = preset_range(available, DEFAULT_RANGE)
+
+    def _aplicar_atajo():
+        n = RANGE_PRESETS[st.session_state["atajo"]]
+        if st.session_state["atajo"] == CUSTOM_RANGE:
+            return          # personalizado no mueve nada: manda el deslizador
+        st.session_state["rango"] = preset_range(available, n)
+
+    def _movio_el_deslizador():
+        # Mover el deslizador deja de ser cualquier atajo: decirlo evita que la
+        # etiqueta afirme "12 meses" sobre una ventana que ya no lo es.
+        st.session_state["atajo"] = CUSTOM_RANGE
+
+    st.session_state.setdefault("atajo", "18 meses")
+    st.session_state.setdefault("rango", por_omision)
+    st.sidebar.selectbox("Atajo", list(RANGE_PRESETS), key="atajo",
+                         on_change=_aplicar_atajo, help=texts.RANGE_HELP)
+
+    # El rango guardado se reajusta a la serie actual: cambiar de indicador
+    # puede dejar un extremo en un dekad que esa serie no tiene.
+    guardado = st.session_state["rango"]
+    st.session_state["rango"] = (_clamp(guardado[0], available),
+                                 _clamp(guardado[1], available))
+    return st.sidebar.select_slider(
+        "Periodo", options=available, key="rango", format_func=dekad_label,
+        on_change=_movio_el_deslizador)
+
+
 def indicator_options(level: str, options: dict[str, str]) -> dict[str, str]:
     """Opciones de indicador mostradas según el nivel.
 
@@ -270,20 +330,7 @@ def sidebar(options: dict[str, str]) -> Query:
             "Dekad", available, index=available.index(default),
             format_func=dekad_label, key="dekad")
     else:
-        # Por omisión, los últimos 18 meses y no la historia completa: veintiún
-        # años de dekads hacen ilegible cualquier vista y pesan de más en el
-        # navegador. Quien quiera todo el periodo lo pide moviendo "Desde".
-        inicio = _clamp(dekad_window(available[-1], DEFAULT_RANGE)[0], available)
-        d_from = _clamp(st.session_state.get("desde", inicio), available)
-        d_to = _clamp(st.session_state.get("hasta", available[-1]), available)
-        start = st.sidebar.selectbox(
-            "Desde", available, index=available.index(d_from),
-            format_func=dekad_label, key="desde")
-        later = [d for d in available if dekad_index(d) >= dekad_index(start)]
-        end = st.sidebar.selectbox(
-            "Hasta", later,
-            index=later.index(d_to) if d_to in later else len(later) - 1,
-            format_func=dekad_label, key="hasta")
+        start, end = range_controls(available)
 
     departments: list[str] = []
     if level == "municipio":

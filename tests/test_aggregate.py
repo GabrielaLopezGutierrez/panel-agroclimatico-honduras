@@ -5,9 +5,9 @@ import pandas as pd
 import pytest
 
 from asis import config as cfg
-from asis.aggregate import (classify, climatology_frame, season_columns,
-                            severity_area, to_country, to_department,
-                            worst_case)
+from asis.aggregate import (classify, climatology_frame, over_window,
+                            season_columns, severity_area, to_country,
+                            to_department, worst_case)
 
 
 def panel():
@@ -139,3 +139,40 @@ def test_en_la_primera_el_anio_es_el_del_calendario():
     assert out.loc["2026-05-D1", "Year"] == 2026
     assert out.loc["2026-08-D3", "Year"] == 2026
     assert out.loc["2026-08-D3", "dekad_of_year"] == 24
+
+
+# --- Colapsar la ventana a un valor por unidad -------------------------------
+def _ventana():
+    return pd.DataFrame({
+        "adm1_code": ["1", "1", "1", "2", "2", "2"],
+        "adm1_name": ["Uno"] * 3 + ["Dos"] * 3,
+        "dekad_id": ["2026-05-D1", "2026-05-D2", "2026-05-D3"] * 2,
+        "mean": [10.0, 20.0, 30.0, 5.0, 5.0, 50.0],
+        "km2": [100.0, 100.0, 90.0, 50.0, 50.0, 50.0],
+    })
+
+
+def test_el_promedio_de_la_ventana_da_igual_peso_a_cada_dekad():
+    out = over_window(_ventana(), ["adm1_code", "adm1_name"], how="mean")
+    out = out.set_index("adm1_code")["mean"]
+    assert out["1"] == pytest.approx(20.0)
+    assert out["2"] == pytest.approx(20.0)
+
+
+def test_el_peor_valor_de_la_ventana_no_es_el_promedio():
+    """Dos departamentos con el mismo promedio pueden tener picos muy
+    distintos: por eso el mapa dice cual de los dos resumenes esta mostrando."""
+    out = over_window(_ventana(), ["adm1_code"], how="max").set_index("adm1_code")
+    assert out.loc["1", "mean"] == pytest.approx(30.0)
+    assert out.loc["2", "mean"] == pytest.approx(50.0)
+
+
+def test_una_clave_repetida_no_rompe_el_agrupado():
+    """A nivel departamento la unidad y el departamento son la misma columna."""
+    out = over_window(_ventana(), ["adm1_name", "adm1_name"], how="mean")
+    assert len(out) == 2
+
+
+def test_una_ventana_vacia_no_revienta():
+    vacio = _ventana().iloc[0:0]
+    assert over_window(vacio, ["adm1_code"], how="mean").empty

@@ -35,25 +35,44 @@ import streamlit as st
 # cubre el AttributeError que ocurre dentro de `main()`, y aqui el error pasa
 # al importar, antes de que nada de eso corra.
 #
-# Se purga una sola vez por proceso. En un proceso limpio no hay nada que
-# purgar; en uno reutilizado, esto es lo unico que evita que el script nuevo se
-# encuentre con el paquete viejo. Purgar en cada rerun recrearia las funciones
-# de `st.cache_data` y el panel se releeria del disco en cada clic.
+# Son dos mecanismos y cada uno cubre un caso que el otro no:
+#
+# 1. La purga de una vez por proceso atrapa el codigo que cambio sin cambiar de
+#    nombre. Ahi no hay ImportError que avise: el modulo viejo importa igual y
+#    la app correria en silencio con la version anterior.
+# 2. El reintento atrapa el segundo despliegue en el mismo proceso, donde la
+#    purga de arriba ya corrio y su bandera impide repetirla. Sin esto, la
+#    segunda vez volvia a caer con el mismo ImportError.
+#
+# No se purga en cada rerun: eso recrearia las funciones de `st.cache_data` y
+# el panel se releeria del disco en cada clic.
+def _purgar_modulos_locales() -> None:
+    for name in [n for n in list(sys.modules)
+                 if n.split(".")[0] in ("app", "asis")]:
+        sys.modules.pop(name, None)
+
+
 if not getattr(sys, "_asis_modulos_purgados", False):
     sys._asis_modulos_purgados = True
-    for _name in [n for n in list(sys.modules)
-                  if n.split(".")[0] in ("app", "asis")]:
-        sys.modules.pop(_name, None)
+    _purgar_modulos_locales()
 
-from app import texts                                            # noqa: E402
-from app.controls import (LEVELS, MAX_FRAMES, OVERVIEW_SERIES,   # noqa: E402
-                          Query, dekads, geojson, is_preliminary, load,
-                          manifest, national, season_status, sidebar,
-                          series_options)
-from asis import config as cfg, panel, viz                       # noqa: E402
-from asis.aggregate import (at_level, climatology_frame,         # noqa: E402
-                            season_columns, severity_area, to_country)
-from asis.calendar import dekad_label, dekad_window              # noqa: E402
+for _intento in (1, 2):
+    try:
+        from app import texts                                    # noqa: E402
+        from app.controls import (MAX_FRAMES, OVERVIEW_SERIES,   # noqa: E402
+                                  Query, dekads, geojson, is_preliminary,
+                                  load, manifest, national, season_status,
+                                  sidebar, series_options)
+        from asis import config as cfg, panel, viz               # noqa: E402
+        from asis.aggregate import (at_level, climatology_frame,  # noqa: E402
+                                    over_window, season_columns,
+                                    severity_area, to_country)
+        from asis.calendar import dekad_label, dekad_window       # noqa: E402
+        break
+    except ImportError:
+        if _intento == 2:
+            raise
+        _purgar_modulos_locales()
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 
@@ -184,19 +203,22 @@ def for_display(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def figure(fig, data: pd.DataFrame, slug: str, key: str):
+def figure(fig, data: pd.DataFrame, slug: str, key: str, narrow: bool = False):
     """Dibuja una figura y ofrece exactamente los datos que muestra.
 
     El botón va en una columna angosta a la derecha: es una salida, no una
-    acción principal, y no debe competir con la figura.
+    acción principal, y no debe competir con la figura. Con `narrow` se omite
+    esa columna, para cuando la figura ya vive dentro de una: anidar columnas
+    dos niveles no está permitido, y a ese ancho el botón tampoco necesita
+    achicarse.
     """
     if fig is None:
         st.info(texts.NO_DATA)
         return
     st.plotly_chart(fig, width="stretch")
     shown = for_display(data)
-    _, right = st.columns([3, 1])
-    right.download_button(
+    boton = st if narrow else st.columns([3, 1])[1]
+    boton.download_button(
         f"{texts.FIG_DOWNLOAD} ({len(shown):,})",
         shown.to_csv(index=False).encode("utf-8-sig"),
         file_name=f"asis_{slug}.csv", mime="text/csv", key=key,
@@ -217,25 +239,32 @@ def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
         st.info(texts.NO_DATA)
         return
     n_dekads = data["dekad_id"].nunique()
-    resumen = not query.single and n_dekads > MAX_FRAMES
+    # A nivel departamento el mapa de un rango muestra el promedio de la
+    # ventana, no el peor valor ni una animación: son dieciocho unidades y la
+    # pregunta ahí es cómo le fue al departamento en el periodo, no en qué
+    # dekad tocó fondo. El peor valor sigue siendo el resumen a nivel
+    # municipal, donde un pico aislado sí importa para la alerta.
+    promedio = query.level == "departamento" and not query.single
+    resumen = not query.single and n_dekads > MAX_FRAMES and not promedio
     peor = "mayor" if query.family == "ASI" else "menor"
     extra = {c: ":.0f" for c in ("pct_gt40", "pct_lt0.35")
              if c in data.columns}
 
-    if resumen:
-        agg = "max" if query.family == "ASI" else "min"
-        claves = [query.code_col, query.name_col]
-        if query.name_col != "adm1_name" and "adm1_name" in data:
-            claves.append("adm1_name")
-        data = (data.groupby(claves, as_index=False, observed=True)
-                .agg(**{"mean": ("mean", agg), "km2": ("km2", "max")}))
-        titulo = f"{query.label} · {peor} valor de la ventana"
+    if promedio or resumen:
+        # El promedio se toma sobre los dekads: cada uno pesa igual, porque la
+        # pregunta es por el periodo y no por el área.
+        agg = "mean" if promedio else ("max" if query.family == "ASI" else "min")
+        data = over_window(
+            data, [query.code_col, query.name_col, "adm1_name"], how=agg)
+        titulo = (f"{query.label} · promedio de la ventana" if promedio
+                  else f"{query.label} · {peor} valor de la ventana")
         subtitulo = f"{query.window_label} · {n_dekads} dekads"
         extra = {}
     else:
         titulo = f"{query.label} · {query.window_label}"
         subtitulo = ""
 
+    estatico = promedio or resumen
     if query.family == "ASI":
         # El ASI usa un degradado continuo: un valor apenas sobre un umbral se
         # ve apenas distinto del umbral, en vez de saltar a un color plano
@@ -243,13 +272,13 @@ def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
         fig = viz.continuous_map(
             data, geojson(query.level), "mean", titulo, subtitulo,
             family="ASI", bar_label=query.unit_short,
-            animation=None if (query.single or resumen) else "dekad_id",
+            animation=None if (query.single or estatico) else "dekad_id",
             hover_extra=extra, code_col=query.code_col,
             name_col=query.name_col)
     else:
         fig = viz.class_map(
             data, geojson(query.level), query.family, titulo, subtitulo,
-            animation=None if (query.single or resumen) else "dekad_id",
+            animation=None if (query.single or estatico) else "dekad_id",
             hover_extra=extra, code_col=query.code_col,
             name_col=query.name_col)
     figure(fig, data, f"mapa_{query.slug()}", "dl_mapa")
@@ -314,20 +343,47 @@ def view_department_series(query: Query, cut: pd.DataFrame):
         figure(fig, d, f"departamentos_{query.slug()}", "dl_dept")
         return
 
-    d = cut.dropna(subset=["mean"]).sort_values("dekad_id")
-    fig = px.line(d, x="date", y="mean", color="adm1_name",
-                  labels={"mean": query.unit_short, "date": "",
-                          "adm1_name": ""}, height=560)
-    fig.update_traces(hovertemplate="%{x|%d %b %Y}<br>%{y:.2f}"
-                                    "<extra>%{fullData.name}</extra>")
-    # Leyenda vertical a la derecha: dieciocho departamentos en una fila
-    # horizontal no se leen.
+    d = cut.dropna(subset=["mean"]).sort_values(["adm1_name", "dekad_id"])
+    figure(_department_grid_fig(query, d), d,
+           f"departamentos_{query.slug()}", "dl_dept")
+
+
+GRID_COLUMNS = 3          # 18 departamentos entran en seis filas de tres
+SIDE_BY_SIDE_HEIGHT = 420   # alto minimo de las dos figuras pareadas de pais
+
+
+def _department_grid_fig(query: Query, d: pd.DataFrame):
+    """Una cuadrícula con la serie de cada departamento en su propio recuadro.
+
+    Antes eran dieciocho líneas superpuestas en un solo eje con una leyenda de
+    dieciocho colores: para seguir un departamento había que encontrar su color
+    entre diecisiete parecidos, y las líneas se tapaban entre sí. Separadas,
+    cada una se lee sola y siguen comparables porque comparten el eje vertical.
+
+    Es una sola figura, así que lleva una sola descarga, con los datos de todos
+    los departamentos.
+    """
+    if d.empty:
+        return None
+    filas = -(-d["adm1_name"].nunique() // GRID_COLUMNS)
+    fig = px.line(d, x="date", y="mean", facet_col="adm1_name",
+                  facet_col_wrap=GRID_COLUMNS,
+                  labels={"mean": query.unit_short, "date": ""},
+                  height=max(320, 200 * filas))
+    # El nombre del departamento viene como "adm1_name=Atlántida".
+    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    fig.update_traces(hovertemplate="%{x|%d %b %Y}<br>%{y:.2f}<extra></extra>")
+    # Con seis filas, repetir la fecha bajo cada recuadro es ruido: basta la de
+    # la fila de abajo, que es la que ancla la lectura.
+    fig.update_xaxes(showticklabels=False, title_text="")
+    for eje in fig.select_xaxes(row=1):
+        eje.update(showticklabels=True)
     viz.style_fig(fig, f"{query.label} por departamento", query.window_label,
-                  y_source=-0.13, legend="v")
-    figure(fig, d, f"departamentos_{query.slug()}", "dl_dept")
+                  y_source=-0.06, legend="off")
+    return fig
 
 
-def _climatology_section(query: Query, series_id: str, slug: str, key: str):
+def _climatology_fig(query: Query, series_id: str):
     """Mapa de calor año x dekad de una temporada, desde el panel propio.
 
     Antes esta figura leía la serie nacional oficial de FAO mientras el resto
@@ -336,22 +392,27 @@ def _climatology_section(query: Query, series_id: str, slug: str, key: str):
     brecha era la esperable entre la agregación de FAO y la nuestra (0,76 pp en
     promedio durante 2025-2026), pero no hay forma de que quien lee dos números
     distintos sepa eso. Ahora toda la pantalla habla de una sola fuente.
+
+    Devuelve también el alto, porque la serie que va al lado tiene que usar el
+    mismo: dos figuras pareadas con alturas distintas se leen como si una
+    estuviera incompleta. El alto sigue a la cantidad de años de la ventana, de
+    modo que dos años no queden estirados sobre 600 px.
     """
+    vacio = (None, pd.DataFrame(), SIDE_BY_SIDE_HEIGHT)
     df = load(series_id, query.start, query.end)
     if df.empty:
-        return
+        return vacio
     season = cfg.SERIES[series_id].season
     frame = climatology_frame(to_country(df), season)
     if frame.empty:
-        return
+        return vacio
+    alto = min(600, max(SIDE_BY_SIDE_HEIGHT, 130 + 26 * frame["Year"].nunique()))
     fig = viz.climatology_matrix(
         frame, f"Climatología · {panel.label_of(series_id)}",
         "Panel propio por dekad de la temporada · cada franja roja es una "
         "alerta roja de ASI (estrés extremo)",
-        value_col="mean", columns=season_columns(season))
-    figure(fig, frame[["Year", "dekad_id", "dekad_of_year", "mean"]], slug, key)
-    if fig is not None:
-        st.caption(texts.ALERT_DISCLAIMER)
+        value_col="mean", columns=season_columns(season), height=alto)
+    return fig, frame[["Year", "dekad_id", "dekad_of_year", "mean"]], alto
 
 
 # --- Vista: panorama nacional ------------------------------------------------
@@ -363,13 +424,48 @@ def view_country(query: Query, cut: pd.DataFrame):
         _view_country_indicator(query)
 
 
-def _country_series_fig(query: Query, series_id: str, serie: pd.DataFrame):
+def _country_series_fig(query: Query, series_id: str, serie: pd.DataFrame,
+                        height=SIDE_BY_SIDE_HEIGHT):
     familia = panel.family_of(series_id)
     return viz.series_fig(
         serie, "mean", f"{panel.label_of(series_id)} · nacional",
         query.window_label, label=panel.unit_short_of(series_id),
-        family=familia, threshold=0.35 if familia == "VCI" else None,
+        family=familia, height=height,
+        threshold=0.35 if familia == "VCI" else None,
         threshold_label="umbral FAO 0,35" if familia == "VCI" else "")
+
+
+def _country_indicator_block(query: Query, series_id: str):
+    """Un indicador a nivel país: mapa de calor y serie, lado a lado.
+
+    Las dos figuras responden la misma pregunta desde ángulos distintos —el
+    mapa de calor sitúa la temporada dentro de su historia, la serie muestra el
+    detalle de la ventana— y compararlas obligaba a hacer scroll entre una y
+    otra. Cada una conserva su propia descarga: son datos distintos.
+
+    Los indicadores sin temporada no tienen mapa de calor, así que su serie
+    ocupa el ancho completo en vez de dejar media pantalla vacía.
+    """
+    df = load(series_id, query.start, query.end)
+    if df.empty:
+        return
+    serie = to_country(df)
+    slug = f"{series_id}_{query.slug()}"
+    if not cfg.SERIES[series_id].season:
+        figure(_country_series_fig(query, series_id, serie), serie,
+               f"serie_nacional_{slug}", f"dl_serie_{series_id}")
+        return
+
+    fig_clima, datos_clima, alto = _climatology_fig(query, series_id)
+    izquierda, derecha = st.columns(2)
+    with izquierda:
+        figure(fig_clima, datos_clima, f"climatologia_{slug}",
+               f"dl_clima_{series_id}", narrow=True)
+        if fig_clima is not None:
+            st.caption(texts.ALERT_DISCLAIMER)
+    with derecha:
+        figure(_country_series_fig(query, series_id, serie, alto), serie,
+               f"serie_nacional_{slug}", f"dl_serie_{series_id}", narrow=True)
 
 
 def _view_country_overview(query: Query):
@@ -383,18 +479,8 @@ def _view_country_overview(query: Query):
     for series_id in OVERVIEW_SERIES:
         if series_id not in panel.stored_series():
             continue
-        df = load(series_id, query.start, query.end)
-        if df.empty:
-            continue
-        serie = to_country(df)
         st.subheader(panel.label_of(series_id))
-        figure(_country_series_fig(query, series_id, serie), serie,
-               f"serie_nacional_{series_id}_{query.slug()}",
-               f"dl_serie_{series_id}")
-        if cfg.SERIES[series_id].season:
-            _climatology_section(query, series_id,
-                                 f"climatologia_{series_id}_{query.slug()}",
-                                 f"dl_clima_{series_id}")
+        _country_indicator_block(query, series_id)
 
     rain = national("serie_nacional_lluvia")
     ventana = pd.DataFrame()
@@ -412,13 +498,7 @@ def _view_country_overview(query: Query):
 
 def _view_country_indicator(query: Query):
     """Solo las figuras del indicador elegido, nada del resumen."""
-    serie = to_country(load(query.series_id, query.start, query.end))
-    figure(_country_series_fig(query, query.series_id, serie), serie,
-           f"serie_nacional_{query.slug()}", "dl_serie_pais")
-
-    if cfg.SERIES[query.series_id].season:
-        _climatology_section(query, query.series_id,
-                             f"climatologia_{query.slug()}", "dl_clima")
+    _country_indicator_block(query, query.series_id)
 
 
 def overview_table(query: Query) -> pd.DataFrame:
