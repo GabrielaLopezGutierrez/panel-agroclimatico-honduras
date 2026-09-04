@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 
 from asis import config as cfg
-from asis.build import diff_dekad, is_preliminary
+from asis.build import diff_dekad, is_preliminary, preliminary_dekads
 
 TOL_ASI = cfg.tolerance_for(cfg.SERIES["asi_gs1"])     # 0,5 pp
 TOL_VCI = cfg.tolerance_for(cfg.SERIES["vci"])         # 0,005
@@ -91,21 +91,40 @@ def test_series_vacias_no_revientan():
     assert diff_dekad(vacia, vacia, TOL_ASI) is None
 
 
-# --- Dato preliminar: solo el dekad mas nuevo se acepta sin --aceptar-republicacion
-def test_el_dekad_mas_nuevo_del_catalogo_es_preliminar():
-    assert is_preliminary("2026-08-D2", catalog_latest="2026-08-D2")
+# --- Dato preliminar: los ultimos dekads se aceptan sin --aceptar-republicacion
+CATALOGO = ["2026-07-D1", "2026-07-D2", "2026-07-D3",
+            "2026-08-D1", "2026-08-D2", "2026-08-D3"]
 
 
-def test_un_dekad_mas_viejo_no_es_preliminar():
-    """Este es el caso que protege la seguridad de siempre: un dekad que ya no
-    es el mas nuevo y aun asi cambia sigue necesitando --aceptar-republicacion,
-    porque eso seria una revision genuinamente anomala."""
-    assert not is_preliminary("2026-08-D1", catalog_latest="2026-08-D2")
+def test_la_ventana_preliminar_son_los_tres_mas_nuevos():
+    assert preliminary_dekads(CATALOGO) == ["2026-08-D1", "2026-08-D2",
+                                            "2026-08-D3"]
+
+
+def test_el_dekad_mas_nuevo_es_preliminar():
+    assert is_preliminary("2026-08-D3", preliminary_dekads(CATALOGO))
+
+
+def test_dos_dekads_atras_del_mas_nuevo_sigue_siendo_preliminar():
+    """El caso que motivo ensanchar la ventana: se midio una revision real de
+    FAO en 2026-08-D1 cuando el mas nuevo ya era 2026-08-D3. Con la ventana de
+    un solo dekad esa revision habria detenido la corrida."""
+    assert is_preliminary("2026-08-D1", preliminary_dekads(CATALOGO))
+
+
+def test_mas_atras_de_la_ventana_no_es_preliminar():
+    """Aqui sigue viva la red de seguridad: un dekad ya asentado que cambia
+    necesita --aceptar-republicacion, porque seria una revision anomala."""
+    assert not is_preliminary("2026-07-D3", preliminary_dekads(CATALOGO))
+
+
+def test_catalogo_mas_corto_que_la_ventana_no_revienta():
+    assert preliminary_dekads(["2026-08-D3"]) == ["2026-08-D3"]
 
 
 def test_sin_catalogo_nada_es_preliminar():
-    """Si no se pudo consultar el catalogo (--hasta historico, por ejemplo),
-    no se marca nada como preliminar por default: preferible quedarse corto en
-    la marca de transparencia que arriesgar marcar un dekad viejo como si
-    todavia pudiera cambiar."""
-    assert not is_preliminary("2026-08-D2", catalog_latest=None)
+    """Si no se pudo consultar el catalogo, no se marca nada por default:
+    preferible quedarse corto en la marca de transparencia que arriesgar
+    marcar un dekad viejo como si todavia pudiera cambiar."""
+    assert preliminary_dekads([]) == []
+    assert not is_preliminary("2026-08-D3", None)

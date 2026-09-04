@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-09-04T15:45:30+00:00",
+  "actualizado": "2026-09-04T16:53:04+00:00",
   "start_year": 2005,
   "pais": "Honduras",
   "municipios": 290,
@@ -795,6 +795,11 @@
         "2026-08-D1",
         "2026-08-D2",
         "2026-08-D3"
+      ],
+      "preliminares": [
+        "2026-08-D1",
+        "2026-08-D2",
+        "2026-08-D3"
       ]
     },
     "asi_gs1": {
@@ -1584,6 +1589,11 @@
         "2026-07-D1",
         "2026-07-D2",
         "2026-07-D3",
+        "2026-08-D1",
+        "2026-08-D2",
+        "2026-08-D3"
+      ],
+      "preliminares": [
         "2026-08-D1",
         "2026-08-D2",
         "2026-08-D3"
@@ -2379,23 +2389,28 @@
         "2026-08-D1",
         "2026-08-D2",
         "2026-08-D3"
+      ],
+      "preliminares": [
+        "2026-08-D1",
+        "2026-08-D2",
+        "2026-08-D3"
       ]
     }
   },
   "oficiales": {
     "asi_dekad_s1": {
       "estado": "ok",
-      "origen": "vivo",
+      "origen": "instantánea",
       "descargado": "2026-09-04"
     },
     "rain_dekad": {
       "estado": "ok",
-      "origen": "vivo",
+      "origen": "instantánea",
       "descargado": "2026-09-04"
     },
     "vci_dekad": {
       "estado": "ok",
-      "origen": "vivo",
+      "origen": "instantánea",
       "descargado": "2026-09-04"
     }
   },

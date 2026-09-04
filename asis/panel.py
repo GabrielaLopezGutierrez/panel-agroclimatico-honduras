@@ -149,20 +149,18 @@ def last_dekad(series_id: str) -> str | None:
 
 
 def is_preliminary(series_id: str, dekad_id: str) -> bool:
-    """Si `dekad_id` es el dekad más reciente que FAO tenía publicado la
-    última vez que se construyó el panel, y por lo tanto todavía puede
-    revisarse en una próxima actualización.
+    """Si `dekad_id` cae en la ventana que FAO todavía puede revisar, según lo
+    que el catálogo decía la última vez que se construyó el panel.
 
-    Para el indicador combinado se mira si alguna de las dos temporadas
-    todavía tiene ese dekad como el suyo más nuevo: el peor caso toma, por
-    municipio, el mayor entre primera y postrera, así que basta con que una de
-    las dos siga siendo preliminar para que el resultado también lo sea.
+    Para el indicador combinado basta con que una de las dos temporadas lo
+    tenga como preliminar: el peor caso toma, por municipio, el mayor entre
+    primera y postrera, así que si una de las dos todavía puede cambiar, el
+    resultado también.
     """
     info = manifest().get("series", {})
 
     def flagged(sid: str) -> bool:
-        s = info.get(sid, {})
-        return bool(s.get("preliminar")) and s.get("ultimo") == dekad_id
+        return dekad_id in set(info.get(sid, {}).get("preliminares", []))
 
     if series_id == cfg.ASI_COMBINED:
         return any(flagged(s) for s in ("asi_gs1", "asi_gs2"))

@@ -78,8 +78,9 @@ NO_DATA = ("Sin dato para esta selección. No es un cero: el panel no inventa "
 # El dekad más reciente de FAO puede seguir revisándose: se avisa, en vez de
 # mostrarlo como si fuera un valor definitivo. Ver asis.build.is_preliminary.
 PRELIMINARY_NOTICE = (
-    "**Dato preliminar.** {dekad} es el dekad más reciente que publicó FAO: "
-    "todavía puede revisarlo en una próxima actualización del panel.")
+    "**Dato preliminar.** {dekad} está entre los dekads más recientes que "
+    "publicó FAO: todavía puede revisarlo en una próxima actualización del "
+    "panel.")
 
 # --- Pestaña "Cómo leer" -----------------------------------------------------
 # ASI y VCI ya no tienen ficha aquí: su definición se muestra junto a las
@@ -128,12 +129,14 @@ LIMITS = [
      "Tras Eta e Iota en noviembre de 2020 el VCI nacional incluso subió: más "
      "agua reverdece el promedio del país. El daño por exceso es local y hay "
      "que buscarlo por municipio."),
-    ("El dekad más reciente puede revisarse",
-     "FAO sigue completando el dekad más nuevo de cada serie con imágenes que "
-     "van llegando, así que el valor puede corregirse en la próxima "
-     "actualización. El panel lo acepta automáticamente y lo marca como "
-     "preliminar; los dekads anteriores, una vez asentados, no vuelven a "
-     "cambiar."),
+    ("Los dekads más recientes pueden revisarse",
+     "FAO sigue completando sus imágenes más nuevas con información que va "
+     "llegando, así que los valores de los últimos tres dekads de cada serie "
+     "pueden corregirse en una próxima actualización. El panel los acepta "
+     "automáticamente y los marca como preliminares. Se observó una revisión "
+     "de FAO dos dekads atrás del más nuevo, y de ahí sale la ventana de tres; "
+     "más atrás de eso, un cambio detiene la actualización para revisarlo a "
+     "mano."),
     ("Las banderas del ráster no son valores del índice",
      "Los valores 251 a 255 marcan fuera de temporada, sin dato, sin "
      "estacionalidad, sin cultivo y nodata. El enmascarado ocurre en el "
