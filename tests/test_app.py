@@ -229,3 +229,61 @@ def test_el_mapa_de_departamento_con_rango_muestra_el_promedio(last):
     esperado = cut.groupby("adm1_code")["mean"].mean()
     obtenido = promedio.set_index("adm1_code")["mean"]
     assert obtenido.round(6).equals(esperado.reindex(obtenido.index).round(6))
+
+
+# --- Controles de rango, sobre la app corriendo ------------------------------
+# Estos dos defectos no los veia ninguna prueba de funcion pura: salian de como
+# Streamlit reconcilia el estado de los widgets, asi que hay que correr la app.
+def _app():
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    # Ruta absoluta: AppTest resuelve las relativas contra este archivo.
+    guion = Path(__file__).resolve().parents[1] / "streamlit_app.py"
+    at = AppTest.from_file(str(guion), default_timeout=180)
+    at.run()
+    return at
+
+
+def _estado(at, clave):
+    try:
+        return at.session_state[clave]
+    except KeyError:
+        return None
+
+
+def test_el_atajo_elegido_no_se_marca_solo_como_personalizado():
+    """Al mover el deslizador escribiendole la llave de su widget, Streamlit
+    disparaba su on_change como si lo hubiera movido alguien, y el atajo recien
+    elegido se marcaba solo como Personalizado."""
+    at = _app()
+    at.selectbox(key="atajo").set_value("5 años").run()
+    assert not at.exception
+    assert _estado(at, "atajo") == "5 años"
+    desde, hasta = _estado(at, "ventana")
+    assert desde < hasta
+
+
+def test_mover_el_deslizador_no_revienta():
+    """select_slider sin `value` explicito se declara de un solo extremo: al
+    interactuar colapsaba la tupla a una cadena y la corrida siguiente reventaba
+    al leer esa cadena como par de dekads."""
+    at = _app()
+    at.select_slider[0].set_range("2024-01-D1", "2026-08-D3").run()
+    assert not at.exception
+    assert _estado(at, "ventana") == ("2024-01-D1", "2026-08-D3")
+    assert _estado(at, "atajo") == "Personalizado"
+
+
+def test_el_atajo_describe_la_ventana_y_no_lo_ultimo_que_se_toco():
+    """Se calcula, no se recuerda: si el deslizador queda justo en la ventana
+    de un atajo, la etiqueta lo dice."""
+    from app.controls import matching_preset, preset_range
+    from asis import panel as _panel
+
+    disponibles = _panel.dekads("asi_gs1")
+    doce = preset_range(disponibles, 36)
+    assert matching_preset(doce, disponibles) == "12 meses"
+    assert matching_preset((disponibles[3], disponibles[-2]),
+                           disponibles) == "Personalizado"

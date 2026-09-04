@@ -61,9 +61,9 @@ RANGE_PRESETS = {
     "18 meses": 54,
     "3 años": 108,
     "5 años": 180,
-    "Todo": None,
-    CUSTOM_RANGE: None,
+    "Todo": None,           # None = toda la serie
 }
+RANGE_OPTIONS = [*RANGE_PRESETS, CUSTOM_RANGE]
 # Un mapa animado con un cuadro por dekad deja de ser legible mucho antes de
 # volverse pesado. Pasado este limite el mapa muestra el extremo de la ventana
 # en vez de la secuencia.
@@ -241,6 +241,18 @@ def preset_range(available: list[str], n: int | None) -> tuple[str, str]:
     return _clamp(dekad_window(available[-1], n)[0], available), available[-1]
 
 
+def matching_preset(window: tuple[str, str], available: list[str]) -> str:
+    """Qué atajo describe una ventana, o `CUSTOM_RANGE` si ninguno.
+
+    Se calcula, no se recuerda: así la etiqueta nunca puede afirmar "12 meses"
+    sobre una ventana que ya no lo es.
+    """
+    for nombre, n in RANGE_PRESETS.items():
+        if preset_range(available, n) == tuple(window):
+            return nombre
+    return CUSTOM_RANGE
+
+
 def range_controls(available: list[str]) -> tuple[str, str]:
     """Selección del rango: un atajo y un deslizador de dos extremos.
 
@@ -248,35 +260,44 @@ def range_controls(available: list[str]) -> tuple[str, str]:
     menos clics, quita el estado imposible que tenían: eran dos controles
     independientes, así que "Hasta" había que recortarlo a mano para que no
     quedara antes de "Desde". Un deslizador de dos extremos no puede cruzarse.
+
+    La ventana vive en `session_state["ventana"]`, que no es la llave de ningún
+    widget, y el deslizador se dibuja sin llave propia. Tenerla costó los dos
+    defectos que esto corrige: al escribirle la llave a un widget para moverlo
+    desde el atajo, Streamlit dispara el `on_change` del deslizador como si lo
+    hubiera movido alguien, y el atajo recién elegido se marcaba solo como
+    "Personalizado"; y `select_slider` sin `value` explícito se declara de un
+    solo extremo, así que al interactuar colapsaba la tupla a una cadena y la
+    corrida siguiente reventaba al leerla como par.
     """
     if not available:
         return "", ""
-    por_omision = preset_range(available, DEFAULT_RANGE)
+
+    guardada = st.session_state.get("ventana", preset_range(available,
+                                                            DEFAULT_RANGE))
+    # Cambiar de indicador puede dejar un extremo en un dekad que la serie
+    # nueva no tiene.
+    ventana = (_clamp(guardada[0], available), _clamp(guardada[1], available))
 
     def _aplicar_atajo():
-        n = RANGE_PRESETS[st.session_state["atajo"]]
-        if st.session_state["atajo"] == CUSTOM_RANGE:
-            return          # personalizado no mueve nada: manda el deslizador
-        st.session_state["rango"] = preset_range(available, n)
+        elegido = st.session_state["atajo"]
+        if elegido != CUSTOM_RANGE:
+            st.session_state["ventana"] = preset_range(available,
+                                                       RANGE_PRESETS[elegido])
 
-    def _movio_el_deslizador():
-        # Mover el deslizador deja de ser cualquier atajo: decirlo evita que la
-        # etiqueta afirme "12 meses" sobre una ventana que ya no lo es.
-        st.session_state["atajo"] = CUSTOM_RANGE
-
-    st.session_state.setdefault("atajo", "18 meses")
-    st.session_state.setdefault("rango", por_omision)
-    st.sidebar.selectbox("Atajo", list(RANGE_PRESETS), key="atajo",
+    # El atajo se fija antes de crear el desplegable, que es cuando se puede.
+    st.session_state["atajo"] = matching_preset(ventana, available)
+    st.sidebar.selectbox("Atajo", RANGE_OPTIONS, key="atajo",
                          on_change=_aplicar_atajo, help=texts.RANGE_HELP)
 
-    # El rango guardado se reajusta a la serie actual: cambiar de indicador
-    # puede dejar un extremo en un dekad que esa serie no tiene.
-    guardado = st.session_state["rango"]
-    st.session_state["rango"] = (_clamp(guardado[0], available),
-                                 _clamp(guardado[1], available))
-    return st.sidebar.select_slider(
-        "Periodo", options=available, key="rango", format_func=dekad_label,
-        on_change=_movio_el_deslizador)
+    elegido = tuple(st.sidebar.select_slider(
+        "Periodo", options=available, value=ventana, format_func=dekad_label))
+    if elegido != ventana:
+        # Lo movió alguien. Se guarda y se vuelve a correr para que el atajo de
+        # arriba, que ya se dibujó, no siga mostrando el de la ventana vieja.
+        st.session_state["ventana"] = elegido
+        st.rerun()
+    return elegido
 
 
 def indicator_options(level: str, options: dict[str, str]) -> dict[str, str]:
