@@ -44,6 +44,26 @@ OVERVIEW_HELP = ("Las dos temporadas del ASI por separado, cada una con su "
                  "cifra y su mapa de calor, más el VCI y la lluvia. Para ver "
                  "un solo indicador, selecciónelo arriba.")
 
+# --- Las dos vistas de una temporada, a nivel país ---------------------------
+# Son el mismo dato ordenado de dos maneras, así que los títulos dicen qué
+# pregunta responde cada una y no repiten el nombre del indicador, que ya está
+# en el encabezado de la sección. Sin eso, dos figuras tituladas casi igual se
+# leen como dos indicadores distintos, que es lo que pasaba antes.
+SEASON_MATRIX_TITLE = "Año contra año"
+SEASON_MATRIX_SUBTITLE = (
+    "Cada fila es una temporada y cada columna el mismo dekad del calendario: "
+    "dice si la temporada va peor o mejor que las anteriores en esa fecha")
+SEASON_LINE_TITLE = "A lo largo del tiempo"
+SEASON_LINE_SUBTITLE = (
+    "La misma serie en orden cronológico, una línea por temporada: dice cómo "
+    "evolucionó dentro de cada una")
+SEASON_PAIR_NOTE = (
+    "Las dos figuras muestran el mismo dato: {indicador}, promedio nacional "
+    "ponderado por píxeles válidos, {ventana}. Solo se grafican los dekads "
+    "dentro de la ventana de cultivo ({temporada}); fuera de ella el índice "
+    "queda congelado en el valor con que cerró la temporada y no describe esa "
+    "fecha.")
+
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.
 ALERT_DISCLAIMER = ("Las alertas reflejan condiciones de estrés/sequía "

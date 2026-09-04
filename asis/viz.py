@@ -275,20 +275,33 @@ def severity_area_fig(df, family, title, subtitle="", value_col="mean",
 
 
 def series_fig(df, value_col, title, subtitle="", label="", family="ASI",
-               height=420, threshold=None, threshold_label=""):
-    """Serie de tiempo de un nivel agregado, con banda de referencia opcional."""
+               height=420, threshold=None, threshold_label="",
+               segment_col=None):
+    """Serie de tiempo de un nivel agregado, con banda de referencia opcional.
+
+    `segment_col` corta la línea en tramos en vez de dibujar uno solo. Se usa
+    cuando la serie tiene huecos con significado: al graficar una temporada
+    agrícola, los meses fuera de la ventana de cultivo no están, y una línea
+    continua uniría el cierre de una temporada con la apertura de la siguiente
+    como si el índice hubiera evolucionado entremedio.
+    """
     d = df.dropna(subset=[value_col]).sort_values("dekad_id")
     if d.empty:
         return None
     color = "#b0413e" if family == "ASI" else "#2f8f4e"
     fig = go.Figure()
-    fig.add_scatter(x=d["date"], y=d[value_col], mode="lines+markers",
-                    name=label or value_col,
-                    line=dict(color=color, width=2.4),
-                    fill="tozeroy" if family == "ASI" else None,
-                    fillcolor="rgba(176,65,62,.18)" if family == "ASI" else None,
-                    hovertemplate="%{x|%d %b %Y}<br>" + (label or value_col)
-                                  + ": %{y:.2f}<extra></extra>")
+    tramos = ([(None, d)] if not segment_col or segment_col not in d.columns
+              else list(d.groupby(segment_col, sort=True)))
+    for _clave, tramo in tramos:
+        fig.add_scatter(x=tramo["date"], y=tramo[value_col],
+                        mode="lines+markers", name=label or value_col,
+                        showlegend=False,
+                        line=dict(color=color, width=2.4),
+                        fill="tozeroy" if family == "ASI" else None,
+                        fillcolor=("rgba(176,65,62,.18)" if family == "ASI"
+                                   else None),
+                        hovertemplate="%{x|%d %b %Y}<br>" + (label or value_col)
+                                      + ": %{y:.2f}<extra></extra>")
     if threshold is not None:
         fig.add_hline(y=threshold,
                       line=dict(color="#ff8900", width=1.2, dash="dot"))

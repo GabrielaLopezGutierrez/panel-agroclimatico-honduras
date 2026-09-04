@@ -287,3 +287,47 @@ def test_el_atajo_describe_la_ventana_y_no_lo_ultimo_que_se_toco():
     assert matching_preset(doce, disponibles) == "12 meses"
     assert matching_preset((disponibles[3], disponibles[-2]),
                            disponibles) == "Personalizado"
+
+
+# --- Las dos vistas de una temporada, a nivel pais ---------------------------
+def _frame_y_figuras(series_id, last):
+    query = q("pais", series_id, "2025-03-D1", last)
+    frame = app._season_frame(query, series_id)
+    alto = min(600, max(app.SIDE_BY_SIDE_HEIGHT,
+                        130 + 26 * frame["Year"].nunique()))
+    return (query, frame, app._matrix_fig(frame, series_id, alto),
+            app._country_series_fig(query, series_id, frame, alto))
+
+
+def test_las_dos_figuras_de_la_temporada_grafican_el_mismo_dato(last):
+    """El defecto que esto fija: el mapa de calor recortaba a la ventana de
+    cultivo y la linea no, asi que la linea mostraba una meseta de valores
+    congelados que el mapa de calor no tenia, y las dos decian ser el mismo
+    indicador."""
+    import numpy as np
+
+    for series_id in ("asi_gs1", "asi_gs2"):
+        _query, frame, matriz, linea = _frame_y_figuras(series_id, last)
+        assert not frame.empty
+        celdas = int(np.isfinite(matriz.data[0].z).sum())
+        puntos = sum(len(t.x) for t in linea.data)
+        assert celdas == len(frame), series_id
+        assert puntos == len(frame), series_id
+
+
+def test_la_temporada_no_grafica_dekads_congelados(last):
+    """Fuera de la ventana de cultivo el raster trae valores, pero congelados
+    en el cierre de la temporada: no describen esa fecha."""
+    from asis.aggregate import season_columns
+
+    for series_id in ("asi_gs1", "asi_gs2"):
+        _query, frame, _m, _l = _frame_y_figuras(series_id, last)
+        propios = set(season_columns(cfg.SERIES[series_id].season))
+        assert set(frame["dekad_of_year"]) <= propios, series_id
+
+
+def test_la_linea_se_corta_entre_temporadas(last):
+    """Una linea continua uniria el cierre de una temporada con la apertura de
+    la siguiente, como si el indice hubiera evolucionado entremedio."""
+    _query, frame, _m, linea = _frame_y_figuras("asi_gs1", last)
+    assert len(linea.data) == frame["Year"].nunique() > 1

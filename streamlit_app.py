@@ -62,7 +62,8 @@ for _intento in (1, 2):
         from app.controls import (MAX_FRAMES, OVERVIEW_SERIES,   # noqa: E402
                                   Query, dekads, geojson, is_preliminary,
                                   load, manifest, national, season_status,
-                                  sidebar, series_options)
+                                  season_window_label, sidebar,
+                                  series_options)
         from asis import config as cfg, panel, viz               # noqa: E402
         from asis.aggregate import (at_level, climatology_frame,  # noqa: E402
                                     over_window, season_columns,
@@ -216,6 +217,13 @@ def figure(fig, data: pd.DataFrame, slug: str, key: str, narrow: bool = False):
         st.info(texts.NO_DATA)
         return
     st.plotly_chart(fig, width="stretch")
+    download(data, slug, key, narrow=narrow)
+
+
+def download(data: pd.DataFrame, slug: str, key: str, narrow: bool = False):
+    """La descarga de una figura, aparte para poder colgarla de un par de
+    figuras que comparten datos: dos botones identicos invitan a pensar que
+    detras hay dos cortes distintos."""
     shown = for_display(data)
     boton = st if narrow else st.columns([3, 1])[1]
     boton.download_button(
@@ -383,36 +391,33 @@ def _department_grid_fig(query: Query, d: pd.DataFrame):
     return fig
 
 
-def _climatology_fig(query: Query, series_id: str):
-    """Mapa de calor año x dekad de una temporada, desde el panel propio.
+def _season_frame(query: Query, series_id: str) -> pd.DataFrame:
+    """La serie nacional de una temporada, solo dentro de su ventana de cultivo.
 
-    Antes esta figura leía la serie nacional oficial de FAO mientras el resto
-    de la pantalla leía el panel propio, y las dos decían "ASI nacional" con
-    cifras distintas para el mismo dekad: 27,0 contra 25,2 en 2026-08-D3. La
-    brecha era la esperable entre la agregación de FAO y la nuestra (0,76 pp en
-    promedio durante 2025-2026), pero no hay forma de que quien lee dos números
-    distintos sepa eso. Ahora toda la pantalla habla de una sola fuente.
+    Es el unico dato de las dos figuras de la temporada. Antes cada una armaba
+    el suyo: el mapa de calor recortaba a la ventana de cultivo y la linea no,
+    asi que la linea mostraba una meseta de valores congelados que el mapa de
+    calor no tenia, y las dos decian ser el mismo indicador.
 
-    Devuelve también el alto, porque la serie que va al lado tiene que usar el
-    mismo: dos figuras pareadas con alturas distintas se leen como si una
-    estuviera incompleta. El alto sigue a la cantidad de años de la ventana, de
-    modo que dos años no queden estirados sobre 600 px.
+    Fuera de la ventana el raster trae valores, pero congelados en el cierre de
+    la temporada: no describen esa fecha, y por eso no se grafican.
     """
-    vacio = (None, pd.DataFrame(), SIDE_BY_SIDE_HEIGHT)
     df = load(series_id, query.start, query.end)
     if df.empty:
-        return vacio
+        return pd.DataFrame()
     season = cfg.SERIES[series_id].season
     frame = climatology_frame(to_country(df), season)
-    if frame.empty:
-        return vacio
-    alto = min(600, max(SIDE_BY_SIDE_HEIGHT, 130 + 26 * frame["Year"].nunique()))
-    fig = viz.climatology_matrix(
-        frame, f"Climatología · {panel.label_of(series_id)}",
-        "Panel propio por dekad de la temporada · cada franja roja es una "
-        "alerta roja de ASI (estrés extremo)",
-        value_col="mean", columns=season_columns(season), height=alto)
-    return fig, frame[["Year", "dekad_id", "dekad_of_year", "mean"]], alto
+    if frame.empty or not season:
+        return frame
+    return frame[frame["dekad_of_year"].isin(season_columns(season))]
+
+
+def _matrix_fig(frame: pd.DataFrame, series_id: str, height: int):
+    """Mapa de calor anio x dekad de la temporada."""
+    season = cfg.SERIES[series_id].season
+    return viz.climatology_matrix(
+        frame, texts.SEASON_MATRIX_TITLE, texts.SEASON_MATRIX_SUBTITLE,
+        value_col="mean", columns=season_columns(season), height=height)
 
 
 # --- Vista: panorama nacional ------------------------------------------------
@@ -427,45 +432,70 @@ def view_country(query: Query, cut: pd.DataFrame):
 def _country_series_fig(query: Query, series_id: str, serie: pd.DataFrame,
                         height=SIDE_BY_SIDE_HEIGHT):
     familia = panel.family_of(series_id)
+    titulo = (texts.SEASON_LINE_TITLE if cfg.SERIES[series_id].season
+              else f"{panel.label_of(series_id)} · nacional")
+    subtitulo = (texts.SEASON_LINE_SUBTITLE if cfg.SERIES[series_id].season
+                 else query.window_label)
     return viz.series_fig(
-        serie, "mean", f"{panel.label_of(series_id)} · nacional",
-        query.window_label, label=panel.unit_short_of(series_id),
+        serie, "mean", titulo, subtitulo,
+        label=panel.unit_short_of(series_id),
         family=familia, height=height,
         threshold=0.35 if familia == "VCI" else None,
-        threshold_label="umbral FAO 0,35" if familia == "VCI" else "")
+        threshold_label="umbral FAO 0,35" if familia == "VCI" else "",
+        segment_col="Year")
 
 
 def _country_indicator_block(query: Query, series_id: str):
-    """Un indicador a nivel país: mapa de calor y serie, lado a lado.
+    """Un indicador a nivel país.
 
-    Las dos figuras responden la misma pregunta desde ángulos distintos —el
-    mapa de calor sitúa la temporada dentro de su historia, la serie muestra el
-    detalle de la ventana— y compararlas obligaba a hacer scroll entre una y
-    otra. Cada una conserva su propia descarga: son datos distintos.
+    En una temporada son dos vistas del mismo dato, lado a lado: el mapa de
+    calor la sitúa frente a las temporadas anteriores en la misma fecha, la
+    línea muestra cómo evolucionó dentro de cada una. Comparten el dato y la
+    escala, así que llevan **una sola descarga**: dos botones idénticos bajo dos
+    figuras invitan a pensar que detrás hay dos cortes distintos, y no los hay.
 
     Los indicadores sin temporada no tienen mapa de calor, así que su serie
     ocupa el ancho completo en vez de dejar media pantalla vacía.
     """
-    df = load(series_id, query.start, query.end)
-    if df.empty:
-        return
-    serie = to_country(df)
     slug = f"{series_id}_{query.slug()}"
     if not cfg.SERIES[series_id].season:
+        serie = to_country(load(series_id, query.start, query.end))
+        if serie.empty:
+            return
         figure(_country_series_fig(query, series_id, serie), serie,
                f"serie_nacional_{slug}", f"dl_serie_{series_id}")
         return
 
-    fig_clima, datos_clima, alto = _climatology_fig(query, series_id)
+    frame = _season_frame(query, series_id)
+    if frame.empty:
+        st.info(texts.NO_DATA)
+        return
+    # El alto sigue a la cantidad de temporadas para que dos no queden
+    # estiradas sobre 600 px, y lo comparten las dos figuras: pareadas con
+    # alturas distintas se leen como si una estuviera incompleta.
+    alto = min(600, max(SIDE_BY_SIDE_HEIGHT,
+                        130 + 26 * frame["Year"].nunique()))
     izquierda, derecha = st.columns(2)
     with izquierda:
-        figure(fig_clima, datos_clima, f"climatologia_{slug}",
-               f"dl_clima_{series_id}", narrow=True)
-        if fig_clima is not None:
-            st.caption(texts.ALERT_DISCLAIMER)
+        matriz = _matrix_fig(frame, series_id, alto)
+        if matriz is None:
+            st.info(texts.NO_DATA)
+        else:
+            st.plotly_chart(matriz, width="stretch")
     with derecha:
-        figure(_country_series_fig(query, series_id, serie, alto), serie,
-               f"serie_nacional_{slug}", f"dl_serie_{series_id}", narrow=True)
+        linea = _country_series_fig(query, series_id, frame, alto)
+        if linea is None:
+            st.info(texts.NO_DATA)
+        else:
+            st.plotly_chart(linea, width="stretch")
+
+    st.caption(texts.SEASON_PAIR_NOTE.format(
+        indicador=panel.label_of(series_id), ventana=query.window_label,
+        temporada=season_window_label(cfg.SERIES[series_id].season)))
+    st.caption(texts.ALERT_DISCLAIMER)
+    download(frame[["dekad_id", "date", "Year", "dekad_of_year", "mean",
+                    "n_px", "n_muni"]],
+             f"temporada_{slug}", f"dl_temporada_{series_id}")
 
 
 def _view_country_overview(query: Query):
