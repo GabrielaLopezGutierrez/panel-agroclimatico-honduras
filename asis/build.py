@@ -14,6 +14,16 @@ vuelven a descargar y se comparan contra lo guardado; si difieren por encima de
 `TOLERANCE` la corrida falla y lo reporta, en vez de cambiar una cifra que
 alguien ya pudo haber citado. Se acepta con `--aceptar-republicacion`.
 
+Excepción, y es a propósito: el dekad más reciente que FAO tiene publicado para
+una serie es, por definición, un dato preliminar —FAO sigue completando esa
+imagen mientras llega más información— y se revisa solo, sin pedir
+`--aceptar-republicacion`, con un aviso en el log y una marca en
+`manifest.json` para que la app lo diga. Esto se midió antes de implementarlo:
+en 2,5 meses de historia reciente de las tres series, el único dekad que cambió
+alguna vez fue el que en ese momento era el más nuevo; ninguno de los anteriores
+se movió. Un dekad que ya no es el más reciente y aun así cambia sigue
+deteniendo la corrida igual que antes, porque eso sería genuinamente anómalo.
+
 Nunca se inventan filas. Un dekad que FAO no publicó no aparece en el panel. Sin
 dato no es cero, y rellenar con ceros fabricaría una calma que el índice no
 afirma.
@@ -93,17 +103,33 @@ def write_year(series_id: str, year: int, new_rows: pd.DataFrame,
 
 
 # --- Construcción de una serie ----------------------------------------------
+def is_preliminary(dekad_id: str, catalog_latest: str | None) -> bool:
+    """Si un dekad es el más reciente que FAO tiene publicado ahora para la
+    serie, sin importar hasta dónde se pidió construir (`--hasta`).
+
+    Se compara contra el catálogo sin acotar por arriba, no contra el último
+    dekad del rango que se estaba construyendo: un `--hasta` histórico no debe
+    hacer que un dekad viejo se marque como preliminar.
+    """
+    return catalog_latest is not None and dekad_id == catalog_latest
+
+
 def build_series(series_id: str, start: str, end: str, recheck: int,
                  accept_republication: bool, workers=None) -> dict:
     from asis.zonal import municipal_series      # importa rasterio: solo aquí
 
     series = cfg.SERIES[series_id]
     log(f"\n=== {series_id} ({series.label}) ===")
-    published = [d for d in client.available_dekads(
-        series, year_min=dekad_year(start)) if start <= d <= end]
+    # Sin cota superior: es el catálogo real de FAO en este momento, para saber
+    # cuál es el dekad todavía preliminar aunque esta corrida solo pida
+    # construir hasta uno anterior.
+    all_available = client.available_dekads(series, year_min=dekad_year(start))
+    catalog_latest = all_available[-1] if all_available else None
+    published = [d for d in all_available if start <= d <= end]
     if not published:
         log("   el catalogo no publica dekads en la ventana pedida")
-        return {"nuevos": 0, "republicados": [], "dekads": []}
+        return {"nuevos": 0, "republicados": [], "preliminares": [],
+                "dekads": [], "ultimo_publicado_fao": catalog_latest}
 
     have = stored_dekads(series_id)
     missing = [d for d in published if d not in have]
@@ -114,6 +140,7 @@ def build_series(series_id: str, start: str, end: str, recheck: int,
         + (f" - a revisar {len(revisit)}" if revisit else ""))
 
     republished: list[dict] = []
+    preliminary_changes: list[dict] = []
     total_new = 0
     todo = sorted(set(missing) | set(revisit))
     by_year: dict[int, list[str]] = {}
@@ -134,9 +161,16 @@ def build_series(series_id: str, start: str, end: str, recheck: int,
         if again:
             changed = compare_stored(series_id, year, rows, again)
             for c in changed:
-                republished.append(c)
-                if accept_republication:
+                if is_preliminary(c["dekad_id"], catalog_latest):
+                    # El dekad más reciente de FAO se revisa solo: no hay
+                    # cifra previa que proteger, porque nadie pudo haber
+                    # citado algo que hoy mismo se marca como preliminar.
+                    preliminary_changes.append(c)
                     accepted.add(c["dekad_id"])
+                else:
+                    republished.append(c)
+                    if accept_republication:
+                        accepted.add(c["dekad_id"])
             unchanged = set(again) - {c["dekad_id"] for c in changed}
             accepted |= unchanged        # idénticos: reescribir no cambia nada
         keep = rows[rows["dekad_id"].isin(accepted)]
@@ -147,8 +181,18 @@ def build_series(series_id: str, start: str, end: str, recheck: int,
                 accepted & set(again)))
             log(f"      -> {series_id}/{year}.parquet: {n:,} filas")
 
+    if preliminary_changes:
+        log(f"   dato preliminar revisado y aceptado sin intervención "
+            f"({len(preliminary_changes)} dekad(s), es el más nuevo de FAO):")
+        for c in preliminary_changes:
+            log(f"      {c['dekad_id']}: dif_max={c['dif_max']} "
+                f"(tolerancia {c['tolerancia']:g}) - "
+                f"{c['municipios_afectados']} municipios")
+
     return {"nuevos": total_new, "republicados": republished,
-            "dekads": sorted(stored_dekads(series_id))}
+            "preliminares": preliminary_changes,
+            "dekads": sorted(stored_dekads(series_id)),
+            "ultimo_publicado_fao": catalog_latest}
 
 
 def diff_dekad(old: pd.Series, fresh: pd.Series, tol: float) -> dict | None:
@@ -331,6 +375,15 @@ def write_manifest(series_info: dict, official: dict, validation: dict,
     }
     for sid, info in series_info.items():
         dekads = info["dekads"]
+        catalog_latest = info.get("ultimo_publicado_fao")
+        if catalog_latest is not None:
+            # Se consultó el catálogo esta corrida: la marca es exacta.
+            preliminar = bool(dekads) and dekads[-1] == catalog_latest
+        else:
+            # No se consultó (rama "al día" o --solo-oficiales): se conserva
+            # lo que ya decía el manifiesto anterior en vez de asumir nada.
+            preliminar = (previous.get("series", {}).get(sid, {})
+                         .get("preliminar", False))
         manifest["series"][sid] = {
             "etiqueta": cfg.SERIES[sid].label,
             "familia": cfg.SERIES[sid].family,
@@ -341,6 +394,10 @@ def write_manifest(series_info: dict, official: dict, validation: dict,
             "ultimo": dekads[-1] if dekads else None,
             "n_dekads": len(dekads),
             "dekads": dekads,
+            # El último dekad de FAO es, por definición, un dato que todavía
+            # puede revisarse: se marca aquí para que la app sea transparente
+            # sobre eso en vez de mostrarlo como si fuera definitivo.
+            "preliminar": preliminar,
         }
     # Si nada cambio salvo la hora, se conserva la anterior. De lo contrario el
     # manifiesto seria el unico archivo distinto en cada corrida y la
@@ -401,7 +458,7 @@ def main(argv=None) -> int:
     log(f"panel: {cfg.PANEL_DIR}")
     log(f"cache de rasteres: {cfg.CACHE}")
 
-    series_info, republished = {}, []
+    series_info, republished, preliminares = {}, [], []
     if not args.solo_oficiales:
         end = args.hasta or client.last_dekad("ASI_D", season="GS1",
                                               landcover="C")
@@ -418,12 +475,18 @@ def main(argv=None) -> int:
             if dekad_index(start) > dekad_index(series_end):
                 log(f"\n=== {sid} === al dia ({start} > {series_end})")
                 series_info[sid] = {"nuevos": 0, "republicados": [],
-                                    "dekads": sorted(have)}
+                                    "preliminares": [], "dekads": sorted(have),
+                                    # No se consultó el catálogo en esta rama:
+                                    # write_manifest() conserva la marca de
+                                    # preliminar que ya tenía del manifiesto
+                                    # anterior en vez de perderla.
+                                    "ultimo_publicado_fao": None}
                 continue
             info = build_series(sid, start, series_end, args.revisar,
                                 args.aceptar_republicacion, args.workers)
             series_info[sid] = info
             republished += info["republicados"]
+            preliminares += info["preliminares"]
 
     # Los pesos departamentales salen del panel del ASI de la primera: es el
     # área de cultivo que el propio ráster reconoce.
@@ -439,6 +502,17 @@ def main(argv=None) -> int:
     validation = validate(asi_panel) if len(asi_panel) else {}
     n_muni = None if args.sin_geometria or args.solo_oficiales else build_geometry()
     write_manifest(series_info, official, validation, n_muni)
+
+    if preliminares:
+        log("\n" + "-" * 68)
+        log("DATO PRELIMINAR: FAO todavía puede revisar el dekad más reciente "
+            "de estas series. Se aceptó sin pedir confirmación, y queda "
+            "marcado en manifest.json para que la app lo diga.")
+        for p in preliminares:
+            log(f"   {p['serie']} {p['dekad_id']}: dif_max={p['dif_max']} "
+                f"(tolerancia {p['tolerancia']:g}) - "
+                f"{p['municipios_afectados']} municipios")
+        log("-" * 68)
 
     if republished:
         log("\n" + "=" * 68)

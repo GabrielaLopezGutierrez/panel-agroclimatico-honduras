@@ -148,6 +148,27 @@ def last_dekad(series_id: str) -> str | None:
     return d[-1] if d else None
 
 
+def is_preliminary(series_id: str, dekad_id: str) -> bool:
+    """Si `dekad_id` es el dekad más reciente que FAO tenía publicado la
+    última vez que se construyó el panel, y por lo tanto todavía puede
+    revisarse en una próxima actualización.
+
+    Para el indicador combinado se mira si alguna de las dos temporadas
+    todavía tiene ese dekad como el suyo más nuevo: el peor caso toma, por
+    municipio, el mayor entre primera y postrera, así que basta con que una de
+    las dos siga siendo preliminar para que el resultado también lo sea.
+    """
+    info = manifest().get("series", {})
+
+    def flagged(sid: str) -> bool:
+        s = info.get(sid, {})
+        return bool(s.get("preliminar")) and s.get("ultimo") == dekad_id
+
+    if series_id == cfg.ASI_COMBINED:
+        return any(flagged(s) for s in ("asi_gs1", "asi_gs2"))
+    return flagged(series_id)
+
+
 def municipios() -> pd.DataFrame:
     if not MUNI_PATH.exists():
         raise PanelVacio(f"falta {MUNI_PATH}; reconstruya con asis.build")

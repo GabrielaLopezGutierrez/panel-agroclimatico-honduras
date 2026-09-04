@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 
 from asis import config as cfg
-from asis.build import diff_dekad
+from asis.build import diff_dekad, is_preliminary
 
 TOL_ASI = cfg.tolerance_for(cfg.SERIES["asi_gs1"])     # 0,5 pp
 TOL_VCI = cfg.tolerance_for(cfg.SERIES["vci"])         # 0,005
@@ -89,3 +89,23 @@ def test_conteos_no_se_confunden_con_los_nulos_comunes():
 def test_series_vacias_no_revientan():
     vacia = pd.Series(dtype="float64")
     assert diff_dekad(vacia, vacia, TOL_ASI) is None
+
+
+# --- Dato preliminar: solo el dekad mas nuevo se acepta sin --aceptar-republicacion
+def test_el_dekad_mas_nuevo_del_catalogo_es_preliminar():
+    assert is_preliminary("2026-08-D2", catalog_latest="2026-08-D2")
+
+
+def test_un_dekad_mas_viejo_no_es_preliminar():
+    """Este es el caso que protege la seguridad de siempre: un dekad que ya no
+    es el mas nuevo y aun asi cambia sigue necesitando --aceptar-republicacion,
+    porque eso seria una revision genuinamente anomala."""
+    assert not is_preliminary("2026-08-D1", catalog_latest="2026-08-D2")
+
+
+def test_sin_catalogo_nada_es_preliminar():
+    """Si no se pudo consultar el catalogo (--hasta historico, por ejemplo),
+    no se marca nada como preliminar por default: preferible quedarse corto en
+    la marca de transparencia que arriesgar marcar un dekad viejo como si
+    todavia pudiera cambiar."""
+    assert not is_preliminary("2026-08-D2", catalog_latest=None)

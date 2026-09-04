@@ -147,6 +147,11 @@ def _municipios(version: str) -> pd.DataFrame:
     return panel.municipios()
 
 
+@st.cache_data(show_spinner=False)
+def _is_preliminary(version: str, series_id: str, dekad_id: str) -> bool:
+    return panel.is_preliminary(series_id, dekad_id)
+
+
 def manifest() -> dict:
     return _manifest(data_version())
 
@@ -173,6 +178,10 @@ def series_options() -> dict[str, str]:
 
 def municipios() -> pd.DataFrame:
     return _municipios(data_version())
+
+
+def is_preliminary(series_id: str, dekad_id: str) -> bool:
+    return _is_preliminary(data_version(), series_id, dekad_id)
 
 
 def _clamp(code: str, available: list[str]) -> str:

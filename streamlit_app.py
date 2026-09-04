@@ -23,9 +23,9 @@ import plotly.express as px
 import streamlit as st
 
 from app import texts
-from app.controls import (LEVELS, MAX_FRAMES, Query, dekads, geojson, load,
-                          manifest, national, season_status, sidebar,
-                          series_options)
+from app.controls import (LEVELS, MAX_FRAMES, Query, dekads, geojson,
+                          is_preliminary, load, manifest, national,
+                          season_status, sidebar, series_options)
 from asis import config as cfg, panel, viz
 from asis.aggregate import at_level, severity_area, to_country
 from asis.calendar import dekad_label, dekad_window, dekad_year
@@ -73,6 +73,8 @@ def notices(query: Query, ampliada: bool):
     if ampliada:
         st.caption(f"Ventana ampliada a 18 meses ({query.window_label}): a "
                    f"nivel país un solo dekad no forma una serie.")
+    if is_preliminary(query.series_id, query.end):
+        st.info(texts.PRELIMINARY_NOTICE.format(dekad=dekad_label(query.end)))
     status = season_status(query)
     if not status["seasonal"] or not status["outside"]:
         return
