@@ -18,18 +18,42 @@ ninguna descarga podía corresponder a todas.
 """
 from __future__ import annotations
 
+import sys
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from app import texts
-from app.controls import (LEVELS, MAX_FRAMES, OVERVIEW_SERIES, Query, dekads,
-                          geojson, is_preliminary, load, manifest, national,
-                          season_status, sidebar, series_options)
-from asis import config as cfg, panel, viz
-from asis.aggregate import (at_level, climatology_frame, season_columns,
-                            severity_area, to_country)
-from asis.calendar import dekad_label, dekad_window
+# --- Modulos locales obsoletos en memoria, antes de importarlos --------------
+# Tras un despliegue, Streamlit Cloud puede reejecutar el script nuevo en un
+# proceso que ya tiene importados los modulos locales viejos. Si el commit
+# agrego un nombre, el `from app.controls import ...` de abajo falla con
+# ImportError en la linea 26 y la app cae sin dibujar nada: paso de verdad dos
+# veces, con `texts.SOURCE_MD` y con `OVERVIEW_SERIES`.
+#
+# El reintento que ya existia al final del archivo no alcanza para esto: solo
+# cubre el AttributeError que ocurre dentro de `main()`, y aqui el error pasa
+# al importar, antes de que nada de eso corra.
+#
+# Se purga una sola vez por proceso. En un proceso limpio no hay nada que
+# purgar; en uno reutilizado, esto es lo unico que evita que el script nuevo se
+# encuentre con el paquete viejo. Purgar en cada rerun recrearia las funciones
+# de `st.cache_data` y el panel se releeria del disco en cada clic.
+if not getattr(sys, "_asis_modulos_purgados", False):
+    sys._asis_modulos_purgados = True
+    for _name in [n for n in list(sys.modules)
+                  if n.split(".")[0] in ("app", "asis")]:
+        sys.modules.pop(_name, None)
+
+from app import texts                                            # noqa: E402
+from app.controls import (LEVELS, MAX_FRAMES, OVERVIEW_SERIES,   # noqa: E402
+                          Query, dekads, geojson, is_preliminary, load,
+                          manifest, national, season_status, sidebar,
+                          series_options)
+from asis import config as cfg, panel, viz                       # noqa: E402
+from asis.aggregate import (at_level, climatology_frame,         # noqa: E402
+                            season_columns, severity_area, to_country)
+from asis.calendar import dekad_label, dekad_window              # noqa: E402
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 

@@ -153,3 +153,32 @@ def test_toda_columna_del_resumen_tiene_definicion(last):
     shown = app.for_display(app.overview_table(query))
     sin_definir = [c for c in shown.columns if not texts.describe_column(c)]
     assert not sin_definir, f"columnas sin definicion {sin_definir}"
+
+
+# --- Arranque con modulos locales viejos en memoria --------------------------
+def test_un_modulo_local_viejo_en_memoria_no_tumba_el_arranque():
+    """Tras un despliegue, Streamlit Cloud puede correr el script nuevo en un
+    proceso que ya tiene importados los modulos locales viejos. Si el commit
+    agrego un nombre, el import de arriba del script falla y la app cae sin
+    dibujar nada. Paso dos veces en produccion: con texts.SOURCE_MD y con
+    OVERVIEW_SERIES.
+
+    Se corre en un subproceso porque hay que ensuciar sys.modules a proposito.
+    """
+    import subprocess
+    import sys as _sys
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[1]
+    codigo = (
+        "import sys, types\n"
+        # Un app.controls viejo, sin el nombre que el script nuevo importa.
+        "sys.modules['app.controls'] = types.ModuleType('app.controls')\n"
+        "import streamlit_app\n"
+        "assert hasattr(streamlit_app, 'OVERVIEW_SERIES')\n"
+        "print('arranco')\n"
+    )
+    r = subprocess.run([_sys.executable, "-c", codigo], cwd=raiz,
+                       capture_output=True, text=True)
+    assert r.returncode == 0, f"la app no arranco:\n{r.stderr[-2000:]}"
+    assert "arranco" in r.stdout
