@@ -371,7 +371,9 @@ def dekad_labels(codes) -> list[str]:
 def season_lines_fig(frame, columns, title, subtitle="", label="",
                      value_col="mean", season_col="Year",
                      dekad_col="dekad_of_year", family="ASI", height=420,
-                     threshold=None, threshold_label=""):
+                     threshold=None, threshold_label="", color=None,
+                     reference=None, reference_label="",
+                     reference_color="#0b3d91"):
     """Una línea por temporada sobre el eje de dekads de la temporada.
 
     Es la misma matriz que dibuja `climatology_matrix()`, codificada en posición
@@ -386,6 +388,10 @@ def season_lines_fig(frame, columns, title, subtitle="", label="",
     La temporada más reciente va en el color del indicador y el resto en gris:
     con veinte años en pantalla, todas del mismo color no se distinguen, y la
     pregunta casi siempre es cómo va esta contra las anteriores.
+
+    `reference` dibuja encima una serie de referencia común a todos los años,
+    indexada por dekad del año. La usa la precipitación para el promedio de
+    largo plazo, que no es un año más sino la vara contra la que se comparan.
     """
     d = frame.dropna(subset=[value_col])
     if d.empty:
@@ -396,7 +402,7 @@ def season_lines_fig(frame, columns, title, subtitle="", label="",
     etiquetas = dekad_labels(orden)
     temporadas = sorted(d[season_col].unique())
     reciente = temporadas[-1]
-    color = "#b0413e" if family == "ASI" else "#2f8f4e"
+    color = color or ("#b0413e" if family == "ASI" else "#2f8f4e")
     fig = go.Figure()
     for anio in temporadas:
         serie = (d[d[season_col] == anio].set_index(dekad_col)[value_col]
@@ -410,6 +416,13 @@ def season_lines_fig(frame, columns, title, subtitle="", label="",
             marker=dict(size=6 if ultima else 4),
             hovertemplate="%{x}<br>" + (label or value_col)
                           + ": %{y:.2f}<extra>%{fullData.name}</extra>")
+    if reference is not None and len(reference):
+        fig.add_scatter(
+            x=etiquetas, y=pd.Series(reference).reindex(orden).values,
+            mode="lines", name=reference_label or "referencia",
+            line=dict(color=reference_color, width=2.4, dash="dot"),
+            hovertemplate="%{x}<br>" + (reference_label or "referencia")
+                          + ": %{y:.1f}<extra></extra>")
     if threshold is not None:
         fig.add_hline(y=threshold,
                       line=dict(color="#ff8900", width=1.2, dash="dot"))
@@ -458,6 +471,33 @@ def climatology_matrix(national, title, subtitle="", value_col="value",
         xaxis=dict(tickangle=-45, tickmode="array",
                    tickvals=thin_ticks(labels)))
     return style_fig(fig, title, subtitle, legend="off", source_shift=78)
+
+
+def anomaly_bars_fig(rain, title, subtitle="", height=320, value_col="anom_pct",
+                     label="anomalía (%)"):
+    """Anomalía de lluvia por dekad, sobre el eje del tiempo completo.
+
+    Va aparte de las líneas por año y no en un eje secundario encima de ellas:
+    tres lecturas superpuestas —barras de lluvia, línea del promedio y línea de
+    anomalía— no dejaban leer ninguna con comodidad.
+
+    El signo se codifica en el color, y el cero queda marcado: la pregunta que
+    responde es de qué lado del promedio cayó cada dekad.
+    """
+    d = rain.dropna(subset=[value_col]).sort_values("dekad_id")
+    if d.empty:
+        return None
+    labels = [dekad_label(c) for c in d["dekad_id"]]
+    colores = ["#3b7dd8" if v >= 0 else "#d99a2b" for v in d[value_col]]
+    fig = go.Figure(go.Bar(
+        x=labels, y=d[value_col], marker_color=colores,
+        hovertemplate="%{x}<br>" + label + ": %{y:+.0f}%<extra></extra>"))
+    fig.add_hline(y=0, line=dict(color="#5b6270", width=1))
+    fig.update_layout(
+        height=height, yaxis_title=label,
+        xaxis=dict(tickangle=-45, tickfont=dict(size=9), tickmode="array",
+                   tickvals=thin_ticks(labels, 16)))
+    return style_fig(fig, title, subtitle, legend="off", source_shift=104)
 
 
 def rainfall_fig(rain, title, subtitle="", height=440):

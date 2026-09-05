@@ -21,7 +21,8 @@ import streamlit as st
 
 from app import texts
 from asis import config as cfg, panel
-from asis.calendar import dekad_index, dekad_label, dekad_window
+from asis.calendar import (dekad_index, dekad_label, dekad_label_compact,
+                           dekad_window)
 
 LEVELS = {"pais": "País", "departamento": "Departamento",
           "municipio": "Municipio"}
@@ -128,6 +129,14 @@ class Query:
         if self.single:
             return dekad_label(self.start)
         return f"{dekad_label(self.start)} a {dekad_label(self.end)}"
+
+    @property
+    def window_compact(self) -> str:
+        """El mismo rango en forma mínima, para títulos de figura."""
+        if self.single:
+            return dekad_label_compact(self.start)
+        return (f"{dekad_label_compact(self.start)} a "
+                f"{dekad_label_compact(self.end)}")
 
     def slug(self) -> str:
         base = f"{self.series_id}_{self.level}_{self.start}"

@@ -88,5 +88,16 @@ def dekad_label_long(code: str) -> str:
     return f"{ORDINAL_ES[d]} dekad de {MONTH_ES_FULL[m]} {y}"
 
 
+def dekad_label_compact(code: str) -> str:
+    """Forma mínima, para títulos de figura: "nov D3 2018".
+
+    En la cuadrícula de país las figuras van a media pantalla, y el rango en
+    forma corta ("1er dek mar 2025 a 3er dek ago 2026") empujaba el título a dos
+    renglones y le comía sitio a la figura.
+    """
+    y, m, d = int(code[:4]), int(code[5:7]), int(code[-1])
+    return f"{MONTH_ES[m]} D{d} {y}"
+
+
 def dekad_year(code: str) -> int:
     return int(code[:4])

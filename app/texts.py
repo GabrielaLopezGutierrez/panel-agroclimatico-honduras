@@ -46,10 +46,10 @@ PRELIMINARY_HEADER = (
     "Los últimos tres dekads son datos preliminares: FAO puede revisarlos en "
     "actualizaciones futuras.")
 
-# Rótulo del dekad al que corresponde cada cifra de encabezado. Va rotulado y
-# no como fecha suelta: suelta se leía como la fecha de actualización del panel,
-# que es otra cosa y ya está arriba.
-KPI_DEKAD = "Último dekad disponible: {dekad}"
+# Bajo cada cifra de encabezado va solo el dekad al que corresponde. El color de
+# la cifra es el de la clase de FAO en la que cae (ver config.PALETTE); el
+# número sigue visible, así que el color informa pero no es el único canal.
+KPI_DEKAD = "{dekad}"
 
 # --- Definiciones de indicador, junto a las cifras de encabezado -------------
 # Se muestran cerca de las métricas principales, no en la pestaña "Cómo leer":
@@ -92,7 +92,7 @@ INDICATOR_DEFINITIONS = {
 # Título de la caja desplegable con las definiciones. Van plegadas: son la
 # referencia que se consulta una vez, no algo que haga falta leer en cada
 # consulta, y desplegadas empujaban las figuras fuera de la primera pantalla.
-DEFINITIONS_BOX = "Qué mide cada serie"
+DEFINITIONS_BOX = "¿Qué mide cada serie?"
 
 # El resumen nacional es un modo de vista, no un indicador: muestra las dos
 # temporadas del ASI una al lado de la otra, cada una con su cifra y su mapa de
@@ -103,29 +103,26 @@ OVERVIEW_HELP = ("Las dos temporadas del ASI por separado, cada una con su "
                  "un solo indicador, selecciónelo arriba.")
 
 # --- Las dos vistas de una temporada, a nivel país ---------------------------
-# Son el mismo dato ordenado de dos maneras, así que los títulos dicen qué
-# pregunta responde cada una y no repiten el nombre del indicador, que ya está
-# en el encabezado de la sección. Sin eso, dos figuras tituladas casi igual se
-# leen como dos indicadores distintos, que es lo que pasaba antes.
 # Las dos llevan el mismo título, que nombra el indicador y la ventana: son el
 # mismo dato y titularlas distinto las hacía leer como dos indicadores. Lo que
 # cambia es la cola del subtítulo, que dice cómo está codificado cada uno, para
 # poder referirse a una de las dos sin ambigüedad.
 SEASON_TITLE = "{indicador} ({sigla}) · {ventana}"
-SEASON_SUBTITLE = (
-    "{sigla} nacional por dekad de la temporada {temporada} ({meses}), "
-    "ponderado por el área de cultivo de cada municipio · {codificacion}")
-SEASON_MATRIX_ENCODING = "una fila por temporada, el valor en la intensidad del color"
-SEASON_LINE_ENCODING = "una línea por temporada, el valor en la altura del punto"
+# Subtítulos cortos: a media pantalla, el que además decía la temporada, sus
+# meses y la ponderación se partía en tres renglones y le comía sitio a la
+# figura. Eso ya lo dice la nota de abajo, que se lee una vez para las dos.
+SEASON_MATRIX_SUBTITLE = ("Una fila por temporada y el valor en la intensidad "
+                          "del color de cada dekad")
+SEASON_LINE_SUBTITLE = ("Una línea por temporada y el valor en la altura del "
+                        "punto de cada dekad")
 OVERVIEW_KPI_NOTE = "Promedios nacionales ponderados por píxeles válidos."
 
 # El VCI no tiene temporada, así que su eje es el año completo y sus líneas son
 # años calendario. Misma idea que en las temporadas: superponer en vez de
 # encadenar, para poder comparar un ciclo contra otro.
-YEAR_LINE_TITLE = "Matriz año × dekad · codificada en posición"
-YEAR_LINE_SUBTITLE = (
-    "Una línea por año sobre los 36 dekads del calendario; la altura del punto "
-    "es el valor del índice, y el año más reciente va destacado")
+YEAR_LINE_TITLE = "{indicador} ({sigla}) · {ventana}"
+YEAR_LINE_SUBTITLE = ("Una línea por año y el valor en la altura del punto "
+                      "de cada dekad")
 SEASON_PAIR_NOTE = (
     "Las dos figuras grafican el mismo dato: {indicador}, como promedio "
     "nacional ponderado por píxeles válidos de las estimaciones satelitales por "
@@ -134,6 +131,22 @@ SEASON_PAIR_NOTE = (
     "de unos diez días, llamados dekads, y el índice se evalúa en cada uno. "
     "Fuera de esa ventana el índice queda congelado en el valor con que cerró "
     "la temporada, así que no se grafica.")
+
+# --- Precipitación -----------------------------------------------------------
+# Dos figuras en vez de una. La anterior superponía barras de lluvia, la línea
+# del promedio de largo plazo y la anomalía en un eje secundario: tres lecturas
+# en el mismo espacio, y ninguna cómoda.
+RAIN_LINES_TITLE = "Precipitación · {ventana}"
+RAIN_LINES_SUBTITLE = ("Una línea por año y el valor en la altura del punto de "
+                       "cada dekad, contra el promedio de largo plazo de FAO")
+RAIN_BARS_TITLE = "Anomalía de precipitación · {ventana}"
+RAIN_BARS_SUBTITLE = ("Diferencia porcentual de cada dekad contra su promedio "
+                      "de largo plazo: sobre cero llovió más que lo habitual")
+RAIN_NOTE = (
+    "Lluvia acumulada por dekad, ponderada por área de cultivo, y su promedio "
+    "de largo plazo. La referencia es la que publica FAO y no se recalcula. La "
+    "anomalía va sobre el eje del tiempo completo, sin cortar por temporada: la "
+    "lluvia no depende de la ventana de cultivo de ningún indicador.")
 
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.

@@ -64,9 +64,10 @@ for _intento in (1, 2):
                                   national, season_months_label, sidebar,
                                   series_options)
         from asis import config as cfg, panel, viz               # noqa: E402
-        from asis.aggregate import (at_level, climatology_frame,  # noqa: E402
-                                    over_window, season_columns,
-                                    severity_area, to_country)
+        from asis.aggregate import (at_level, classify,          # noqa: E402
+                                    climatology_frame, over_window,
+                                    season_columns, severity_area,
+                                    to_country)
         from asis.calendar import (dekad_label,                   # noqa: E402
                                    dekad_label_long, dekad_window)
         break
@@ -76,6 +77,16 @@ for _intento in (1, 2):
         _purgar_modulos_locales()
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
+
+# Estilo de las cifras de encabezado. Se define una vez porque `st.metric` no
+# admite color en el valor, y el color de la clase de FAO va justamente ahi.
+st.markdown("""<style>
+.asis-kpi { line-height: 1.25; margin-bottom: .4rem; }
+.asis-kpi-label { font-size: .8rem; color: #5b6270; }
+.asis-kpi-value { font-size: 2rem; font-weight: 650; display: inline-block;
+                  padding: .05em .35em; border-radius: .3rem; }
+.asis-kpi-foot { font-size: .8rem; color: #8b929e; }
+</style>""", unsafe_allow_html=True)
 
 TABS = {
     "pais": ["Panorama nacional", "Datos", texts.HELP_TAB],
@@ -445,15 +456,10 @@ def _season_captions(query: Query, series_id: str, codificacion: str):
     una de las dos sin ambigüedad.
     """
     familia = panel.family_of(series_id)
-    season = cfg.SERIES[series_id].season
     titulo = texts.SEASON_TITLE.format(
         indicador=texts.INDICATOR_PLAIN[familia], sigla=familia,
-        ventana=query.window_label)
-    subtitulo = texts.SEASON_SUBTITLE.format(
-        sigla=familia,
-        temporada=cfg.SEASONS[season].split(" (")[0].lower(),
-        meses=season_months_label(season), codificacion=codificacion)
-    return titulo, subtitulo
+        ventana=query.window_compact)
+    return titulo, codificacion
 
 
 def _matrix_fig(query: Query, frame: pd.DataFrame, series_id: str,
@@ -461,7 +467,7 @@ def _matrix_fig(query: Query, frame: pd.DataFrame, series_id: str,
     """La matriz temporada x dekad codificada en color."""
     season = cfg.SERIES[series_id].season
     titulo, subtitulo = _season_captions(query, series_id,
-                                         texts.SEASON_MATRIX_ENCODING)
+                                         texts.SEASON_MATRIX_SUBTITLE)
     return viz.climatology_matrix(
         frame, titulo, subtitulo, value_col="mean",
         columns=season_columns(season), height=height)
@@ -477,7 +483,7 @@ def _lines_fig(query: Query, frame: pd.DataFrame, series_id: str, height: int):
     """
     season = cfg.SERIES[series_id].season
     titulo, subtitulo = _season_captions(query, series_id,
-                                         texts.SEASON_LINE_ENCODING)
+                                         texts.SEASON_LINE_SUBTITLE)
     return viz.season_lines_fig(
         frame, season_columns(season), titulo, subtitulo,
         label=panel.unit_short_of(series_id),
@@ -520,7 +526,10 @@ def _country_series_fig(query: Query, series_id: str, serie: pd.DataFrame,
     """
     familia = panel.family_of(series_id)
     return viz.season_lines_fig(
-        serie, season_columns(None), texts.YEAR_LINE_TITLE,
+        serie, season_columns(None),
+        texts.YEAR_LINE_TITLE.format(
+            indicador=texts.INDICATOR_PLAIN[familia], sigla=familia,
+            ventana=query.window_compact),
         texts.YEAR_LINE_SUBTITLE, label=panel.unit_short_of(series_id),
         family=familia, height=height,
         threshold=0.35 if familia == "VCI" else None,
@@ -599,18 +608,46 @@ def _view_country_overview(query: Query):
         st.subheader(panel.label_of(series_id))
         _country_indicator_block(query, series_id)
 
+    _rainfall_block(query)
+
+
+def _rainfall_block(query: Query):
+    """La precipitación, en dos figuras en vez de una.
+
+    Antes era una sola con barras de lluvia, la línea del promedio de largo
+    plazo y la anomalía sobre un eje secundario: tres lecturas en el mismo
+    espacio. Ahora arriba van los años superpuestos contra el promedio, y abajo
+    la anomalía como barras.
+
+    La anomalía se grafica sobre el eje del tiempo completo, sin cortar por
+    temporada, a diferencia del ASI: la lluvia no depende de la ventana de
+    cultivo de ningún indicador.
+    """
     rain = national("serie_nacional_lluvia")
-    ventana = pd.DataFrame()
-    if len(rain):
-        ventana = rain[(rain["dekad_id"] >= query.start)
-                       & (rain["dekad_id"] <= query.end)]
-    if len(ventana):
-        st.subheader("Lluvia")
-        fig = viz.rainfall_fig(
-            ventana, "Lluvia observada y su promedio histórico",
-            "Ponderada por área de cultivo · el promedio de largo plazo es el "
-            "que publica FAO y no se recalcula")
-        figure(fig, ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
+    if not len(rain):
+        return
+    ventana = rain[(rain["dekad_id"] >= query.start)
+                   & (rain["dekad_id"] <= query.end)]
+    if not len(ventana):
+        return
+    st.subheader("Precipitación")
+    # El promedio de largo plazo es el mismo para todos los años, así que se
+    # resume por dekad del año en vez de dibujarse una vez por año.
+    lta = ventana.groupby("dekad_of_year")["lta"].mean()
+    lineas = viz.season_lines_fig(
+        ventana, season_columns(None),
+        texts.RAIN_LINES_TITLE.format(ventana=query.window_compact),
+        texts.RAIN_LINES_SUBTITLE, label="mm por dekad", value_col="value",
+        color="#3b7dd8", reference=lta, reference_label="promedio de largo plazo")
+    if lineas is not None:
+        st.plotly_chart(lineas, width="stretch")
+    barras = viz.anomaly_bars_fig(
+        ventana, texts.RAIN_BARS_TITLE.format(ventana=query.window_compact),
+        texts.RAIN_BARS_SUBTITLE)
+    if barras is not None:
+        st.plotly_chart(barras, width="stretch")
+    st.caption(texts.RAIN_NOTE)
+    download(ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
 
 
 def _view_country_indicator(query: Query):
@@ -664,13 +701,60 @@ def summary_overview(query: Query):
         return
     for col, series_id in zip(st.columns(len(disponibles)), disponibles):
         ultimo = season_kpi(query, series_id)
-        col.metric(panel.label_of(series_id),
-                   "sin dato" if ultimo is None else f"{ultimo[1]:.2f}",
-                   help=f"{panel.unit_of(series_id)}. Ponderado por píxeles "
-                        f"válidos.")
-        col.caption("" if ultimo is None else
-                    texts.KPI_DEKAD.format(dekad=dekad_label(ultimo[0])))
+        with col:
+            kpi(panel.label_of(series_id), ultimo,
+                panel.family_of(series_id),
+                f"{panel.unit_of(series_id)}. Ponderado por píxeles válidos.")
     st.caption(texts.OVERVIEW_KPI_NOTE)
+
+
+def class_color(value: float, family: str) -> tuple[str, str]:
+    """Clase de FAO en la que cae un valor, y su color.
+
+    Sale de `cfg.CLASSES`, que es de donde también salen los mapas: la cifra de
+    encabezado y el mapa que está dos pantallas más abajo no pueden pintar el
+    mismo valor de colores distintos.
+    """
+    clase = str(classify(pd.Series([value]), family).iloc[0])
+    return clase, cfg.PALETTE[family].get(clase, "#1f2430")
+
+
+def contrast_text(hex_color: str) -> str:
+    """Negro o blanco, el que se lea sobre ese fondo.
+
+    Hace falta porque la paleta de FAO va del verde oscuro al amarillo puro:
+    la cifra se pinta *sobre* el color de la clase y no *del* color de la clase,
+    porque amarillo #ffff00 como texto sobre blanco no se lee.
+    """
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+    luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    return "#1f2430" if luminancia > 0.6 else "#ffffff"
+
+
+def kpi(label: str, ultimo, family: str, ayuda: str):
+    """Cifra de encabezado con el color de su clase de FAO.
+
+    No usa `st.metric` porque solo admite color en el delta, y lo que hay que
+    colorear es el valor. El número queda a la vista: el color acompaña la
+    lectura, no la reemplaza, que es lo que haría falta para alguien que no
+    distingue esos tonos.
+    """
+    if ultimo is None:
+        st.markdown(f"<div class='asis-kpi' title='{ayuda}'>"
+                    f"<div class='asis-kpi-label'>{label}</div>"
+                    f"<div class='asis-kpi-value'>sin dato</div></div>",
+                    unsafe_allow_html=True)
+        return
+    dekad, valor = ultimo
+    clase, color = class_color(valor, family)
+    st.markdown(
+        f"<div class='asis-kpi' title='{ayuda} Clase FAO: {clase}.'>"
+        f"<div class='asis-kpi-label'>{label}</div>"
+        f"<div class='asis-kpi-value' style='background:{color};"
+        f"color:{contrast_text(color)}'>{valor:.2f}</div>"
+        f"<div class='asis-kpi-foot'>"
+        f"{texts.KPI_DEKAD.format(dekad=dekad_label(dekad))}</div></div>",
+        unsafe_allow_html=True)
 
 
 # --- Vista: datos ------------------------------------------------------------

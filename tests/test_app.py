@@ -388,19 +388,28 @@ def test_las_dos_figuras_comparten_titulo_y_nombran_el_indicador(last):
     for titulo in titulos:
         assert "Índice de estrés agrícola" in titulo
         assert "(ASI)" in titulo
-        assert query.window_label in titulo
+        assert query.window_compact in titulo
     encabezado = [t.split("<br>")[0] for t in titulos]
     assert encabezado[0] == encabezado[1]
     subtitulos = [t.split("<br>")[1] for t in titulos]
     assert subtitulos[0] != subtitulos[1]
-    for sub in subtitulos:
-        assert "temporada primera (mayo a octubre)" in sub
-        assert "área de cultivo de cada municipio" in sub
 
 
-def test_cada_temporada_declara_su_propia_ventana(last):
-    _q, _f, matriz, _l = _frame_y_figuras("asi_gs2", last)
-    assert "temporada postrera (septiembre a enero)" in matriz.layout.title.text
+def test_el_rango_del_titulo_va_en_forma_corta(last):
+    """A media pantalla, "1er dek mar 2025 a 3er dek ago 2026" partia el titulo
+    en dos renglones y le comia sitio a la figura."""
+    query, _f, matriz, _l = _frame_y_figuras("asi_gs1", last)
+    assert query.window_compact in matriz.layout.title.text
+    assert query.window_label not in matriz.layout.title.text
+    assert "dek " not in query.window_compact
+
+
+def test_la_temporada_y_sus_meses_se_explican_bajo_las_figuras(last):
+    """Salieron del subtitulo para acortarlo, pero no se perdieron: la nota de
+    abajo se lee una vez para las dos figuras."""
+    assert "{temporada}" in texts.SEASON_PAIR_NOTE
+    assert "{meses}" in texts.SEASON_PAIR_NOTE
+    assert "píxeles válidos" in texts.SEASON_PAIR_NOTE
 
 
 def test_la_herramienta_dice_dekad_y_nunca_dekadal():

@@ -121,3 +121,35 @@ def test_la_nota_de_fuente_se_ancla_en_pixeles_bajo_el_eje():
     nota = [a for a in fig.layout.annotations if "Fuente" in (a.text or "")][0]
     assert nota.y == 0 and nota.yshift == -78
     assert fig.layout.margin.b >= 78
+
+
+# --- Color de clase en las cifras de encabezado ------------------------------
+def test_el_texto_del_kpi_contrasta_con_el_color_de_la_clase():
+    """La paleta de FAO va del verde oscuro al amarillo puro. La cifra se pinta
+    *sobre* el color de la clase y no *del* color de la clase, porque amarillo
+    #ffff00 como texto sobre blanco no se lee."""
+    import streamlit_app as app
+
+    assert app.contrast_text("#ffff00") == "#1f2430"    # amarillo VCI
+    assert app.contrast_text("#9a0000") == "#ffffff"    # rojo oscuro VCI
+    assert app.contrast_text("#2fcd00") == "#ffffff"    # verde ASI
+
+
+def test_el_kpi_usa_la_misma_clasificacion_que_los_mapas():
+    """La cifra de encabezado y el mapa que esta dos pantallas mas abajo no
+    pueden pintar el mismo valor de colores distintos."""
+    import streamlit_app as app
+    from asis import config as cfg
+
+    for familia, valor in (("ASI", 32.0), ("VCI", 0.5)):
+        clase, color = app.class_color(valor, familia)
+        assert cfg.PALETTE[familia][clase] == color
+
+
+def test_la_anomalia_colorea_por_signo():
+    lluvia = pd.DataFrame({
+        "dekad_id": ["2026-01-D1", "2026-01-D2", "2026-01-D3"],
+        "anom_pct": [40.0, -25.0, 0.0]})
+    fig = viz.anomaly_bars_fig(lluvia, "t")
+    colores = list(fig.data[0].marker.color)
+    assert colores[0] == colores[2] != colores[1]
