@@ -370,6 +370,19 @@ def sidebar(options: dict[str, str]) -> Query:
 # que decía no dependía de la selección sino del indicador, y ahora se explica
 # una vez en la definición del ASI. Las figuras de país, además, ya no grafican
 # esos dekads, así que no hay nada que advertir sobre ellos.
+def season_months_label(season: str) -> str:
+    """La ventana de cultivo en meses: "mayo a octubre".
+
+    Sale de `SEASON_WINDOW`, que está en dekads, y no de una constante escrita
+    aparte: si algún día se corrige el calendario agrícola, los subtítulos lo
+    siguen solos en vez de quedar afirmando la ventana vieja.
+    """
+    from asis.calendar import MONTH_ES_FULL
+    inicio, fin = cfg.SEASON_WINDOW[season]
+    return (f"{MONTH_ES_FULL[(inicio - 1) // 3 + 1]} a "
+            f"{MONTH_ES_FULL[(fin - 1) // 3 + 1]}")
+
+
 def season_window_label(season: str) -> str:
     from asis.calendar import MONTH_ES
     start, end = cfg.SEASON_WINDOW[season]

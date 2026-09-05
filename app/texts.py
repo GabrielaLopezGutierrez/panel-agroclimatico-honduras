@@ -43,8 +43,13 @@ INTRO = (
 # desaparecía según el dekad elegido. Dice de quién son las revisiones: son de
 # FAO, no correcciones de este panel.
 PRELIMINARY_HEADER = (
-    "Los últimos tres dekadales son datos preliminares: FAO puede revisarlos "
-    "en actualizaciones futuras.")
+    "Los últimos tres dekads son datos preliminares: FAO puede revisarlos en "
+    "actualizaciones futuras.")
+
+# Rótulo del dekad al que corresponde cada cifra de encabezado. Va rotulado y
+# no como fecha suelta: suelta se leía como la fecha de actualización del panel,
+# que es otra cosa y ya está arriba.
+KPI_DEKAD = "Último dekad disponible: {dekad}"
 
 # --- Definiciones de indicador, junto a las cifras de encabezado -------------
 # Se muestran cerca de las métricas principales, no en la pestaña "Cómo leer":
@@ -58,6 +63,12 @@ INDICATOR_NAMES = {
     "ASI": "Agricultural Stress Index (ASI) · índice de estrés agrícola",
     "VCI": ("Vegetation Condition Index (VCI) · índice de condición de la "
             "vegetación"),
+}
+# El nombre en español a secas, para titular las figuras: ahí la sigla va
+# aparte y el nombre en inglés no cabe sin comerse el rango de fechas.
+INDICATOR_PLAIN = {
+    "ASI": "Índice de estrés agrícola",
+    "VCI": "Índice de condición de la vegetación",
 }
 INDICATOR_DEFINITIONS = {
     "ASI": (INDICATOR_NAMES["ASI"],
@@ -96,14 +107,16 @@ OVERVIEW_HELP = ("Las dos temporadas del ASI por separado, cada una con su "
 # pregunta responde cada una y no repiten el nombre del indicador, que ya está
 # en el encabezado de la sección. Sin eso, dos figuras tituladas casi igual se
 # leen como dos indicadores distintos, que es lo que pasaba antes.
-SEASON_MATRIX_TITLE = "Matriz temporada × dekad · codificada en color"
-SEASON_MATRIX_SUBTITLE = (
-    "Una fila por temporada y una columna por dekad de la ventana de cultivo; "
-    "la intensidad del color es el valor del índice")
-SEASON_LINE_TITLE = "Matriz temporada × dekad · codificada en posición"
-SEASON_LINE_SUBTITLE = (
-    "Una línea por temporada sobre el mismo eje de dekads; la altura del punto "
-    "es el valor del índice, y la temporada más reciente va destacada")
+# Las dos llevan el mismo título, que nombra el indicador y la ventana: son el
+# mismo dato y titularlas distinto las hacía leer como dos indicadores. Lo que
+# cambia es la cola del subtítulo, que dice cómo está codificado cada uno, para
+# poder referirse a una de las dos sin ambigüedad.
+SEASON_TITLE = "{indicador} ({sigla}) · {ventana}"
+SEASON_SUBTITLE = (
+    "{sigla} nacional por dekad de la temporada {temporada} ({meses}), "
+    "ponderado por el área de cultivo de cada municipio · {codificacion}")
+SEASON_MATRIX_ENCODING = "una fila por temporada, el valor en la intensidad del color"
+SEASON_LINE_ENCODING = "una línea por temporada, el valor en la altura del punto"
 OVERVIEW_KPI_NOTE = "Promedios nacionales ponderados por píxeles válidos."
 
 # El VCI no tiene temporada, así que su eje es el año completo y sus líneas son
@@ -114,11 +127,13 @@ YEAR_LINE_SUBTITLE = (
     "Una línea por año sobre los 36 dekads del calendario; la altura del punto "
     "es el valor del índice, y el año más reciente va destacado")
 SEASON_PAIR_NOTE = (
-    "Las dos figuras son la misma matriz: {indicador}, promedio nacional "
-    "ponderado por píxeles válidos, {ventana}. Solo se grafican los dekads "
-    "dentro de la ventana de cultivo ({temporada}); fuera de ella el índice "
-    "queda congelado en el valor con que cerró la temporada y no describe esa "
-    "fecha.")
+    "Las dos figuras grafican el mismo dato: {indicador}, como promedio "
+    "nacional ponderado por píxeles válidos de las estimaciones satelitales por "
+    "píxel que publica FAO para Honduras, en {ventana}. La temporada "
+    "{temporada} va de {meses}; cada mes se divide en tres periodos "
+    "de unos diez días, llamados dekads, y el índice se evalúa en cada uno. "
+    "Fuera de esa ventana el índice queda congelado en el valor con que cerró "
+    "la temporada, así que no se grafica.")
 
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.

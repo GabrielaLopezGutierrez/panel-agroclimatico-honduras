@@ -1,12 +1,13 @@
-"""El calendario dekadal es la clave temporal de todo el panel: si la aritmética
-de dekads se equivoca, el resto del proyecto se equivoca en silencio."""
+"""El calendario de dekads es la clave temporal de todo el panel: si la
+aritmética de dekads se equivoca, el resto del proyecto se equivoca en
+silencio."""
 import pandas as pd
 import pytest
 
 from asis.calendar import (dekad_between, dekad_code, dekad_date,
                            dekad_from_index, dekad_index, dekad_label,
-                           dekad_of_date, dekad_of_year, dekad_range,
-                           dekad_window, dekad_year)
+                           dekad_label_long, dekad_of_date, dekad_of_year,
+                           dekad_range, dekad_window, dekad_year)
 
 
 def test_index_ida_y_vuelta():
@@ -56,7 +57,13 @@ def test_fecha_de_inicio_del_dekad():
 
 
 def test_etiqueta_en_espanol():
-    assert dekad_label("2019-09-D3") == "3a dek sep 2019"
+    """La herramienta dice "dekad" en todas partes, nunca "dekadal": es el
+    termino de FAO GIEWS y la clave temporal del panel. "dek" es su abreviatura
+    y se usa solo donde el ancho aprieta. Los ordinales van en masculino,
+    porque el sustantivo lo es."""
+    assert dekad_label("2019-09-D3") == "3er dek sep 2019"
+    assert dekad_label("2019-09-D1") == "1er dek sep 2019"
+    assert dekad_label_long("2019-09-D3") == "3er dekad de septiembre 2019"
     assert dekad_year("2019-09-D3") == 2019
 
 

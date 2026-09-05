@@ -61,7 +61,7 @@ for _intento in (1, 2):
         from app import texts                                    # noqa: E402
         from app.controls import (MAX_FRAMES, OVERVIEW_SERIES,   # noqa: E402
                                   Query, dekads, geojson, load, manifest,
-                                  national, season_window_label, sidebar,
+                                  national, season_months_label, sidebar,
                                   series_options)
         from asis import config as cfg, panel, viz               # noqa: E402
         from asis.aggregate import (at_level, climatology_frame,  # noqa: E402
@@ -436,15 +436,38 @@ def _season_frame(query: Query, series_id: str) -> pd.DataFrame:
     return frame[frame["dekad_of_year"].isin(season_columns(season))]
 
 
-def _matrix_fig(frame: pd.DataFrame, series_id: str, height: int):
+def _season_captions(query: Query, series_id: str, codificacion: str):
+    """Título y subtítulo de una figura de temporada.
+
+    Las dos figuras del par llevan el mismo título —nombran el indicador y la
+    ventana— porque son el mismo dato: titularlas distinto las hacía leer como
+    dos indicadores. Solo la cola del subtítulo cambia, para poder referirse a
+    una de las dos sin ambigüedad.
+    """
+    familia = panel.family_of(series_id)
+    season = cfg.SERIES[series_id].season
+    titulo = texts.SEASON_TITLE.format(
+        indicador=texts.INDICATOR_PLAIN[familia], sigla=familia,
+        ventana=query.window_label)
+    subtitulo = texts.SEASON_SUBTITLE.format(
+        sigla=familia,
+        temporada=cfg.SEASONS[season].split(" (")[0].lower(),
+        meses=season_months_label(season), codificacion=codificacion)
+    return titulo, subtitulo
+
+
+def _matrix_fig(query: Query, frame: pd.DataFrame, series_id: str,
+                height: int):
     """La matriz temporada x dekad codificada en color."""
     season = cfg.SERIES[series_id].season
+    titulo, subtitulo = _season_captions(query, series_id,
+                                         texts.SEASON_MATRIX_ENCODING)
     return viz.climatology_matrix(
-        frame, texts.SEASON_MATRIX_TITLE, texts.SEASON_MATRIX_SUBTITLE,
-        value_col="mean", columns=season_columns(season), height=height)
+        frame, titulo, subtitulo, value_col="mean",
+        columns=season_columns(season), height=height)
 
 
-def _lines_fig(frame: pd.DataFrame, series_id: str, height: int):
+def _lines_fig(query: Query, frame: pd.DataFrame, series_id: str, height: int):
     """La misma matriz codificada en posicion: una linea por temporada.
 
     Antes era una serie cronologica con la linea cortada en los meses fuera de
@@ -453,9 +476,11 @@ def _lines_fig(frame: pd.DataFrame, series_id: str, height: int):
     la fila de un anio en el mapa de calor es una linea aqui.
     """
     season = cfg.SERIES[series_id].season
+    titulo, subtitulo = _season_captions(query, series_id,
+                                         texts.SEASON_LINE_ENCODING)
     return viz.season_lines_fig(
-        frame, season_columns(season), texts.SEASON_LINE_TITLE,
-        texts.SEASON_LINE_SUBTITLE, label=panel.unit_short_of(series_id),
+        frame, season_columns(season), titulo, subtitulo,
+        label=panel.unit_short_of(series_id),
         family=panel.family_of(series_id), height=height)
 
 
@@ -537,21 +562,23 @@ def _country_indicator_block(query: Query, series_id: str):
                         130 + 26 * frame["Year"].nunique()))
     izquierda, derecha = st.columns(2)
     with izquierda:
-        matriz = _matrix_fig(frame, series_id, alto)
+        matriz = _matrix_fig(query, frame, series_id, alto)
         if matriz is None:
             st.info(texts.NO_DATA)
         else:
             st.plotly_chart(matriz, width="stretch")
     with derecha:
-        linea = _lines_fig(frame, series_id, alto)
+        linea = _lines_fig(query, frame, series_id, alto)
         if linea is None:
             st.info(texts.NO_DATA)
         else:
             st.plotly_chart(linea, width="stretch")
 
+    season = cfg.SERIES[series_id].season
     st.caption(texts.SEASON_PAIR_NOTE.format(
         indicador=panel.label_of(series_id), ventana=query.window_label,
-        temporada=season_window_label(cfg.SERIES[series_id].season)))
+        temporada=cfg.SEASONS[season].split(" (")[0].lower(),
+        meses=season_months_label(season)))
     st.caption(texts.ALERT_DISCLAIMER)
     download(frame[["dekad_id", "date", "Year", "dekad_of_year", "mean",
                     "n_px", "n_muni"]],
@@ -641,7 +668,8 @@ def summary_overview(query: Query):
                    "sin dato" if ultimo is None else f"{ultimo[1]:.2f}",
                    help=f"{panel.unit_of(series_id)}. Ponderado por píxeles "
                         f"válidos.")
-        col.caption("" if ultimo is None else dekad_label(ultimo[0]))
+        col.caption("" if ultimo is None else
+                    texts.KPI_DEKAD.format(dekad=dekad_label(ultimo[0])))
     st.caption(texts.OVERVIEW_KPI_NOTE)
 
 

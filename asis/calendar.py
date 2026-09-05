@@ -66,25 +66,26 @@ def dekad_of_year(code: str) -> int:
     return (m - 1) * 3 + d
 
 
-def dekad_label(code: str) -> str:
-    y, m, d = int(code[:4]), int(code[5:7]), int(code[-1])
-    return f"{d}a dek {MONTH_ES[m]} {y}"
-
-
 MONTH_ES_FULL = {1: "enero", 2: "febrero", 3: "marzo", 4: "abril", 5: "mayo",
                  6: "junio", 7: "julio", 8: "agosto", 9: "septiembre",
                  10: "octubre", 11: "noviembre", 12: "diciembre"}
+# "dekad" es masculino, así que los ordinales van en masculino. La herramienta
+# dice "dekad" en todas partes y no "dekadal": es el término que usa FAO GIEWS,
+# es la clave temporal del panel (`dekad_id`) y ya era la palabra en el resto
+# de la interfaz. "dek" es su abreviatura, y se usa solo donde el ancho aprieta.
 ORDINAL_ES = {1: "1er", 2: "2do", 3: "3er"}
 
 
-def dekad_label_long(code: str) -> str:
-    """Forma larga, para el encabezado: "3er dekadal agosto 2026".
-
-    La corta (`dekad_label`) sigue en ejes, leyendas y cifras, donde el nombre
-    completo del mes no cabe sin apretar el resto.
-    """
+def dekad_label(code: str) -> str:
+    """Forma corta, para ejes, selectores y cifras: "3er dek sep 2019"."""
     y, m, d = int(code[:4]), int(code[5:7]), int(code[-1])
-    return f"{ORDINAL_ES[d]} dekadal {MONTH_ES_FULL[m]} {y}"
+    return f"{ORDINAL_ES[d]} dek {MONTH_ES[m]} {y}"
+
+
+def dekad_label_long(code: str) -> str:
+    """Forma larga, para el encabezado: "3er dekad de agosto 2026"."""
+    y, m, d = int(code[:4]), int(code[5:7]), int(code[-1])
+    return f"{ORDINAL_ES[d]} dekad de {MONTH_ES_FULL[m]} {y}"
 
 
 def dekad_year(code: str) -> int:

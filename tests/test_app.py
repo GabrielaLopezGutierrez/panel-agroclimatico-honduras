@@ -295,8 +295,8 @@ def _frame_y_figuras(series_id, last):
     frame = app._season_frame(query, series_id)
     alto = min(600, max(app.SIDE_BY_SIDE_HEIGHT,
                         130 + 26 * frame["Year"].nunique()))
-    return (query, frame, app._matrix_fig(frame, series_id, alto),
-            app._lines_fig(frame, series_id, alto))
+    return (query, frame, app._matrix_fig(query, frame, series_id, alto),
+            app._lines_fig(query, frame, series_id, alto))
 
 
 def test_las_dos_figuras_de_la_temporada_grafican_el_mismo_dato(last):
@@ -377,3 +377,42 @@ def test_las_fichas_llevan_el_nombre_completo_de_la_serie():
         assert familia in nombre            # la sigla sigue, entre parentesis
     assert "Agricultural Stress Index" in texts.INTRO
     assert "Vegetation Condition Index" in texts.INTRO
+
+
+# --- Titulos de las figuras de temporada -------------------------------------
+def test_las_dos_figuras_comparten_titulo_y_nombran_el_indicador(last):
+    """Titularlas distinto las hacia leer como dos indicadores. Lo unico que
+    cambia es la cola del subtitulo, que dice como esta codificada cada una."""
+    query, _frame, matriz, linea = _frame_y_figuras("asi_gs1", last)
+    titulos = [f.layout.title.text for f in (matriz, linea)]
+    for titulo in titulos:
+        assert "Índice de estrés agrícola" in titulo
+        assert "(ASI)" in titulo
+        assert query.window_label in titulo
+    encabezado = [t.split("<br>")[0] for t in titulos]
+    assert encabezado[0] == encabezado[1]
+    subtitulos = [t.split("<br>")[1] for t in titulos]
+    assert subtitulos[0] != subtitulos[1]
+    for sub in subtitulos:
+        assert "temporada primera (mayo a octubre)" in sub
+        assert "área de cultivo de cada municipio" in sub
+
+
+def test_cada_temporada_declara_su_propia_ventana(last):
+    _q, _f, matriz, _l = _frame_y_figuras("asi_gs2", last)
+    assert "temporada postrera (septiembre a enero)" in matriz.layout.title.text
+
+
+def test_la_herramienta_dice_dekad_y_nunca_dekadal():
+    """Un solo termino en toda la interfaz. Se eligio "dekad": es el de FAO
+    GIEWS, es la clave temporal del panel y ya era la palabra en el resto de
+    los textos."""
+    for nombre in dir(texts):
+        if nombre.startswith("_"):
+            continue
+        valor = getattr(texts, nombre)
+        textos = ([valor] if isinstance(valor, str)
+                  else [x for x in valor if isinstance(x, str)]
+                  if isinstance(valor, (list, tuple)) else [])
+        for t in textos:
+            assert "dekadal" not in t.lower(), f"{nombre} dice dekadal"
