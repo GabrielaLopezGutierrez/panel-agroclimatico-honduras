@@ -33,8 +33,10 @@ INTRO = (
     "Esta herramienta de visualización utiliza los datos satelitales "
     "agroclimáticos que publica FAO en su portal de indicadores por país, "
     "dentro del Global Information and Early Warning System (GIEWS). Entrega "
-    "el historial a nivel de país, departamento y municipio de las series ASI, "
-    "VCI y precipitación.")
+    "el historial a nivel de país, departamento y municipio del Agricultural "
+    "Stress Index (ASI), o índice de estrés agrícola; del Vegetation Condition "
+    "Index (VCI), o índice de condición de la vegetación; y de la "
+    "precipitación.")
 
 # El aviso de dato preliminar es una propiedad permanente de la fuente, no de
 # la consulta, así que vive en el encabezado y no en una caja que aparecía y
@@ -48,23 +50,38 @@ PRELIMINARY_HEADER = (
 # Se muestran cerca de las métricas principales, no en la pestaña "Cómo leer":
 # es lo primero que alguien necesita para interpretar el número que acaba de
 # ver. No se duplican en "Cómo leer".
-INDICATOR_DEFINITIONS = {
-    "ASI": ("ASI", "Porcentaje del área de cultivo que estuvo bajo condiciones "
-                   "de estrés hídrico durante la temporada. La primera y la "
-                   "postrera son dos índices separados, cada uno medido sobre "
-                   "la máscara de cultivo de su propia temporada: no se suman "
-                   "ni se promedian entre sí. Cada uno existe solo dentro de "
-                   "su ventana de cultivo (primera de mayo a octubre, postrera "
-                   "de septiembre a enero); fuera de ella el índice queda "
-                   "congelado en el valor con que cerró la temporada y no "
-                   "describe esa fecha."),
-    "VCI": ("VCI", "Indica qué tan saludable está la vegetación actualmente en "
-                   "comparación con su rango histórico para la misma época del "
-                   "año. Valores altos indican condiciones relativamente "
-                   "favorables; valores bajos indican mayor estrés de la "
-                   "vegetación. A diferencia del ASI, es continuo todo el año: "
-                   "no depende de una ventana de cultivo."),
+# La primera posición es el nombre con el que se rotula la ficha: el nombre
+# completo del indicador, en inglés como lo publica FAO y en español, y no la
+# sigla sola. Quien llega al panel por primera vez no tiene por qué saber qué
+# es "ASI", y la sigla sola tampoco permite buscarlo en el portal de FAO.
+INDICATOR_NAMES = {
+    "ASI": "Agricultural Stress Index (ASI) · índice de estrés agrícola",
+    "VCI": ("Vegetation Condition Index (VCI) · índice de condición de la "
+            "vegetación"),
 }
+INDICATOR_DEFINITIONS = {
+    "ASI": (INDICATOR_NAMES["ASI"],
+            "Porcentaje del área de cultivo que estuvo bajo condiciones de "
+            "estrés hídrico durante la temporada. La primera y la postrera son "
+            "dos índices separados, cada uno medido sobre la máscara de cultivo "
+            "de su propia temporada: no se suman ni se promedian entre sí. Cada "
+            "uno existe solo dentro de su ventana de cultivo (primera de mayo a "
+            "octubre, postrera de septiembre a enero); fuera de ella el índice "
+            "queda congelado en el valor con que cerró la temporada y no "
+            "describe esa fecha."),
+    "VCI": (INDICATOR_NAMES["VCI"],
+            "Indica qué tan saludable está la vegetación actualmente en "
+            "comparación con su rango histórico para la misma época del año. "
+            "Valores altos indican condiciones relativamente favorables; "
+            "valores bajos indican mayor estrés de la vegetación. A diferencia "
+            "del índice de estrés agrícola, es continuo todo el año: no depende "
+            "de una ventana de cultivo."),
+}
+
+# Título de la caja desplegable con las definiciones. Van plegadas: son la
+# referencia que se consulta una vez, no algo que haga falta leer en cada
+# consulta, y desplegadas empujaban las figuras fuera de la primera pantalla.
+DEFINITIONS_BOX = "Qué mide cada serie"
 
 # El resumen nacional es un modo de vista, no un indicador: muestra las dos
 # temporadas del ASI una al lado de la otra, cada una con su cifra y su mapa de

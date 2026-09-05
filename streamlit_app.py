@@ -187,13 +187,18 @@ def indicator_definition(query: Query):
     """Definición del indicador activo, junto a las cifras de encabezado.
 
     Vivía en la pestaña "Cómo leer"; se movió aquí porque es lo primero que
-    hace falta para interpretar el número que se acaba de ver arriba, y para
-    no obligar a salir de la vista para entenderlo.
+    hace falta para interpretar el número que se acaba de ver arriba, y para no
+    obligar a salir de la vista para entenderlo.
+
+    Va plegada. Suelta eran dos párrafos largos entre las cifras y las figuras,
+    y la primera pantalla quedaba más texto que datos, que es justo lo que este
+    tablero trata de evitar. Plegada sigue a un clic de distancia.
     """
     familias = ("ASI", "VCI") if query.overview else (query.family,)
-    for familia in familias:
-        _, definicion = texts.INDICATOR_DEFINITIONS[familia]
-        st.caption(f"**{familia}** — {definicion}")
+    with st.expander(texts.DEFINITIONS_BOX):
+        for familia in familias:
+            nombre, definicion = texts.INDICATOR_DEFINITIONS[familia]
+            st.markdown(f"**{nombre}** — {definicion}")
 
 
 # --- Preparación del corte ---------------------------------------------------

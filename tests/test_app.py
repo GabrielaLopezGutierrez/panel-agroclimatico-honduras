@@ -353,3 +353,27 @@ def test_hay_una_linea_entera_por_temporada(last):
     Superpuestas sobre el eje de dekads, cada temporada es una linea entera."""
     _query, frame, _m, linea = _frame_y_figuras("asi_gs1", last)
     assert len(linea.data) == frame["Year"].nunique() > 1
+
+
+# --- Definiciones de las series ----------------------------------------------
+def test_las_definiciones_van_plegadas_y_una_sola_vez():
+    """Sueltas eran dos parrafos largos entre las cifras y las figuras, y la
+    primera pantalla quedaba mas texto que datos."""
+    at = _app()
+    caja = at.expander[0]
+    assert caja.label == texts.DEFINITIONS_BOX
+    assert len(caja.markdown) == 2          # ASI y VCI en el resumen nacional
+    frase = "Porcentaje del área de cultivo"
+    assert len([m for m in at.markdown if frase in m.value]) == 1
+
+
+def test_las_fichas_llevan_el_nombre_completo_de_la_serie():
+    """La sigla sola no le dice nada a quien llega por primera vez, y tampoco
+    permite buscar el indicador en el portal de FAO."""
+    for familia, esperado in (("ASI", "Agricultural Stress Index"),
+                              ("VCI", "Vegetation Condition Index")):
+        nombre, _definicion = texts.INDICATOR_DEFINITIONS[familia]
+        assert esperado in nombre
+        assert familia in nombre            # la sigla sigue, entre parentesis
+    assert "Agricultural Stress Index" in texts.INTRO
+    assert "Vegetation Condition Index" in texts.INTRO
