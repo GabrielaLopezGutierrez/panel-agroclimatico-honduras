@@ -60,15 +60,15 @@ for _intento in (1, 2):
     try:
         from app import texts                                    # noqa: E402
         from app.controls import (MAX_FRAMES, OVERVIEW_SERIES,   # noqa: E402
-                                  Query, dekads, geojson, is_preliminary,
-                                  load, manifest, national, season_status,
-                                  season_window_label, sidebar,
+                                  Query, dekads, geojson, load, manifest,
+                                  national, season_window_label, sidebar,
                                   series_options)
         from asis import config as cfg, panel, viz               # noqa: E402
         from asis.aggregate import (at_level, climatology_frame,  # noqa: E402
                                     over_window, season_columns,
                                     severity_area, to_country)
-        from asis.calendar import dekad_label, dekad_window       # noqa: E402
+        from asis.calendar import (dekad_label,                   # noqa: E402
+                                   dekad_label_long, dekad_window)
         break
     except ImportError:
         if _intento == 2:
@@ -107,32 +107,33 @@ def effective(query: Query) -> tuple[Query, bool]:
 
 # --- Encabezado --------------------------------------------------------------
 def header(mf: dict):
+    """Título, procedencia y qué es esta herramienta.
+
+    El aviso de dato preliminar vive aquí y no en una caja por consulta: es una
+    propiedad permanente de la fuente, no de lo que se está mirando. Como caja
+    aparecía y desaparecía al mover la ventana, que lo hacía leer como una
+    alerta sobre esa selección.
+    """
     ultimo = max((s.get("ultimo") or "" for s in mf.get("series", {}).values()),
                  default="")
     st.title(texts.TITLE)
-    st.caption(f"{texts.SOURCE_MD} · panel al "
-               f"{dekad_label(ultimo) if ultimo else 'sin datos'}")
+    st.caption(texts.HEADER_SOURCE)
+    st.caption(texts.HEADER_UPDATED.format(
+        dekad=dekad_label_long(ultimo) if ultimo else "sin datos"))
+    st.caption(texts.PRELIMINARY_HEADER)
+    st.write(texts.INTRO)
 
 
 def notices(query: Query, ampliada: bool):
+    """Lo único que sigue dependiendo de la consulta.
+
+    El aviso de fuera de temporada se retiró de aquí: no era una propiedad de
+    la selección sino del indicador, y ahora se explica una vez en la
+    definición del ASI, debajo de las cifras de encabezado.
+    """
     if ampliada:
         st.caption(f"Ventana ampliada a 18 meses ({query.window_label}): a "
                    f"nivel país un solo dekad no forma una serie.")
-    if is_preliminary(query.series_id, query.end):
-        st.info(texts.PRELIMINARY_NOTICE.format(dekad=dekad_label(query.end)))
-    status = season_status(query)
-    if not status["seasonal"] or not status["outside"]:
-        return
-    completo = status["outside"] == status["total"]
-    if status["combined"]:
-        plantilla = (texts.OUT_OF_SEASON_COMBINED if completo
-                     else texts.PARTIAL_SEASON_COMBINED)
-    else:
-        plantilla = texts.OUT_OF_SEASON if completo else texts.PARTIAL_SEASON
-    st.warning(plantilla.format(
-        n=status["outside"], total=status["total"],
-        temporada=status["season_name"], ventana=status["window"],
-        dekad=query.window_label))
 
 
 def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
@@ -480,18 +481,20 @@ def view_country(query: Query, cut: pd.DataFrame):
 
 def _country_series_fig(query: Query, series_id: str, serie: pd.DataFrame,
                         height=SIDE_BY_SIDE_HEIGHT):
+    """Los indicadores sin temporada, también con una línea por año.
+
+    El VCI era una línea continua sobre un eje de fechas: con la ventana
+    completa son veintiún años encadenados en un hilo que no deja comparar un
+    año contra otro. Superpuestos sobre los 36 dekads del año, cada año es una
+    línea y el ciclo estacional se lee de una vez.
+    """
     familia = panel.family_of(series_id)
-    titulo = (texts.SEASON_LINE_TITLE if cfg.SERIES[series_id].season
-              else f"{panel.label_of(series_id)} · nacional")
-    subtitulo = (texts.SEASON_LINE_SUBTITLE if cfg.SERIES[series_id].season
-                 else query.window_label)
-    return viz.series_fig(
-        serie, "mean", titulo, subtitulo,
-        label=panel.unit_short_of(series_id),
+    return viz.season_lines_fig(
+        serie, season_columns(None), texts.YEAR_LINE_TITLE,
+        texts.YEAR_LINE_SUBTITLE, label=panel.unit_short_of(series_id),
         family=familia, height=height,
         threshold=0.35 if familia == "VCI" else None,
-        threshold_label="umbral FAO 0,35" if familia == "VCI" else "",
-        segment_col="Year")
+        threshold_label="umbral FAO 0,35" if familia == "VCI" else "")
 
 
 def _country_indicator_block(query: Query, series_id: str):
@@ -508,9 +511,12 @@ def _country_indicator_block(query: Query, series_id: str):
     """
     slug = f"{series_id}_{query.slug()}"
     if not cfg.SERIES[series_id].season:
-        serie = to_country(load(series_id, query.start, query.end))
-        if serie.empty:
+        # `climatology_frame` sin temporada agrega Year y dekad_of_year, que es
+        # lo que necesita la figura para trazar una línea por año.
+        df = load(series_id, query.start, query.end)
+        if df.empty:
             return
+        serie = climatology_frame(to_country(df), None)
         figure(_country_series_fig(query, series_id, serie), serie,
                f"serie_nacional_{slug}", f"dl_serie_{series_id}")
         return

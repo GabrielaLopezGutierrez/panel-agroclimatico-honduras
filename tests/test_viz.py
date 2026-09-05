@@ -97,3 +97,27 @@ def test_area_de_severidad_reparte_la_superficie_por_clase():
     fig = viz.severity_area_fig(d, "ASI", "t")
     nombres = {t.name for t in fig.data}
     assert "<10" in nombres and ">=40" in nombres
+
+
+# --- Ejes categoricos de dekads ----------------------------------------------
+def test_las_etiquetas_del_eje_se_espacian():
+    """Una etiqueta por dekad deja de leerse mucho antes de dejar de caber: con
+    la ventana completa serian 779."""
+    assert viz.thin_ticks(["a", "b", "c"]) == ["a", "b", "c"]
+    muchas = [str(i) for i in range(779)]
+    assert len(viz.thin_ticks(muchas)) <= 12
+    assert len(viz.thin_ticks(muchas, 16)) <= 16
+    # Siempre arranca en la primera, para que el eje quede anclado.
+    assert viz.thin_ticks(muchas)[0] == "0"
+
+
+def test_la_nota_de_fuente_se_ancla_en_pixeles_bajo_el_eje():
+    """Con la nota en fraccion del area de dibujo, las etiquetas rotadas la
+    invadian entre 8 y 17 pixeles, medidos en el navegador. En pixeles la
+    separacion no depende del alto de la figura."""
+    import plotly.graph_objects as go
+
+    fig = viz.style_fig(go.Figure(), "t", source_shift=78)
+    nota = [a for a in fig.layout.annotations if "Fuente" in (a.text or "")][0]
+    assert nota.y == 0 and nota.yshift == -78
+    assert fig.layout.margin.b >= 78

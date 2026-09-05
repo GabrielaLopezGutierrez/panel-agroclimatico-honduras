@@ -57,7 +57,7 @@ def range_for(family: str):
 
 
 def style_fig(fig, title, subtitle="", source=cfg.SOURCE_NOTE, y_source=-0.14,
-              legend="top", top=90):
+              legend="top", top=90, source_shift=None):
     """Título, subtítulo y nota de fuente, sin repetir código en cada figura.
 
     Modos de leyenda, elegidos por legibilidad y no por costumbre:
@@ -70,12 +70,20 @@ def style_fig(fig, title, subtitle="", source=cfg.SOURCE_NOTE, y_source=-0.14,
     series: dieciocho departamentos en una fila horizontal no se leen.
 
     `bottom` la deja abajo, que es la convención en los mapas de clases.
+
+    `source_shift` ancla la nota de fuente a tantos píxeles bajo el eje, en vez
+    de a una fracción del área de dibujo. Lo necesitan las figuras de eje
+    categórico: sus etiquetas van rotadas y crecen hacia abajo, y con la nota
+    puesta en fracción terminaban encimadas —entre ocho y diecisiete píxeles,
+    medidos en el navegador—. En píxeles la separación no depende del alto de
+    la figura, que además cambia con la cantidad de temporadas.
     """
     text = f"<b>{title}</b>"
     if subtitle:
         text += ("<br><span style='font-size:12px;color:#5b6270'>"
                  f"{subtitle}</span>")
-    margin = dict(l=70, r=30, t=top, b=70)
+    margin = dict(l=70, r=30, t=top,
+                  b=70 if source_shift is None else source_shift + 26)
     if legend == "top":
         fig.update_layout(legend=dict(
             orientation="h", y=1.0, yanchor="bottom", x=0, xanchor="left",
@@ -95,9 +103,11 @@ def style_fig(fig, title, subtitle="", source=cfg.SOURCE_NOTE, y_source=-0.14,
     fig.update_layout(title=dict(text=text, x=0.01, xanchor="left", y=0.97,
                                  yanchor="top"), margin=margin)
     if source:
+        posicion = (dict(y=y_source) if source_shift is None
+                    else dict(y=0, yanchor="top", yshift=-source_shift))
         fig.add_annotation(text=source, xref="paper", yref="paper", x=0,
-                           y=y_source, showarrow=False, align="left",
-                           font=dict(size=9, color="#9aa1ad"))
+                           showarrow=False, align="left",
+                           font=dict(size=9, color="#9aa1ad"), **posicion)
     return fig
 
 
@@ -275,33 +285,25 @@ def severity_area_fig(df, family, title, subtitle="", value_col="mean",
 
 
 def series_fig(df, value_col, title, subtitle="", label="", family="ASI",
-               height=420, threshold=None, threshold_label="",
-               segment_col=None):
+               height=420, threshold=None, threshold_label=""):
     """Serie de tiempo de un nivel agregado, con banda de referencia opcional.
 
-    `segment_col` corta la línea en tramos en vez de dibujar uno solo. Se usa
-    cuando la serie tiene huecos con significado: al graficar una temporada
-    agrícola, los meses fuera de la ventana de cultivo no están, y una línea
-    continua uniría el cierre de una temporada con la apertura de la siguiente
-    como si el índice hubiera evolucionado entremedio.
+    Es la serie cronológica de un tirón. Las vistas de país no la usan: ahí las
+    series se superponen por temporada o por año con `season_lines_fig()`, que
+    permite comparar un ciclo contra otro. Esta la siguen usando los cuadernos.
     """
     d = df.dropna(subset=[value_col]).sort_values("dekad_id")
     if d.empty:
         return None
     color = "#b0413e" if family == "ASI" else "#2f8f4e"
     fig = go.Figure()
-    tramos = ([(None, d)] if not segment_col or segment_col not in d.columns
-              else list(d.groupby(segment_col, sort=True)))
-    for _clave, tramo in tramos:
-        fig.add_scatter(x=tramo["date"], y=tramo[value_col],
-                        mode="lines+markers", name=label or value_col,
-                        showlegend=False,
-                        line=dict(color=color, width=2.4),
-                        fill="tozeroy" if family == "ASI" else None,
-                        fillcolor=("rgba(176,65,62,.18)" if family == "ASI"
-                                   else None),
-                        hovertemplate="%{x|%d %b %Y}<br>" + (label or value_col)
-                                      + ": %{y:.2f}<extra></extra>")
+    fig.add_scatter(x=d["date"], y=d[value_col], mode="lines+markers",
+                    name=label or value_col,
+                    line=dict(color=color, width=2.4),
+                    fill="tozeroy" if family == "ASI" else None,
+                    fillcolor="rgba(176,65,62,.18)" if family == "ASI" else None,
+                    hovertemplate="%{x|%d %b %Y}<br>" + (label or value_col)
+                                  + ": %{y:.2f}<extra></extra>")
     if threshold is not None:
         fig.add_hline(y=threshold,
                       line=dict(color="#ff8900", width=1.2, dash="dot"))
@@ -344,6 +346,21 @@ def climatology_fig(national, pctl, n_baseline, years, title, subtitle="",
     return style_fig(fig, title, subtitle, y_source=-0.20, legend="top")
 
 
+def thin_ticks(labels, maximo=12) -> list[str]:
+    """Etiquetas espaciadas para un eje categórico de dekads.
+
+    Un eje con una etiqueta por dekad deja de leerse mucho antes de dejar de
+    caber: con la ventana completa serían setecientas setenta y nueve. Además,
+    rotadas a -45° crecen hacia abajo y terminan invadiendo la nota de fuente
+    del pie. Se muestra una de cada N y el resto sigue en el hover.
+    """
+    labels = list(labels)
+    if len(labels) <= maximo:
+        return labels
+    paso = -(-len(labels) // maximo)
+    return labels[::paso]
+
+
 def dekad_labels(codes) -> list[str]:
     """Etiquetas de dekad del año: 13 -> "may D1". Las comparte el mapa de calor
     con las líneas por temporada, para que el mismo dekad se lea igual en las
@@ -353,7 +370,8 @@ def dekad_labels(codes) -> list[str]:
 
 def season_lines_fig(frame, columns, title, subtitle="", label="",
                      value_col="mean", season_col="Year",
-                     dekad_col="dekad_of_year", family="ASI", height=420):
+                     dekad_col="dekad_of_year", family="ASI", height=420,
+                     threshold=None, threshold_label=""):
     """Una línea por temporada sobre el eje de dekads de la temporada.
 
     Es la misma matriz que dibuja `climatology_matrix()`, codificada en posición
@@ -392,9 +410,22 @@ def season_lines_fig(frame, columns, title, subtitle="", label="",
             marker=dict(size=6 if ultima else 4),
             hovertemplate="%{x}<br>" + (label or value_col)
                           + ": %{y:.2f}<extra>%{fullData.name}</extra>")
-    fig.update_layout(height=height, yaxis_title=label or value_col,
-                      xaxis=dict(tickangle=-45))
-    return style_fig(fig, title, subtitle, y_source=-0.13, legend="v")
+    if threshold is not None:
+        fig.add_hline(y=threshold,
+                      line=dict(color="#ff8900", width=1.2, dash="dot"))
+        if threshold_label:
+            fig.add_annotation(x=etiquetas[0], y=threshold, text=threshold_label,
+                               showarrow=False, yshift=10, xanchor="left",
+                               font=dict(size=10, color="#ff8900"))
+    # Con los 36 dekads del año, una etiqueta por punto se amontona hasta ser
+    # ilegible: se muestra una de cada tres, que deja una por mes. En la ventana
+    # de una temporada caben todas. `automargin` evita que las etiquetas
+    # rotadas invadan la nota de fuente del pie.
+    fig.update_layout(
+        height=height, yaxis_title=label or value_col,
+        xaxis=dict(tickangle=-45, tickmode="array",
+                   tickvals=thin_ticks(etiquetas)))
+    return style_fig(fig, title, subtitle, legend="v", source_shift=78)
 
 
 def climatology_matrix(national, title, subtitle="", value_col="value",
@@ -422,9 +453,11 @@ def climatology_matrix(national, title, subtitle="", value_col="value",
         xgap=0.5, ygap=0.5,
         colorbar=dict(title="ASI %", thickness=14, len=0.85),
         hovertemplate="%{y} · %{x}<br>ASI %{z:.1f}%<extra></extra>"))
-    fig.update_layout(height=height, yaxis=dict(dtick=1, autorange="reversed"),
-                      xaxis=dict(tickangle=-45))
-    return style_fig(fig, title, subtitle, y_source=-0.13, legend="off")
+    fig.update_layout(
+        height=height, yaxis=dict(dtick=1, autorange="reversed"),
+        xaxis=dict(tickangle=-45, tickmode="array",
+                   tickvals=thin_ticks(labels)))
+    return style_fig(fig, title, subtitle, legend="off", source_shift=78)
 
 
 def rainfall_fig(rain, title, subtitle="", height=440):
@@ -454,9 +487,13 @@ def rainfall_fig(rain, title, subtitle="", height=440):
         fig.update_yaxes(title_text="anomalía sobre la LTA (%)",
                          secondary_y=True, showgrid=False)
     fig.update_yaxes(title_text="mm por dekad", secondary_y=False)
-    fig.update_layout(height=height,
-                      xaxis=dict(tickangle=-45, tickfont=dict(size=9)))
-    return style_fig(fig, title, subtitle, y_source=-0.24, legend="top")
+    # Ancho completo: caben mas etiquetas que en las figuras pareadas, pero no
+    # una por dekad. Con la ventana completa serian setecientas setenta y nueve.
+    fig.update_layout(
+        height=height,
+        xaxis=dict(tickangle=-45, tickfont=dict(size=9),
+                   tickmode="array", tickvals=thin_ticks(labels, 16)))
+    return style_fig(fig, title, subtitle, legend="top", source_shift=104)
 
 
 def dashboard_fig(asi, vci, rain, title, subtitle="", height=720):

@@ -71,5 +71,21 @@ def dekad_label(code: str) -> str:
     return f"{d}a dek {MONTH_ES[m]} {y}"
 
 
+MONTH_ES_FULL = {1: "enero", 2: "febrero", 3: "marzo", 4: "abril", 5: "mayo",
+                 6: "junio", 7: "julio", 8: "agosto", 9: "septiembre",
+                 10: "octubre", 11: "noviembre", 12: "diciembre"}
+ORDINAL_ES = {1: "1er", 2: "2do", 3: "3er"}
+
+
+def dekad_label_long(code: str) -> str:
+    """Forma larga, para el encabezado: "3er dekadal agosto 2026".
+
+    La corta (`dekad_label`) sigue en ejes, leyendas y cifras, donde el nombre
+    completo del mes no cabe sin apretar el resto.
+    """
+    y, m, d = int(code[:4]), int(code[5:7]), int(code[-1])
+    return f"{ORDINAL_ES[d]} dekadal {MONTH_ES_FULL[m]} {y}"
+
+
 def dekad_year(code: str) -> int:
     return int(code[:4])

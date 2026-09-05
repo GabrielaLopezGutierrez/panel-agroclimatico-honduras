@@ -22,18 +22,48 @@ SOURCE_MD = f"[{cfg.SOURCE_NAME}]({cfg.SOURCE_URL})"
 PORTAL_MD = (f"Portal oficial de FAO GIEWS para Honduras: "
              f"[indicadores por país]({cfg.SOURCE_URL}).")
 
+# --- Encabezado --------------------------------------------------------------
+# La fuente y la fecha del panel van en dos líneas rotuladas, no en una sola
+# separada por un punto medio: "panel al 3a dek ago 2026" no decía si esa fecha
+# era la del dato o la de la última corrida.
+HEADER_SOURCE = f"**Fuente:** {SOURCE_MD}"
+HEADER_UPDATED = "**Actualizado al:** {dekad}"
+
+INTRO = (
+    "Esta herramienta de visualización utiliza los datos satelitales "
+    "agroclimáticos que publica FAO en su portal de indicadores por país, "
+    "dentro del Global Information and Early Warning System (GIEWS). Entrega "
+    "el historial a nivel de país, departamento y municipio de las series ASI, "
+    "VCI y precipitación.")
+
+# El aviso de dato preliminar es una propiedad permanente de la fuente, no de
+# la consulta, así que vive en el encabezado y no en una caja que aparecía y
+# desaparecía según el dekad elegido. Dice de quién son las revisiones: son de
+# FAO, no correcciones de este panel.
+PRELIMINARY_HEADER = (
+    "Los últimos tres dekadales son datos preliminares: FAO puede revisarlos "
+    "en actualizaciones futuras.")
+
 # --- Definiciones de indicador, junto a las cifras de encabezado -------------
 # Se muestran cerca de las métricas principales, no en la pestaña "Cómo leer":
 # es lo primero que alguien necesita para interpretar el número que acaba de
 # ver. No se duplican en "Cómo leer".
 INDICATOR_DEFINITIONS = {
     "ASI": ("ASI", "Porcentaje del área de cultivo que estuvo bajo condiciones "
-                   "de estrés hídrico durante la temporada."),
+                   "de estrés hídrico durante la temporada. La primera y la "
+                   "postrera son dos índices separados, cada uno medido sobre "
+                   "la máscara de cultivo de su propia temporada: no se suman "
+                   "ni se promedian entre sí. Cada uno existe solo dentro de "
+                   "su ventana de cultivo (primera de mayo a octubre, postrera "
+                   "de septiembre a enero); fuera de ella el índice queda "
+                   "congelado en el valor con que cerró la temporada y no "
+                   "describe esa fecha."),
     "VCI": ("VCI", "Indica qué tan saludable está la vegetación actualmente en "
                    "comparación con su rango histórico para la misma época del "
                    "año. Valores altos indican condiciones relativamente "
                    "favorables; valores bajos indican mayor estrés de la "
-                   "vegetación."),
+                   "vegetación. A diferencia del ASI, es continuo todo el año: "
+                   "no depende de una ventana de cultivo."),
 }
 
 # El resumen nacional es un modo de vista, no un indicador: muestra las dos
@@ -57,10 +87,15 @@ SEASON_LINE_TITLE = "Matriz temporada × dekad · codificada en posición"
 SEASON_LINE_SUBTITLE = (
     "Una línea por temporada sobre el mismo eje de dekads; la altura del punto "
     "es el valor del índice, y la temporada más reciente va destacada")
-OVERVIEW_KPI_NOTE = (
-    "Promedios nacionales ponderados por píxeles válidos. Cada cifra es el "
-    "último dekad con dato dentro de la temporada del indicador, que es el "
-    "mismo con el que cierran sus figuras.")
+OVERVIEW_KPI_NOTE = "Promedios nacionales ponderados por píxeles válidos."
+
+# El VCI no tiene temporada, así que su eje es el año completo y sus líneas son
+# años calendario. Misma idea que en las temporadas: superponer en vez de
+# encadenar, para poder comparar un ciclo contra otro.
+YEAR_LINE_TITLE = "Matriz año × dekad · codificada en posición"
+YEAR_LINE_SUBTITLE = (
+    "Una línea por año sobre los 36 dekads del calendario; la altura del punto "
+    "es el valor del índice, y el año más reciente va destacado")
 SEASON_PAIR_NOTE = (
     "Las dos figuras son la misma matriz: {indicador}, promedio nacional "
     "ponderado por píxeles válidos, {ventana}. Solo se grafican los dekads "
@@ -75,36 +110,13 @@ ALERT_DISCLAIMER = ("Las alertas reflejan condiciones de estrés/sequía "
                     "necesariamente una declaratoria oficial de sequía.")
 
 # --- Avisos que dependen de la selección -------------------------------------
-# Dos redacciones porque el resumen nacional se evalúa contra las dos
-# temporadas y una sola plantilla daba "fuera de la temporada primera ni la
-# postrera", que no es gramatical.
-OUT_OF_SEASON = (
-    "**Fuera de temporada.** En {dekad} el índice está congelado en el valor con "
-    "que cerró la {temporada} ({ventana}): no describe esa fecha. Use el VCI, que "
-    "cubre todo el año, o mueva la ventana dentro de la temporada.")
-
-OUT_OF_SEASON_COMBINED = (
-    "**Fuera de temporada.** En {dekad} no hay ninguna temporada activa "
-    "({ventana}), así que el índice está congelado en el valor con que cerró la "
-    "última: no describe esa fecha. Use el VCI, que cubre todo el año.")
-
-PARTIAL_SEASON = (
-    "{n} de {total} dekads de la ventana caen fuera de la temporada "
-    "{temporada}. Ahí el índice está congelado.")
-
-PARTIAL_SEASON_COMBINED = (
-    "En {n} de {total} dekads de la ventana no hay ninguna temporada activa. "
-    "Ahí el índice está congelado.")
-
+# Quedó uno solo. Los de fuera de temporada y de dato preliminar eran cajas que
+# aparecían y desaparecían al mover la ventana, lo que las hacía leer como
+# alertas sobre esa selección cuando describían propiedades permanentes: la
+# primera, del indicador (vive en INDICATOR_DEFINITIONS); la segunda, de la
+# fuente (vive en PRELIMINARY_HEADER).
 NO_DATA = ("Sin dato para esta selección. No es un cero: el panel no inventa "
            "filas. Pruebe otra ventana u otro indicador.")
-
-# El dekad más reciente de FAO puede seguir revisándose: se avisa, en vez de
-# mostrarlo como si fuera un valor definitivo. Ver asis.build.is_preliminary.
-PRELIMINARY_NOTICE = (
-    "**Dato preliminar.** {dekad} está entre los dekads más recientes que "
-    "publicó FAO: todavía puede revisarlo en una próxima actualización del "
-    "panel.")
 
 # --- Pestaña "Cómo leer" -----------------------------------------------------
 # ASI y VCI ya no tienen ficha aquí: su definición se muestra junto a las

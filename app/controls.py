@@ -21,8 +21,7 @@ import streamlit as st
 
 from app import texts
 from asis import config as cfg, panel
-from asis.calendar import (dekad_index, dekad_label, dekad_of_year,
-                           dekad_window)
+from asis.calendar import dekad_index, dekad_label, dekad_window
 
 LEVELS = {"pais": "País", "departamento": "Departamento",
           "municipio": "Municipio"}
@@ -365,46 +364,12 @@ def sidebar(options: dict[str, str]) -> Query:
                  departments=departments)
 
 
-# --- Estado de la temporada --------------------------------------------------
-def seasons_of(series_id: str) -> list[str]:
-    """Temporadas que gobiernan el aviso de fuera de temporada."""
-    if series_id == OVERVIEW:
-        return [s.season for s in cfg.SERIES.values() if s.season]
-    season = cfg.SERIES[series_id].season
-    return [season] if season else []
-
-
-def season_status(query: Query) -> dict:
-    """Cuántos dekads de la ventana caen fuera de la ventana de cultivo.
-
-    Se responde con la ventana declarada en config y no con la ausencia de dato,
-    porque el ráster del ASI trae valores los 36 dekads del año: fuera de
-    temporada el índice está congelado, que no es lo mismo que ausente.
-
-    El resumen nacional se evalúa contra las dos temporadas a la vez: está
-    fuera de temporada solo cuando ninguna está activa, que en Honduras ocurre
-    entre febrero y abril.
-    """
-    seasons = seasons_of(query.series_id)
-    if not seasons:
-        return {"seasonal": False, "outside": 0, "total": 0}
-    combinado = query.series_id == OVERVIEW
-    if combinado:
-        name = ""
-        window = " · ".join(f"{cfg.SEASONS[s].split(' (')[0].lower()} "
-                            f"{season_window_label(s)}" for s in seasons)
-    else:
-        name = cfg.SEASONS[seasons[0]].split(" (")[0].lower()
-        window = season_window_label(seasons[0])
-    codes = [d for d in dekads(query.series_id)
-             if query.start <= d <= query.end]
-    outside = [d for d in codes
-               if not any(cfg.in_season(s, dekad_of_year(d)) for s in seasons)]
-    return {"seasonal": True, "season_name": name, "combined": combinado,
-            "outside": len(outside), "total": len(codes),
-            "outside_codes": outside, "window": window}
-
-
+# --- Temporadas ---------------------------------------------------------------
+# Aquí vivía `season_status()`, que contaba cuántos dekads de la ventana caían
+# fuera de la ventana de cultivo para pintar un aviso. Ese aviso se retiró: lo
+# que decía no dependía de la selección sino del indicador, y ahora se explica
+# una vez en la definición del ASI. Las figuras de país, además, ya no grafican
+# esos dekads, así que no hay nada que advertir sobre ellos.
 def season_window_label(season: str) -> str:
     from asis.calendar import MONTH_ES
     start, end = cfg.SEASON_WINDOW[season]
