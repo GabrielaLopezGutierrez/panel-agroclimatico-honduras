@@ -81,11 +81,28 @@ st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 # Estilo de las cifras de encabezado. Se define una vez porque `st.metric` no
 # admite color en el valor, y el color de la clase de FAO va justamente ahi.
 st.markdown("""<style>
-.asis-kpi { line-height: 1.25; margin-bottom: .4rem; }
-.asis-kpi-label { font-size: .8rem; color: #5b6270; }
-.asis-kpi-value { font-size: 2rem; font-weight: 650; display: inline-block;
-                  padding: .05em .35em; border-radius: .3rem; }
-.asis-kpi-foot { font-size: .8rem; color: #8b929e; }
+.asis-kpi {
+  border: 1px solid #e6e8ec; border-left: 5px solid #c9ced6;
+  border-radius: 10px; padding: .7rem .9rem .6rem; background: #fcfcfd;
+  line-height: 1.2; height: 100%;
+}
+.asis-kpi-label {
+  font-size: .78rem; font-weight: 550; color: #5b6270;
+  letter-spacing: .01em; margin-bottom: .3rem;
+}
+.asis-kpi-row { display: flex; align-items: baseline; gap: .55rem;
+                flex-wrap: wrap; }
+.asis-kpi-value { font-size: 2.15rem; font-weight: 680;
+                  font-variant-numeric: tabular-nums; }
+.asis-kpi-sin { font-size: 1.3rem; font-weight: 600; color: #8b929e; }
+.asis-kpi-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .74rem; color: #5b6270; background: #eef0f3;
+  border-radius: 999px; padding: .1rem .5rem;
+}
+.asis-kpi-dot { width: .6rem; height: .6rem; border-radius: 50%;
+                display: inline-block; box-shadow: 0 0 0 1px #00000018; }
+.asis-kpi-foot { font-size: .75rem; color: #8b929e; margin-top: .35rem; }
 </style>""", unsafe_allow_html=True)
 
 TABS = {
@@ -709,49 +726,72 @@ def summary_overview(query: Query):
 
 
 def class_color(value: float, family: str) -> tuple[str, str]:
-    """Clase de FAO en la que cae un valor, y su color.
+    """Clase de FAO en la que cae un valor, y el color continuo de ese valor.
 
-    Sale de `cfg.CLASSES`, que es de donde también salen los mapas: la cifra de
-    encabezado y el mapa que está dos pantallas más abajo no pueden pintar el
-    mismo valor de colores distintos.
+    La clase sirve para nombrarla; el color sale de la escala continua, que es
+    la misma que pinta la celda de ese dekad en el mapa de calor. Antes salía
+    del color plano de la clase, así que dos valores de la misma banda —uno
+    apenas dentro y otro a punto de salir— se veían idénticos en la cifra y
+    distintos en el mapa.
     """
     clase = str(classify(pd.Series([value]), family).iloc[0])
-    return clase, cfg.PALETTE[family].get(clase, "#1f2430")
+    return clase, viz.color_at(value, family)
 
 
-def contrast_text(hex_color: str) -> str:
-    """Negro o blanco, el que se lea sobre ese fondo.
+def readable_ink(hex_color: str, sobre="#ffffff", minimo=4.5) -> str:
+    """El mismo color, oscurecido hasta que se lea sobre el fondo dado.
 
-    Hace falta porque la paleta de FAO va del verde oscuro al amarillo puro:
-    la cifra se pinta *sobre* el color de la clase y no *del* color de la clase,
-    porque amarillo #ffff00 como texto sobre blanco no se lee.
+    Conserva el tono, que es lo que comunica, y solo baja la luminosidad hasta
+    alcanzar la razón de contraste pedida. Hace falta porque la paleta de FAO
+    llega al amarillo puro: como tinta sobre blanco no se lee, pero oscurecido
+    sigue siendo amarillo y sigue siendo distinguible del naranja de al lado.
     """
-    r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
-    luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-    return "#1f2430" if luminancia > 0.6 else "#ffffff"
+    def canal(c):
+        c = c / 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    def luminancia(rgb):
+        r, g, b = (canal(c) for c in rgb)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    rgb = [int(hex_color[i:i + 2], 16) for i in (1, 3, 5)]
+    fondo = luminancia([int(sobre[i:i + 2], 16) for i in (1, 3, 5)])
+    for _ in range(24):
+        claro, oscuro = sorted((fondo, luminancia(rgb)), reverse=True)
+        if (claro + 0.05) / (oscuro + 0.05) >= minimo:
+            break
+        rgb = [max(0, round(c * 0.88)) for c in rgb]
+    return "#" + "".join(f"{c:02x}" for c in rgb)
 
 
 def kpi(label: str, ultimo, family: str, ayuda: str):
-    """Cifra de encabezado con el color de su clase de FAO.
+    """Cifra de encabezado, como tarjeta.
 
     No usa `st.metric` porque solo admite color en el delta, y lo que hay que
-    colorear es el valor. El número queda a la vista: el color acompaña la
-    lectura, no la reemplaza, que es lo que haría falta para alguien que no
-    distingue esos tonos.
+    colorear es el valor. La tarjeta lleva tres cosas y en este orden: qué es,
+    cuánto, y de cuándo. El color aparece dos veces, en la barra lateral y en la
+    tinta del número, pero nunca solo: al lado va el nombre de la clase, así que
+    quien no distinga esos tonos lee lo mismo.
     """
     if ultimo is None:
-        st.markdown(f"<div class='asis-kpi' title='{ayuda}'>"
-                    f"<div class='asis-kpi-label'>{label}</div>"
-                    f"<div class='asis-kpi-value'>sin dato</div></div>",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='asis-kpi' title='{ayuda}'>"
+            f"<div class='asis-kpi-label'>{label}</div>"
+            f"<div class='asis-kpi-value asis-kpi-sin'>sin dato</div>"
+            f"</div>", unsafe_allow_html=True)
         return
     dekad, valor = ultimo
     clase, color = class_color(valor, family)
+    tinta = readable_ink(color)
     st.markdown(
-        f"<div class='asis-kpi' title='{ayuda} Clase FAO: {clase}.'>"
+        f"<div class='asis-kpi' style='border-left-color:{color}' "
+        f"title='{ayuda} Clase FAO: {clase}.'>"
         f"<div class='asis-kpi-label'>{label}</div>"
-        f"<div class='asis-kpi-value' style='background:{color};"
-        f"color:{contrast_text(color)}'>{valor:.2f}</div>"
+        f"<div class='asis-kpi-row'>"
+        f"<span class='asis-kpi-value' style='color:{tinta}'>{valor:.2f}</span>"
+        f"<span class='asis-kpi-chip'>"
+        f"<span class='asis-kpi-dot' style='background:{color}'></span>"
+        f"{clase}</span></div>"
         f"<div class='asis-kpi-foot'>"
         f"{texts.KPI_DEKAD.format(dekad=dekad_label(dekad))}</div></div>",
         unsafe_allow_html=True)

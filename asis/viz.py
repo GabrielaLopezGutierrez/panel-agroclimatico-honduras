@@ -31,19 +31,45 @@ pio.templates.default = "asis"
 # Escalas continuas coherentes con la semántica del indicador: en el ASI el rojo
 # es más estrés, en el VCI el rojo es peor vegetación.
 #
-# La del ASI sigue los umbrales de alerta (10/25/40, ver config.ASI_ALERT_*): el
-# color cambia de familia justo en el umbral (por eso hay dos paradas casi
-# juntas en 0.10, 0.25 y 0.40, una a cada lado del corte) y dentro de cada banda
-# el tono se degrada de claro a oscuro a medida que se acerca al siguiente
-# umbral. Así un valor apenas sobre 10% sale amarillo claro y uno cerca de 25%
-# sale amarillo oscuro, a punto de cruzar a naranja.
-SCALE_ASI = [[0.00, "#1b7a1b"], [0.08, "#4fc93f"],
-             [0.10, "#fff59d"], [0.24, "#ffb300"],
-             [0.25, "#ffcc80"], [0.39, "#ff6f00"],
-             [0.40, "#f4511e"], [1.00, "#7a0000"]]
-SCALE_VCI = [[0.0, "#9a0000"], [0.15, "#ff0000"], [0.30, "#ff8900"],
-             [0.45, "#ffff00"], [0.60, "#66ff00"], [0.80, "#009a00"],
-             [1.0, "#217400"]]
+# Se derivan de los colores de clase de FAO (`config.CLASSES`), poniendo cada
+# color en el **centro** de su banda y dejando que Plotly interpole entre ellos.
+# Así hay un solo lugar donde vive el color de un indicador, y el degradado es
+# monótono.
+#
+# La versión anterior del ASI ponía dos paradas casi juntas a cada lado de los
+# umbrales (0,10 / 0,25 / 0,40) para que el color cambiara de familia justo ahí,
+# y dentro de cada banda iba de claro a oscuro. El efecto no era el buscado: la
+# luminosidad se reiniciaba en cada umbral —#ffb300 saltaba a #ffcc80, más
+# claro— así que el degradado retrocedía tres veces y los bordes de banda se
+# veían como costuras en vez de como transiciones.
+def scale_from_classes(family: str) -> list[list]:
+    """Escala continua a partir de los colores de clase de FAO.
+
+    Cada color se ancla en el centro de su banda; los extremos se extienden
+    planos hasta 0 y 1. Un valor dentro de una banda sale del color de esa
+    banda, y al acercarse a la siguiente transita hacia ella sin saltos.
+    """
+    edges, _labels, colors = cfg.CLASSES[family]
+    lo, hi = float(edges[0]), float(edges[-1])
+    ancho = hi - lo
+    paradas = [[0.0, colors[0]]]
+    for i, color in enumerate(colors):
+        centro = ((float(edges[i]) + float(edges[i + 1])) / 2 - lo) / ancho
+        paradas.append([round(min(max(centro, 0.0), 1.0), 4), color])
+    paradas.append([1.0, colors[-1]])
+    # Sin paradas repetidas en 0 o en 1: Plotly las acepta, pero duplicar el
+    # extremo es justo lo que producía la costura de la versión anterior.
+    vistas, limpias = set(), []
+    for pos, color in paradas:
+        if pos in vistas:
+            continue
+        vistas.add(pos)
+        limpias.append([pos, color])
+    return limpias
+
+
+SCALE_ASI = scale_from_classes("ASI")
+SCALE_VCI = scale_from_classes("VCI")
 MAP_CENTER = dict(lat=14.72, lon=-86.6)
 _HAS_MAP = hasattr(px, "choropleth_map")     # plotly >= 5.24 usa maplibre
 
@@ -54,6 +80,32 @@ def scale_for(family: str):
 
 def range_for(family: str):
     return (0, 100) if family == "ASI" else (0, 1)
+
+
+def color_at(value: float, family: str) -> str:
+    """El color exacto que la escala continua le da a un valor.
+
+    Es la función que hace que la celda de un dekad en el mapa de calor y la
+    cifra de encabezado de ese mismo dekad salgan del mismo color. Por eso el
+    mapa de calor fija su rango al del indicador y no al de los datos en
+    pantalla: si el máximo dependiera de la ventana, el mismo valor cambiaría
+    de color al mover el rango, y ya no habría un color por valor.
+    """
+    lo, hi = range_for(family)
+    t = min(max((float(value) - lo) / (hi - lo), 0.0), 1.0)
+    paradas = scale_for(family)
+    for (p0, c0), (p1, c1) in zip(paradas, paradas[1:]):
+        if t <= p1:
+            frac = 0.0 if p1 == p0 else (t - p0) / (p1 - p0)
+            return _mix(c0, c1, frac)
+    return paradas[-1][1]
+
+
+def _mix(a: str, b: str, frac: float) -> str:
+    ca = [int(a[i:i + 2], 16) for i in (1, 3, 5)]
+    cb = [int(b[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * frac):02x}"
+                         for x, y in zip(ca, cb))
 
 
 def style_fig(fig, title, subtitle="", source=cfg.SOURCE_NOTE, y_source=-0.14,
@@ -442,13 +494,19 @@ def season_lines_fig(frame, columns, title, subtitle="", label="",
 
 
 def climatology_matrix(national, title, subtitle="", value_col="value",
-                       dekad_from=13, dekad_to=30, height=600, columns=None):
+                       dekad_from=13, dekad_to=30, height=600, columns=None,
+                       family="ASI", unit="%"):
     """Año x dekad: cada franja roja horizontal es una alerta roja de ASI
     (estrés extremo), no una declaratoria oficial de sequía.
 
     `columns` permite pasar el orden de dekads de una temporada que cruza el
     año, como la postrera: ahí la ventana va de septiembre a enero y un rango
     creciente dejaría la matriz vacía.
+
+    El rango de color es el del indicador, no el de los datos en pantalla. Antes
+    el máximo salía del percentil 99,5 de la ventana: el mismo valor cambiaba de
+    color al mover el rango, dos temporadas no se podían comparar entre sí y el
+    color de una celda no coincidía con el de la cifra de encabezado.
     """
     orden = (list(columns) if columns is not None
              else list(range(dekad_from, dekad_to + 1)))
@@ -459,13 +517,14 @@ def climatology_matrix(national, title, subtitle="", value_col="value",
                            values=value_col)
     matrix = matrix.reindex(columns=[c for c in orden if c in matrix.columns])
     labels = dekad_labels(matrix.columns)
-    top = float(np.nanpercentile(matrix.values, 99.5))
+    lo, hi = range_for(family)
     fig = go.Figure(go.Heatmap(
         z=matrix.values, x=labels, y=matrix.index.astype(int),
-        colorscale=SCALE_ASI, zmin=0, zmax=top if top > 0 else 1,
+        colorscale=scale_for(family), zmin=lo, zmax=hi,
         xgap=0.5, ygap=0.5,
-        colorbar=dict(title="ASI %", thickness=14, len=0.85),
-        hovertemplate="%{y} · %{x}<br>ASI %{z:.1f}%<extra></extra>"))
+        colorbar=dict(title=f"{family} {unit}".strip(), thickness=14, len=0.85),
+        hovertemplate="%{y} · %{x}<br>" + family
+                      + " %{z:.1f}" + unit + "<extra></extra>"))
     fig.update_layout(
         height=height, yaxis=dict(dtick=1, autorange="reversed"),
         xaxis=dict(tickangle=-45, tickmode="array",

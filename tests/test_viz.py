@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from asis import viz
+from asis import config as cfg, viz
 from asis.calendar import dekad_date
 
 DEKADS = ["2019-06-D1", "2019-06-D2", "2019-06-D3", "2019-07-D1"]
@@ -123,27 +123,71 @@ def test_la_nota_de_fuente_se_ancla_en_pixeles_bajo_el_eje():
     assert fig.layout.margin.b >= 78
 
 
-# --- Color de clase en las cifras de encabezado ------------------------------
-def test_el_texto_del_kpi_contrasta_con_el_color_de_la_clase():
-    """La paleta de FAO va del verde oscuro al amarillo puro. La cifra se pinta
-    *sobre* el color de la clase y no *del* color de la clase, porque amarillo
-    #ffff00 como texto sobre blanco no se lee."""
+# --- Escala continua y color de las cifras de encabezado ---------------------
+def _rgb(h):
+    return [int(h[i:i + 2], 16) for i in (1, 3, 5)]
+
+
+def _salto_maximo(family, lo, hi, n=400):
+    """El mayor salto de color entre dos valores contiguos de la escala."""
+    cols = [_rgb(viz.color_at(lo + (hi - lo) * i / n, family))
+            for i in range(n + 1)]
+    return max(max(abs(a - b) for a, b in zip(c1, c2))
+               for c1, c2 in zip(cols, cols[1:]))
+
+
+def test_la_escala_no_tiene_costuras_en_los_umbrales():
+    """El defecto que esto fija: la escala anterior ponia dos paradas a cada
+    lado de cada umbral y reiniciaba la luminosidad, asi que el borde de banda
+    se veia como una costura. Medido, el salto maximo entre valores contiguos
+    era de 32 sobre 255, justo en 24 (el umbral de 25); ahora es de 5."""
+    assert _salto_maximo("ASI", 0, 100) <= 8
+    assert _salto_maximo("VCI", 0, 1) <= 8
+
+
+def test_la_escala_sale_de_los_colores_de_clase_de_fao():
+    """Un solo lugar donde vive el color de un indicador: si cambian las clases
+    de config, la escala continua las sigue."""
+    for familia in ("ASI", "VCI"):
+        colores_escala = {c for _pos, c in viz.scale_from_classes(familia)}
+        assert set(cfg.CLASSES[familia][2]) <= colores_escala
+
+
+def test_el_mapa_de_calor_y_el_kpi_pintan_igual_un_valor():
+    """Es lo que hace que la celda de un dekad y su cifra de encabezado se vean
+    del mismo color. Depende de que el mapa fije el rango al del indicador y no
+    al de los datos en pantalla."""
+    d = pd.DataFrame({"Year": [2025, 2025], "dekad_of_year": [13, 14],
+                      "mean": [12.0, 80.0]})
+    fig = viz.climatology_matrix(d, "t", value_col="mean", columns=[13, 14],
+                                 family="ASI")
+    assert (fig.data[0].zmin, fig.data[0].zmax) == viz.range_for("ASI")
+    assert list(fig.data[0].colorscale) == [tuple(p) for p in viz.scale_for("ASI")]
+
+
+def test_la_tinta_del_kpi_conserva_el_tono_y_alcanza_contraste():
+    """La cifra va del color del valor, no de un gris: se oscurece solo lo
+    necesario para leerse sobre blanco, y sigue siendo del mismo tono."""
     import streamlit_app as app
 
-    assert app.contrast_text("#ffff00") == "#1f2430"    # amarillo VCI
-    assert app.contrast_text("#9a0000") == "#ffffff"    # rojo oscuro VCI
-    assert app.contrast_text("#2fcd00") == "#ffffff"    # verde ASI
+    tinta = app.readable_ink("#ffff00")            # amarillo puro
+    r, g, b = _rgb(tinta)
+    assert r > 100 and g > 100 and b < 80          # sigue siendo amarillo
+    assert tinta != "#ffff00"                      # pero oscurecido
+    assert app.readable_ink("#9a0000") == "#9a0000"  # ya contrastaba
 
 
-def test_el_kpi_usa_la_misma_clasificacion_que_los_mapas():
-    """La cifra de encabezado y el mapa que esta dos pantallas mas abajo no
-    pueden pintar el mismo valor de colores distintos."""
+def test_el_color_del_kpi_es_el_de_la_escala_continua():
+    """Antes salia del color plano de la clase, asi que dos valores de la misma
+    banda se veian identicos en la cifra y distintos en el mapa."""
     import streamlit_app as app
-    from asis import config as cfg
 
     for familia, valor in (("ASI", 32.0), ("VCI", 0.5)):
-        clase, color = app.class_color(valor, familia)
-        assert cfg.PALETTE[familia][clase] == color
+        _clase, color = app.class_color(valor, familia)
+        assert color == viz.color_at(valor, familia)
+    bajo = app.class_color(11.0, "ASI")[1]
+    alto = app.class_color(24.0, "ASI")[1]
+    assert bajo != alto                            # misma banda, distinto color
 
 
 def test_la_anomalia_colorea_por_signo():
