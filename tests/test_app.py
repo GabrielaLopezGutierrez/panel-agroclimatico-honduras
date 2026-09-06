@@ -270,7 +270,8 @@ def test_mover_el_deslizador_no_revienta():
     interactuar colapsaba la tupla a una cadena y la corrida siguiente reventaba
     al leer esa cadena como par de dekads."""
     at = _app()
-    at.select_slider[0].set_range("2024-01-D1", "2026-08-D3").run()
+    # El de la barra lateral, explicito: la figura de anomalia tiene el suyo.
+    at.sidebar.select_slider[0].set_range("2024-01-D1", "2026-08-D3").run()
     assert not at.exception
     assert _estado(at, "ventana") == ("2024-01-D1", "2026-08-D3")
     assert _estado(at, "atajo") == "Personalizado"
@@ -425,3 +426,54 @@ def test_la_herramienta_dice_dekad_y_nunca_dekadal():
                   if isinstance(valor, (list, tuple)) else [])
         for t in textos:
             assert "dekadal" not in t.lower(), f"{nombre} dice dekadal"
+
+
+# --- Deslizador propio de la anomalia de lluvia ------------------------------
+def _deslizador_anomalia(at):
+    """Por etiqueta y no por posicion: hay dos deslizadores en la pagina."""
+    for sl in at.select_slider:
+        if sl.label == texts.RAIN_BARS_RANGE:
+            return sl
+    raise AssertionError("falta el deslizador de la anomalia")
+
+
+def test_la_anomalia_tiene_su_propio_recorte_dentro_de_la_consulta(last):
+    """Va sobre el eje del tiempo completo: con la ventana ancha son cientos de
+    barras finitas. El recorte solo puede achicar lo ya elegido arriba, nunca
+    ampliarlo."""
+    from asis.calendar import dekad_label
+
+    at = _app()
+    anomalia = _deslizador_anomalia(at)
+    desde, hasta = at.sidebar.select_slider[0].value
+    # `options` viene ya formateado por format_func, asi que se compara contra
+    # las etiquetas de los extremos de la consulta.
+    assert anomalia.options[0] == dekad_label(desde)
+    assert anomalia.options[-1] == dekad_label(hasta)
+    # Abre completo: recortar es opcional.
+    assert anomalia.value == (desde, hasta)
+
+
+def test_el_recorte_de_la_anomalia_no_toca_la_consulta(last):
+    """Es un acercamiento de esa figura, no otra consulta: la ventana de la
+    barra lateral y las demas figuras se quedan como estaban."""
+    at = _app()
+    desde, hasta = at.sidebar.select_slider[0].value
+    # Codigos crudos, no las etiquetas de `options`: AppTest no sabe volver de
+    # la etiqueta al valor cuando el widget usa format_func.
+    dentro = [d for d in panel.dekads("vci") if desde <= d <= hasta]
+    medio = dentro[len(dentro) // 2]
+    _deslizador_anomalia(at).set_range(medio, hasta).run()
+    assert not at.exception
+    assert at.sidebar.select_slider[0].value == (desde, hasta)
+    assert _deslizador_anomalia(at).value == (medio, hasta)
+
+
+def test_la_anomalia_descarga_su_propio_recorte(last):
+    """Dejo de compartir descarga con las lineas cuando dejo de compartir
+    rango: la descarga de una figura tiene que ser la de esa figura."""
+    at = _app()
+    nombres = [d.label for d in at.get("download_button")]
+    por_figura = [n for n in nombres if texts.FIG_DOWNLOAD in n]
+    # Dos temporadas, VCI, lluvia y anomalia: cinco descargas por figura.
+    assert len(por_figura) == 5, nombres

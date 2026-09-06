@@ -140,6 +140,12 @@ RAIN_LINES_TITLE = "Precipitación · {ventana}"
 RAIN_LINES_SUBTITLE = ("Una línea por año y el valor en la altura del punto de "
                        "cada dekad, contra el promedio de largo plazo de FAO")
 RAIN_BARS_TITLE = "Anomalía de precipitación · {ventana}"
+# La anomalía va sobre el eje del tiempo completo: con veintiún años en pantalla
+# son 779 barras de menos de un píxel. Por eso lleva su propio recorte, que solo
+# puede achicar la ventana de la consulta, nunca ampliarla.
+RAIN_BARS_RANGE = "Acercar la anomalía"
+RAIN_BARS_RANGE_HELP = ("Recorta solo esta figura, dentro de la ventana ya "
+                        "elegida en la consulta.")
 RAIN_BARS_SUBTITLE = ("Diferencia porcentual de cada dekad contra su promedio "
                       "de largo plazo: sobre cero llovió más que lo habitual")
 RAIN_NOTE = (

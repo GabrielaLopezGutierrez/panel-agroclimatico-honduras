@@ -69,6 +69,7 @@ for _intento in (1, 2):
                                     season_columns, severity_area,
                                     to_country)
         from asis.calendar import (dekad_label,                   # noqa: E402
+                                   dekad_label_compact,
                                    dekad_label_long, dekad_window)
         break
     except ImportError:
@@ -671,13 +672,51 @@ def _rainfall_block(query: Query):
         color="#3b7dd8", reference=lta, reference_label="promedio de largo plazo")
     if lineas is not None:
         st.plotly_chart(lineas, width="stretch")
+        download(ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
+
+    # La anomalía va sobre el eje del tiempo completo y con la ventana ancha se
+    # vuelve una fila de barras finitas, así que lleva su propio recorte. No
+    # sustituye a la consulta: solo puede achicar lo que ya se eligió arriba.
+    recorte = _anomaly_window(ventana)
     barras = viz.anomaly_bars_fig(
-        ventana, texts.RAIN_BARS_TITLE.format(ventana=query.window_compact),
+        recorte, texts.RAIN_BARS_TITLE.format(
+            ventana=_compact_window(recorte)),
         texts.RAIN_BARS_SUBTITLE)
     if barras is not None:
         st.plotly_chart(barras, width="stretch")
+        # Descarga propia: muestra un recorte distinto al de las líneas, y la
+        # descarga de una figura tiene que ser la de esa figura.
+        download(recorte, f"anomalia_lluvia_{query.slug()}", "dl_anomalia")
     st.caption(texts.RAIN_NOTE)
-    download(ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
+
+
+def _compact_window(d: pd.DataFrame) -> str:
+    dekads = sorted(d["dekad_id"])
+    if not dekads:
+        return ""
+    return (f"{dekad_label_compact(dekads[0])} a "
+            f"{dekad_label_compact(dekads[-1])}")
+
+
+def _anomaly_window(ventana: pd.DataFrame) -> pd.DataFrame:
+    """Deslizador propio de la anomalía, acotado a la ventana ya seleccionada.
+
+    La llave del widget incluye los extremos de la ventana de la consulta, así
+    que cambiar la consulta crea un deslizador nuevo que abre completo. Sale
+    gratis lo que si no habría que manejar a mano: un recorte guardado que
+    apunta a dekads que la consulta ya no incluye. Y nadie le escribe la llave,
+    que es lo que costó dos defectos en el selector de la consulta.
+    """
+    disponibles = sorted(ventana["dekad_id"].unique())
+    if len(disponibles) < 3:
+        return ventana
+    desde, hasta = st.select_slider(
+        texts.RAIN_BARS_RANGE, options=disponibles,
+        value=(disponibles[0], disponibles[-1]), format_func=dekad_label,
+        help=texts.RAIN_BARS_RANGE_HELP,
+        key=f"anomalia_{disponibles[0]}_{disponibles[-1]}")
+    return ventana[(ventana["dekad_id"] >= desde)
+                   & (ventana["dekad_id"] <= hasta)]
 
 
 def _view_country_indicator(query: Query):
