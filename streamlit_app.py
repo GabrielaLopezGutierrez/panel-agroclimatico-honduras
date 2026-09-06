@@ -359,6 +359,13 @@ def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
             animation=animacion, hover_extra=extra, code_col=query.code_col,
             name_col=query.name_col)
     figure(fig, data, f"mapa_{query.slug()}", "dl_mapa")
+    if fig is not None:
+        nota = texts.MAP_NOTE.format(
+            indicador=query.label, unidad=query.unit_name,
+            origen=texts.ORIGIN_BY_LEVEL[query.level],
+            escala=texts.SCALE_BY_FAMILY[query.family],
+            blancos=texts.BLANKS_BY_FAMILY[query.family])
+        st.caption(nota + ("" if query.single else texts.MAP_ANIMATED_NOTE))
 
 
 def _animation_frames(dekads: list[str], tope: int) -> list[str]:
@@ -411,6 +418,13 @@ def view_municipal_ranking(query: Query, muni: pd.DataFrame):
             family=query.family, top=top, ref_dekad=None,
             label=query.unit_short, height=max(480, 16 * top))
     figure(fig, elegidos, f"ranking_{query.slug()}", "dl_ranking")
+    if fig is not None:
+        st.caption(
+            texts.MUNI_RANKING_NOTE.format(top=top, peor=peor,
+                                           dekad=dekad_label(query.end))
+            if query.single else
+            texts.MUNI_MATRIX_NOTE.format(top=top, peor=peor,
+                                          ventana=query.window_label))
 
     if not query.single:
         area = viz.severity_area_fig(
@@ -418,6 +432,8 @@ def view_municipal_ranking(query: Query, muni: pd.DataFrame):
             "km2 en cada clase, dekad por dekad")
         figure(area, severity_area(muni, query.family).reset_index(),
                f"superficie_{query.slug()}", "dl_area")
+        if area is not None:
+            st.caption(texts.SEVERITY_NOTE)
 
 
 def view_department_series(query: Query, cut: pd.DataFrame):
@@ -434,11 +450,16 @@ def view_department_series(query: Query, cut: pd.DataFrame):
             dekad_label(query.end), family=query.family, top=18,
             label=query.unit_short, height=520)
         figure(fig, d, f"departamentos_{query.slug()}", "dl_dept")
+        if fig is not None:
+            st.caption(texts.DEPT_RANKING_NOTE.format(
+                dekad=dekad_label(query.end)))
         return
 
     d = cut.dropna(subset=["mean"]).sort_values(["adm1_name", "dekad_id"])
-    figure(_department_grid_fig(query, d), d,
-           f"departamentos_{query.slug()}", "dl_dept")
+    cuadricula = _department_grid_fig(query, d)
+    figure(cuadricula, d, f"departamentos_{query.slug()}", "dl_dept")
+    if cuadricula is not None:
+        st.caption(texts.DEPT_GRID_NOTE.format(ventana=query.window_label))
 
 
 GRID_COLUMNS = 3          # 18 departamentos entran en seis filas de tres

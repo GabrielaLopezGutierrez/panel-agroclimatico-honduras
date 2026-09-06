@@ -498,3 +498,42 @@ def test_cada_indicador_dibuja_en_cada_nivel():
             at.selectbox(key="serie").set_value(serie).run()
             assert not at.exception, (
                 f"{nivel}/{serie}: {str(at.exception[0].value)[:200]}")
+
+
+# --- Toda figura explica que esta mostrando ----------------------------------
+def test_cada_figura_lleva_su_nota_en_cada_vista():
+    """El principio es el mismo que el de la descarga por figura: quien mira una
+    cifra tiene que poder saber de donde sale sin salir de la vista. Cada
+    combinacion de nivel y ventana dibuja figuras distintas, asi que la nota que
+    corresponde tambien cambia."""
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    esperado = {
+        ("departamento", "Un dekad"): ("El mapa pinta",
+                                       "Los dieciocho departamentos ordenados"),
+        ("departamento", "Rango"): ("El mapa pinta",
+                                    "Cada recuadro es un departamento"),
+        ("municipio", "Un dekad"): ("El mapa pinta", "municipios de "),
+        ("municipio", "Rango"): ("El mapa pinta", "Matriz de municipio por dekad",
+                                 "Superficie en kil"),
+    }
+    for (nivel, modo), marcas in esperado.items():
+        at = AppTest.from_file(guion, default_timeout=300)
+        at.run()
+        at.radio(key="nivel").set_value(nivel).run()
+        at.radio(key=f"modo_{nivel}").set_value(modo).run()
+        assert not at.exception, f"{nivel}/{modo}"
+        texto = " ".join(c.value for c in at.caption)
+        for marca in marcas:
+            assert marca in texto, f"{nivel}/{modo}: falta la nota '{marca}'"
+
+
+def test_las_figuras_de_pais_tambien_llevan_nota():
+    at = _app()
+    texto = " ".join(c.value for c in at.caption)
+    assert "Las dos figuras grafican el mismo dato" in texto   # ASI
+    assert "La figura grafica el índice de condición" in texto  # VCI
+    assert "Las dos figuras grafican la lluvia" in texto        # precipitacion

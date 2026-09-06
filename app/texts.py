@@ -173,6 +173,72 @@ VCI_NOTE = (
     "no depende de la ventana de cultivo de ninguna temporada, y por eso cada "
     "línea es un año del calendario.")
 
+# --- Notas de las figuras de departamento y municipio ------------------------
+# Misma estructura que las de país: qué es el dato, cómo se calculó, qué mirar
+# y hasta dónde llega. Se arman por partes porque la mitad de la frase depende
+# del nivel y del indicador, y repetir cuatro variantes completas garantizaba
+# que alguna quedara vieja.
+ORIGIN_BY_LEVEL = {
+    "municipio": ("tal como está en el panel, que se guarda a nivel municipal"),
+    "departamento": ("agregado desde el panel municipal ponderando por píxeles "
+                     "válidos, no promediando municipios"),
+}
+SCALE_BY_FAMILY = {
+    "ASI": ("El color sigue la escala continua de FAO sobre el rango completo "
+            "del índice, de 0 a 100, así que un mismo valor se ve del mismo "
+            "color en cualquier ventana."),
+    "VCI": ("El color usa las nueve clases de FAO, de 0 a 1, donde el rojo es "
+            "vegetación en peor estado."),
+}
+
+MAP_NOTE = (
+    "El mapa pinta {indicador} de cada {unidad}, {origen}. {escala} Las "
+    "unidades en blanco no tienen dato en ese dekad, que no es lo mismo que "
+    "estar bien: {blancos}")
+# Por qué una unidad puede quedar en blanco. Depende del indicador: el ASI vive
+# dentro de una ventana de cultivo y sobre la máscara de cultivo; el VCI no
+# tiene ventana y cubre todo el territorio, así que sus vacíos vienen de las
+# banderas del ráster, que el panel excluye del promedio en vez de contarlas
+# como valores del índice.
+BLANKS_BY_FAMILY = {
+    "ASI": ("pueden estar fuera de la ventana de cultivo de la temporada o no "
+            "tener área agrícola que medir."),
+    "VCI": ("ahí el ráster marca ausencia de dato, nube o nieve, y el panel las "
+            "excluye del promedio en vez de tomarlas por un valor del índice."),
+}
+MAP_ANIMATED_NOTE = (
+    " Con un rango, el deslizador de la figura recorre los dekads uno por uno "
+    "en vez de resumir la ventana en una cifra.")
+
+DEPT_GRID_NOTE = (
+    "Cada recuadro es un departamento y todos comparten el eje vertical, así "
+    "que las alturas se comparan directamente entre sí. El valor de cada "
+    "departamento sale del panel municipal agregado ponderando por píxeles "
+    "válidos, {ventana}. Es una sola figura, y por eso lleva una sola descarga "
+    "con todos los departamentos.")
+DEPT_RANKING_NOTE = (
+    "Los dieciocho departamentos ordenados por su valor en {dekad}, agregados "
+    "desde el panel municipal ponderando por píxeles válidos. Con un rango de "
+    "fechas esta vista pasa a ser una cuadrícula con la serie de cada uno.")
+
+MUNI_MATRIX_NOTE = (
+    "Matriz de municipio por dekad con los {top} municipios de {peor} valor, "
+    "sobre el dato municipal del panel, {ventana}. El orden sale del {peor} "
+    "valor alcanzado en toda la ventana y no del último dekad: ordenar por el "
+    "último dejaría fuera a quien tuvo el pico a mitad del periodo, que es "
+    "justo el que hay que ver.")
+MUNI_RANKING_NOTE = (
+    "Los {top} municipios de {peor} valor en {dekad}, sobre el dato municipal "
+    "del panel. Con un rango de fechas esta vista pasa a ser una matriz de "
+    "municipio por dekad, ordenada por el {peor} valor del periodo.")
+
+SEVERITY_NOTE = (
+    "Superficie en kilómetros cuadrados dentro de cada clase de severidad, "
+    "dekad por dekad, sumando el área de los municipios que caen en cada una. "
+    "Responde cuánta superficie está afectada y no solo cuán intenso es el "
+    "índice: un valor alto en pocos municipios chicos y otro moderado en medio "
+    "país se leen distinto aquí.")
+
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.
 ALERT_DISCLAIMER = ("Las alertas reflejan condiciones de estrés/sequía "
