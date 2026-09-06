@@ -60,9 +60,9 @@ for _intento in (1, 2):
     try:
         from app import texts                                    # noqa: E402
         from app.controls import (MAX_FRAMES, OVERVIEW_SERIES,   # noqa: E402
-                                  Query, dekads, geojson, load, manifest,
-                                  national, season_months_label, sidebar,
-                                  series_options)
+                                  Query, data_version, dekads, geojson, load,
+                                  manifest, national, season_months_label,
+                                  sidebar, series_options)
         from asis import config as cfg, panel, viz               # noqa: E402
         from asis.aggregate import (at_level, classify,          # noqa: E402
                                     climatology_frame, over_window,
@@ -272,6 +272,19 @@ def figure(fig, data: pd.DataFrame, slug: str, key: str, narrow: bool = False):
     download(data, slug, key, narrow=narrow)
 
 
+@st.cache_data(show_spinner=False, max_entries=8)
+def _csv_bytes(_data: pd.DataFrame, clave: str) -> bytes:
+    """El CSV de una descarga, calculado una vez por corte.
+
+    `st.download_button` necesita los bytes por adelantado, así que el CSV se
+    armaba en cada rerun aunque nadie lo descargara: a nivel municipio con la
+    ventana completa son 24,6 MB por corrida. El guion inicial de `_data` le
+    dice a Streamlit que no intente hashear el DataFrame —hacerlo costaría más
+    que armar el CSV—; la clave es `clave`, que identifica el corte.
+    """
+    return _data.to_csv(index=False).encode("utf-8-sig")
+
+
 def download(data: pd.DataFrame, slug: str, key: str, narrow: bool = False):
     """La descarga de una figura, aparte para poder colgarla de un par de
     figuras que comparten datos: dos botones identicos invitan a pensar que
@@ -280,7 +293,7 @@ def download(data: pd.DataFrame, slug: str, key: str, narrow: bool = False):
     boton = st if narrow else st.columns([3, 1])[1]
     boton.download_button(
         f"{texts.FIG_DOWNLOAD} ({len(shown):,})",
-        shown.to_csv(index=False).encode("utf-8-sig"),
+        _csv_bytes(shown, f"{data_version()}|{slug}|{len(shown)}"),
         file_name=f"asis_{slug}.csv", mime="text/csv", key=key,
         width="stretch")
 
@@ -806,7 +819,8 @@ def view_data(query: Query, cut: pd.DataFrame):
     shown = for_display(cut)
     st.download_button(
         f"Descargar el corte completo · {len(shown):,} filas",
-        shown.to_csv(index=False).encode("utf-8-sig"),
+        _csv_bytes(shown,
+                   f"{data_version()}|completo|{query.slug()}|{len(shown)}"),
         file_name=f"asis_{query.slug()}.csv", mime="text/csv",
         help=texts.DOWNLOAD_HELP, type="primary", key="dl_completo")
     st.dataframe(shown, width="stretch", hide_index=True, height=420)

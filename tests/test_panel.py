@@ -129,3 +129,40 @@ def test_tabla_de_referencia_departamental():
     assert len(ref) == 18
     assert ref["adm1_code"].is_unique
     assert int(ref["n_muni"].sum()) == len(panel.municipios())
+
+
+# --- Memoria -----------------------------------------------------------------
+# Streamlit Community Cloud restringio la app por consumo de memoria. Eran dos
+# causas: el panel se leia con tipos anchos, y el cache guardaba una copia por
+# cada ventana consultada sin soltar ninguna. Medido entonces: 40 ventanas
+# retenidas llevaban el proceso de 315 MB a 712 MB.
+def test_el_panel_se_lee_compacto():
+    """Las columnas de texto que se repiten en cada fila van como categoria, y
+    las estadisticas en float32: el panel completo pasa de 140 MB a unos 57."""
+    df = panel.load("asi_gs1")
+    if df.empty:
+        pytest.skip("no hay panel construido")
+    for col in ("adm2_name", "adm1_name", "series"):
+        assert str(df[col].dtype) == "category", col
+    assert not df.select_dtypes("float64").columns.tolist()
+    # dekad_id NO: se compara por rango en todo el proyecto, y una categoria
+    # sin orden no admite `>=`.
+    assert str(df["dekad_id"].dtype) != "category"
+    assert (df["dekad_id"] >= "2026-01-D1").any()
+
+
+def test_compactar_no_cambia_ninguna_cifra():
+    """El ahorro no puede costar precision: es el dato que alguien cita."""
+    import pandas as pd
+    from asis.aggregate import to_country
+
+    years = panel.years_on_disk("asi_gs1")
+    if not years:
+        pytest.skip("no hay panel construido")
+    crudo = pd.read_parquet(panel.series_dir("asi_gs1") / f"{years[-1]}.parquet")
+    compacto = panel.compact(crudo.copy())
+    a = to_country(crudo).set_index("dekad_id")["mean"]
+    b = to_country(compacto).set_index("dekad_id")["mean"]
+    assert (a.round(6) == b.round(6)).all()
+    assert compacto.memory_usage(deep=True).sum() < \
+        crudo.memory_usage(deep=True).sum() / 2

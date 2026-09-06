@@ -139,8 +139,14 @@ class Query:
                 f"{dekad_label_compact(self.end)}")
 
     def slug(self) -> str:
+        """Identifica el corte. Incluye el filtro de departamentos: sin él, dos
+        recortes distintos compartían nombre de archivo y clave de caché."""
         base = f"{self.series_id}_{self.level}_{self.start}"
-        return base if self.single else f"{base}_{self.end}"
+        if not self.single:
+            base = f"{base}_{self.end}"
+        if self.departments:
+            base = f"{base}_{'-'.join(sorted(self.departments))}"
+        return base
 
 
 # --- Acceso cacheado ---------------------------------------------------------
@@ -170,9 +176,23 @@ def _dekads(version: str, series_id: str) -> list[str]:
     return panel.dekads(series_id)
 
 
-@st.cache_data(show_spinner="Leyendo el panel...")
-def _load(version: str, series_id: str, start: str, end: str) -> pd.DataFrame:
-    return panel.load(series_id, start, end)
+@st.cache_resource(show_spinner="Leyendo el panel...", max_entries=4)
+def _series_frame(version: str, series_id: str) -> pd.DataFrame:
+    """El panel completo de una serie, una sola vez por proceso.
+
+    Antes se cacheaba **por ventana**: cada combinación de inicio y fin dejaba
+    su propia copia en memoria y ninguna se soltaba nunca. Con el deslizador,
+    arrastrarlo genera decenas de ventanas distintas en segundos, y el proceso
+    creció hasta que Streamlit Community Cloud restringió la app por consumo de
+    memoria. Ahora hay a lo sumo una entrada por serie —tres— y cualquier
+    ventana es un recorte de ellas.
+
+    Es `cache_resource` y no `cache_data` porque `cache_data` devuelve una copia
+    profunda en cada acceso: copiar veinte megas en cada rerun es justo lo que
+    hay que evitar. El objeto cacheado nunca se muta: `load()` siempre devuelve
+    un recorte, que es un objeto nuevo.
+    """
+    return panel.load(series_id)
 
 
 @st.cache_data(show_spinner=False)
@@ -212,7 +232,12 @@ def dekads(series_id: str) -> list[str]:
 
 
 def load(series_id: str, start: str, end: str) -> pd.DataFrame:
-    return _load(data_version(), series_id, start, end)
+    """Recorte de una serie. Siempre un objeto nuevo, nunca el que está en el
+    caché: quien lo reciba puede hacer con él lo que quiera."""
+    df = _series_frame(data_version(), series_id)
+    if df.empty:
+        return df
+    return df[(df["dekad_id"] >= start) & (df["dekad_id"] <= end)]
 
 
 def national(name: str) -> pd.DataFrame:
