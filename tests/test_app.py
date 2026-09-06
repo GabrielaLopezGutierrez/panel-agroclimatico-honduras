@@ -219,16 +219,30 @@ def test_la_cuadricula_trae_un_recuadro_por_departamento(last):
     assert len(fig.data) == d["adm1_name"].nunique()
 
 
-def test_el_mapa_de_departamento_con_rango_muestra_el_promedio(last):
-    """Lo que el mapa pinta tiene que ser el promedio de la ventana y no el
-    ultimo dekad ni el peor valor."""
-    from asis.aggregate import over_window
-    query = q("departamento", "asi_gs1", "2026-01-D1", last)
-    _muni, cut = app.slice_for(query)
-    promedio = over_window(cut, ["adm1_code", "adm1_name"], how="mean")
-    esperado = cut.groupby("adm1_code")["mean"].mean()
-    obtenido = promedio.set_index("adm1_code")["mean"]
-    assert obtenido.round(6).equals(esperado.reindex(obtenido.index).round(6))
+def test_el_mapa_con_rango_se_anima_en_vez_de_promediar(last):
+    """El promedio respondia otra pregunta: en un mapa lo que se busca es
+    cuando empezo y cuando aflojo, y colapsar la ventana lo escondia."""
+    from app.controls import MAX_FRAMES
+
+    for level in ("departamento", "municipio"):
+        query = q(level, "asi_gs1", "2026-01-D1", last)
+        _muni, cut = app.slice_for(query)
+        datos = _muni if level == "municipio" else cut
+        todos = sorted(datos["dekad_id"].unique())
+        marcos = app._animation_frames(todos, MAX_FRAMES)
+        assert len(marcos) == len(todos) <= MAX_FRAMES, level
+        assert marcos[-1] == todos[-1], level
+
+
+def test_los_cuadros_de_la_animacion_tienen_tope():
+    """Cada cuadro viaja al navegador con un valor por unidad: la ventana
+    completa son 779 dekads por 290 municipios."""
+    dekads = [f"20{y:02d}-{m:02d}-D{d}" for y in range(5, 27)
+              for m in range(1, 13) for d in (1, 2, 3)]
+    marcos = app._animation_frames(dekads, 48)
+    assert len(marcos) <= 49          # el tope, mas el ultimo si no cayo justo
+    assert marcos[0] == dekads[0]
+    assert marcos[-1] == dekads[-1]   # el ultimo dekad siempre esta
 
 
 # --- Controles de rango, sobre la app corriendo ------------------------------
@@ -428,52 +442,59 @@ def test_la_herramienta_dice_dekad_y_nunca_dekadal():
             assert "dekadal" not in t.lower(), f"{nombre} dice dekadal"
 
 
-# --- Deslizador propio de la anomalia de lluvia ------------------------------
-def _deslizador_anomalia(at):
-    """Por etiqueta y no por posicion: hay dos deslizadores en la pagina."""
-    for sl in at.select_slider:
-        if sl.label == texts.RAIN_BARS_RANGE:
-            return sl
-    raise AssertionError("falta el deslizador de la anomalia")
-
-
-def test_la_anomalia_tiene_su_propio_recorte_dentro_de_la_consulta(last):
-    """Va sobre el eje del tiempo completo: con la ventana ancha son cientos de
-    barras finitas. El recorte solo puede achicar lo ya elegido arriba, nunca
-    ampliarlo."""
-    from asis.calendar import dekad_label
-
-    at = _app()
-    anomalia = _deslizador_anomalia(at)
-    desde, hasta = at.sidebar.select_slider[0].value
-    # `options` viene ya formateado por format_func, asi que se compara contra
-    # las etiquetas de los extremos de la consulta.
-    assert anomalia.options[0] == dekad_label(desde)
-    assert anomalia.options[-1] == dekad_label(hasta)
-    # Abre completo: recortar es opcional.
-    assert anomalia.value == (desde, hasta)
-
-
-def test_el_recorte_de_la_anomalia_no_toca_la_consulta(last):
-    """Es un acercamiento de esa figura, no otra consulta: la ventana de la
-    barra lateral y las demas figuras se quedan como estaban."""
-    at = _app()
-    desde, hasta = at.sidebar.select_slider[0].value
-    # Codigos crudos, no las etiquetas de `options`: AppTest no sabe volver de
-    # la etiqueta al valor cuando el widget usa format_func.
-    dentro = [d for d in panel.dekads("vci") if desde <= d <= hasta]
-    medio = dentro[len(dentro) // 2]
-    _deslizador_anomalia(at).set_range(medio, hasta).run()
-    assert not at.exception
-    assert at.sidebar.select_slider[0].value == (desde, hasta)
-    assert _deslizador_anomalia(at).value == (medio, hasta)
-
-
-def test_la_anomalia_descarga_su_propio_recorte(last):
-    """Dejo de compartir descarga con las lineas cuando dejo de compartir
-    rango: la descarga de una figura tiene que ser la de esa figura."""
+# --- Precipitacion -----------------------------------------------------------
+def test_la_seccion_de_lluvia_tiene_una_sola_descarga(last):
+    """Las dos figuras contienen la misma ventana: el acercamiento de la
+    anomalia es de vista, no de datos. Dos botones identicos invitarian a
+    pensar que detras hay dos cortes distintos."""
     at = _app()
     nombres = [d.label for d in at.get("download_button")]
     por_figura = [n for n in nombres if texts.FIG_DOWNLOAD in n]
-    # Dos temporadas, VCI, lluvia y anomalia: cinco descargas por figura.
-    assert len(por_figura) == 5, nombres
+    # Dos temporadas, VCI y lluvia.
+    assert len(por_figura) == 4, nombres
+
+
+def test_la_anomalia_ya_no_usa_un_deslizador_de_la_pagina(last):
+    """Vivia encima de la figura y obligaba a un rerun por cada acercamiento."""
+    at = _app()
+    etiquetas = [sl.label for sl in at.select_slider]
+    assert texts.RAIN_BARS_RANGE not in etiquetas
+
+
+# --- Recorrido completo de la interfaz ---------------------------------------
+def test_todos_los_niveles_y_ventanas_dibujan_sin_error():
+    """La prueba que faltaba. Al compactar el panel, los nombres pasaron a
+    categoria y una etiqueta que los concatenaba con texto reventaba en
+    departamento y en municipio: `Categorical + str`. Ninguna prueba recorria
+    esas vistas, asi que el fallo llego a produccion.
+    """
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    for nivel in ("pais", "departamento", "municipio"):
+        for modo in ("Un dekad", "Rango"):
+            at = AppTest.from_file(guion, default_timeout=300)
+            at.run()
+            at.radio(key="nivel").set_value(nivel).run()
+            at.radio(key=f"modo_{nivel}").set_value(modo).run()
+            assert not at.exception, (
+                f"{nivel}/{modo}: {str(at.exception[0].value)[:200]}")
+
+
+def test_cada_indicador_dibuja_en_cada_nivel():
+    """Cambiar de indicador tampoco puede romper ninguna vista."""
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    for nivel in ("pais", "departamento", "municipio"):
+        for serie in panel.stored_series():
+            at = AppTest.from_file(guion, default_timeout=300)
+            at.run()
+            at.radio(key="nivel").set_value(nivel).run()
+            at.selectbox(key="serie").set_value(serie).run()
+            assert not at.exception, (
+                f"{nivel}/{serie}: {str(at.exception[0].value)[:200]}")

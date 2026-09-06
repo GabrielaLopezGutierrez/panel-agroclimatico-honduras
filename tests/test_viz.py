@@ -190,10 +190,25 @@ def test_el_color_del_kpi_es_el_de_la_escala_continua():
     assert bajo != alto                            # misma banda, distinto color
 
 
+def _lluvia():
+    from asis.calendar import dekad_date
+    dekads = ["2026-01-D1", "2026-01-D2", "2026-01-D3"]
+    return pd.DataFrame({"dekad_id": dekads,
+                         "date": [dekad_date(d) for d in dekads],
+                         "anom_pct": [40.0, -25.0, 0.0]})
+
+
 def test_la_anomalia_colorea_por_signo():
-    lluvia = pd.DataFrame({
-        "dekad_id": ["2026-01-D1", "2026-01-D2", "2026-01-D3"],
-        "anom_pct": [40.0, -25.0, 0.0]})
-    fig = viz.anomaly_bars_fig(lluvia, "t")
+    fig = viz.anomaly_bars_fig(_lluvia(), "t")
     colores = list(fig.data[0].marker.color)
     assert colores[0] == colores[2] != colores[1]
+
+
+def test_la_anomalia_lleva_el_control_de_rango_dentro_de_la_figura():
+    """El acercamiento vive en el grafico y no en un widget de la pagina: no
+    vuelve a correr la app, y la figura sigue conteniendo toda la ventana, asi
+    que su descarga sigue siendo la de lo que muestra."""
+    fig = viz.anomaly_bars_fig(_lluvia(), "t")
+    assert fig.layout.xaxis.rangeslider.visible
+    # Eje de fechas: el control de rango necesita un eje continuo.
+    assert fig.layout.xaxis.type == "date"

@@ -272,7 +272,10 @@ def heatmap_panel(df, value_col, title, subtitle="", family="ASI", top=30,
     d = df.dropna(subset=[value_col]).copy()
     if d.empty or "dekad_id" not in d:
         return None
-    d["etiqueta"] = d["adm2_name"] + " · " + d["adm1_name"]
+    # astype(str): los nombres vienen como categoria para que el panel ocupe
+    # un tercio en memoria, y una categoria no se concatena con texto.
+    d["etiqueta"] = (d["adm2_name"].astype(str) + " · "
+                     + d["adm1_name"].astype(str))
     # En el ASI interesan los peores por arriba; en el VCI, por abajo.
     peor = "max" if family == "ASI" else "min"
     if ref_dekad and ref_dekad in set(d["dekad_id"]):
@@ -542,20 +545,30 @@ def anomaly_bars_fig(rain, title, subtitle="", height=320, value_col="anom_pct",
 
     El signo se codifica en el color, y el cero queda marcado: la pregunta que
     responde es de qué lado del promedio cayó cada dekad.
+
+    Lleva el control de rango de Plotly debajo del eje, en vez de un deslizador
+    de Streamlit encima de la figura. Es el mismo gesto pero dentro del gráfico:
+    acercarse no vuelve a correr la app, así que responde al instante, y la
+    figura sigue conteniendo toda la ventana, de modo que su descarga sigue
+    siendo la de lo que muestra.
+
+    El eje va en fechas y no en etiquetas de dekad: el control de rango necesita
+    un eje continuo para tener sentido, y de paso las marcas de tiempo las
+    espacia Plotly solo.
     """
     d = rain.dropna(subset=[value_col]).sort_values("dekad_id")
     if d.empty:
         return None
-    labels = [dekad_label(c) for c in d["dekad_id"]]
     colores = ["#3b7dd8" if v >= 0 else "#d99a2b" for v in d[value_col]]
     fig = go.Figure(go.Bar(
-        x=labels, y=d[value_col], marker_color=colores,
-        hovertemplate="%{x}<br>" + label + ": %{y:+.0f}%<extra></extra>"))
+        x=d["date"], y=d[value_col], marker_color=colores,
+        hovertemplate="%{x|%d %b %Y}<br>" + label
+                      + ": %{y:+.0f}%<extra></extra>"))
     fig.add_hline(y=0, line=dict(color="#5b6270", width=1))
     fig.update_layout(
         height=height, yaxis_title=label,
-        xaxis=dict(tickangle=-45, tickfont=dict(size=9), tickmode="array",
-                   tickvals=thin_ticks(labels, 16)))
+        xaxis=dict(type="date", rangeslider=dict(visible=True, thickness=0.12),
+                   tickfont=dict(size=9)))
     return style_fig(fig, title, subtitle, legend="off", source_shift=104)
 
 
@@ -675,7 +688,10 @@ def ranking_fig(df, value_col, title, subtitle="", family="ASI", top=20,
         return None
     d = (d.nlargest(top, value_col) if family == "ASI"
          else d.nsmallest(top, value_col))
-    d["etiqueta"] = d["adm2_name"] + " · " + d["adm1_name"]
+    # astype(str): los nombres vienen como categoria para que el panel ocupe
+    # un tercio en memoria, y una categoria no se concatena con texto.
+    d["etiqueta"] = (d["adm2_name"].astype(str) + " · "
+                     + d["adm1_name"].astype(str))
     d = d.sort_values(value_col, ascending=(family == "ASI"))
     lo, hi = range_for(family)
     fig = go.Figure(go.Bar(

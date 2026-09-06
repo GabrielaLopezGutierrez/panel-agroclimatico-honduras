@@ -65,11 +65,9 @@ for _intento in (1, 2):
                                   sidebar, series_options)
         from asis import config as cfg, panel, viz               # noqa: E402
         from asis.aggregate import (at_level, classify,          # noqa: E402
-                                    climatology_frame, over_window,
-                                    season_columns, severity_area,
-                                    to_country)
+                                    climatology_frame, season_columns,
+                                    severity_area, to_country)
         from asis.calendar import (dekad_label,                   # noqa: E402
-                                   dekad_label_compact,
                                    dekad_label_long, dekad_window)
         break
     except ImportError:
@@ -189,27 +187,37 @@ def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
     nacional = to_country(muni)
     nacional = nacional[nacional["dekad_id"] == referencia]
     at_last = with_data[with_data["dekad_id"] == referencia]
+    # Las mismas tarjetas del resumen nacional, en todos los niveles y también
+    # con un indicador único: el promedio va con el color de su clase de FAO y
+    # los conteos con la misma tipografía. Antes solo el resumen las tenía, así
+    # que cambiar de indicador o de nivel devolvía la cifra a otro estilo.
     c1, c2, c3 = st.columns(3)
-    if len(nacional):
+    with c1:
         etiqueta = ("Promedio del área filtrada" if query.departments
                     else "Promedio nacional")
-        c1.metric(f"{etiqueta} · {dekad_label(referencia)}",
-                  f"{nacional['mean'].iloc[0]:.2f}",
-                  help=f"{query.unit}. Ponderado por píxeles válidos.")
-    if query.level == "pais":
-        aportan = int(at_last["n_muni"].iloc[0]) if len(at_last) else 0
-        c2.metric("Municipios que aportan", f"{aportan:,}")
-    else:
-        c2.metric(f"{PLURAL[query.level]} con dato", f"{len(at_last):,}")
-    if estacional:
-        # Los que se grafican, no los de la ventana: fuera de la temporada no
-        # se dibuja nada, y contarlos aquí prometería puntos que no están.
-        graficados = _season_frame(query, query.series_id)
-        c3.metric("Dekads en la temporada",
-                  f"{graficados['dekad_id'].nunique():,}")
-    else:
-        c3.metric("Dekads en la ventana",
-                  f"{with_data['dekad_id'].nunique():,}")
+        kpi(etiqueta,
+            (referencia, float(nacional["mean"].iloc[0])) if len(nacional)
+            else None,
+            query.family,
+            f"{query.unit}. Ponderado por píxeles válidos.")
+    with c2:
+        if query.level == "pais":
+            aportan = int(at_last["n_muni"].iloc[0]) if len(at_last) else 0
+            kpi_plain("Municipios que aportan", f"{aportan:,}", separador=True)
+        else:
+            kpi_plain(f"{PLURAL[query.level]} con dato", f"{len(at_last):,}",
+                      separador=True)
+    with c3:
+        if estacional:
+            # Los que se grafican, no los de la ventana: fuera de la temporada
+            # no se dibuja nada, y contarlos aquí prometería puntos que no
+            # están.
+            graficados = _season_frame(query, query.series_id)
+            kpi_plain("Dekads en la temporada",
+                      f"{graficados['dekad_id'].nunique():,}", separador=True)
+        else:
+            kpi_plain("Dekads en la ventana",
+                      f"{with_data['dekad_id'].nunique():,}", separador=True)
 
 
 def indicator_definition(query: Query):
@@ -303,59 +311,70 @@ def download(data: pd.DataFrame, slug: str, key: str, narrow: bool = False):
 def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
     """Coropleta del nivel seleccionado, con su propia geometría.
 
-    Con una ventana corta el mapa se anima, un cuadro por dekad. Con una larga
-    no: una animación de cientos de cuadros no se puede leer y obliga al
-    navegador a cargar la geometría una vez por dekad. En ese caso se pinta el
-    peor valor de la ventana.
+    Con un rango el mapa se recorre con el deslizador de la propia figura, un
+    cuadro por dekad. Antes la ventana se colapsaba a una sola cifra —el
+    promedio en departamento, el peor valor en municipio—, que respondia otra
+    pregunta: en un mapa animado lo que se busca es cuando empezo y cuando
+    aflojo, y eso el resumen lo escondia.
     """
     data = muni if query.level == "municipio" else cut
     if data.empty:
         st.info(texts.NO_DATA)
         return
-    n_dekads = data["dekad_id"].nunique()
-    # A nivel departamento el mapa de un rango muestra el promedio de la
-    # ventana, no el peor valor ni una animación: son dieciocho unidades y la
-    # pregunta ahí es cómo le fue al departamento en el periodo, no en qué
-    # dekad tocó fondo. El peor valor sigue siendo el resumen a nivel
-    # municipal, donde un pico aislado sí importa para la alerta.
-    promedio = query.level == "departamento" and not query.single
-    resumen = not query.single and n_dekads > MAX_FRAMES and not promedio
-    peor = "mayor" if query.family == "ASI" else "menor"
     extra = {c: ":.0f" for c in ("pct_gt40", "pct_lt0.35")
              if c in data.columns}
+    subtitulo = ""
+    if not query.single:
+        # Con un rango, el mapa se recorre con el deslizador de la figura en
+        # vez de colapsar la ventana a una sola cifra. El promedio escondia
+        # justo lo que se quiere ver en un mapa animado: cuando empezo y cuando
+        # aflojo. Se acota la cantidad de cuadros porque cada uno viaja al
+        # navegador; si la ventana trae mas, se muestrean parejo y el subtitulo
+        # lo dice, en vez de dejar creer que estan todos.
+        todos = sorted(data["dekad_id"].unique())
+        marcos = _animation_frames(todos, MAX_FRAMES)
+        if len(marcos) < len(todos):
+            data = data[data["dekad_id"].isin(marcos)]
+            cada = -(-len(todos) // MAX_FRAMES)
+            subtitulo = (f"{query.window_label} · {len(todos)} dekads, "
+                         f"un cuadro cada {cada}")
+        else:
+            subtitulo = f"{query.window_label} · {len(todos)} dekads"
+    titulo = (f"{query.label} · {query.window_label}" if query.single
+              else f"{query.label} · recorrido de la ventana")
 
-    if promedio or resumen:
-        # El promedio se toma sobre los dekads: cada uno pesa igual, porque la
-        # pregunta es por el periodo y no por el área.
-        agg = "mean" if promedio else ("max" if query.family == "ASI" else "min")
-        data = over_window(
-            data, [query.code_col, query.name_col, "adm1_name"], how=agg)
-        titulo = (f"{query.label} · promedio de la ventana" if promedio
-                  else f"{query.label} · {peor} valor de la ventana")
-        subtitulo = f"{query.window_label} · {n_dekads} dekads"
-        extra = {}
-    else:
-        titulo = f"{query.label} · {query.window_label}"
-        subtitulo = ""
-
-    estatico = promedio or resumen
+    animacion = None if query.single else "dekad_id"
     if query.family == "ASI":
         # El ASI usa un degradado continuo: un valor apenas sobre un umbral se
         # ve apenas distinto del umbral, en vez de saltar a un color plano
         # nuevo. El VCI sigue con las clases discretas de FAO, sin cambios.
         fig = viz.continuous_map(
             data, geojson(query.level), "mean", titulo, subtitulo,
-            family="ASI", bar_label=query.unit_short,
-            animation=None if (query.single or estatico) else "dekad_id",
+            family="ASI", bar_label=query.unit_short, animation=animacion,
             hover_extra=extra, code_col=query.code_col,
             name_col=query.name_col)
     else:
         fig = viz.class_map(
             data, geojson(query.level), query.family, titulo, subtitulo,
-            animation=None if (query.single or estatico) else "dekad_id",
-            hover_extra=extra, code_col=query.code_col,
+            animation=animacion, hover_extra=extra, code_col=query.code_col,
             name_col=query.name_col)
     figure(fig, data, f"mapa_{query.slug()}", "dl_mapa")
+
+
+def _animation_frames(dekads: list[str], tope: int) -> list[str]:
+    """Los dekads que se animan: como mucho `tope`, espaciados parejo.
+
+    Cada cuadro viaja al navegador con un valor por unidad, asi que la ventana
+    completa —779 dekads por 290 municipios— no cabe. El ultimo dekad se
+    conserva siempre: es el que la gente busca primero.
+    """
+    if len(dekads) <= tope:
+        return list(dekads)
+    paso = -(-len(dekads) // tope)
+    marcos = list(dekads[::paso])
+    if marcos[-1] != dekads[-1]:
+        marcos.append(dekads[-1])
+    return marcos
 
 
 def view_municipal_ranking(query: Query, muni: pd.DataFrame):
@@ -672,51 +691,15 @@ def _rainfall_block(query: Query):
         color="#3b7dd8", reference=lta, reference_label="promedio de largo plazo")
     if lineas is not None:
         st.plotly_chart(lineas, width="stretch")
-        download(ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
-
-    # La anomalía va sobre el eje del tiempo completo y con la ventana ancha se
-    # vuelve una fila de barras finitas, así que lleva su propio recorte. No
-    # sustituye a la consulta: solo puede achicar lo que ya se eligió arriba.
-    recorte = _anomaly_window(ventana)
     barras = viz.anomaly_bars_fig(
-        recorte, texts.RAIN_BARS_TITLE.format(
-            ventana=_compact_window(recorte)),
+        ventana, texts.RAIN_BARS_TITLE.format(ventana=query.window_compact),
         texts.RAIN_BARS_SUBTITLE)
     if barras is not None:
         st.plotly_chart(barras, width="stretch")
-        # Descarga propia: muestra un recorte distinto al de las líneas, y la
-        # descarga de una figura tiene que ser la de esa figura.
-        download(recorte, f"anomalia_lluvia_{query.slug()}", "dl_anomalia")
     st.caption(texts.RAIN_NOTE)
-
-
-def _compact_window(d: pd.DataFrame) -> str:
-    dekads = sorted(d["dekad_id"])
-    if not dekads:
-        return ""
-    return (f"{dekad_label_compact(dekads[0])} a "
-            f"{dekad_label_compact(dekads[-1])}")
-
-
-def _anomaly_window(ventana: pd.DataFrame) -> pd.DataFrame:
-    """Deslizador propio de la anomalía, acotado a la ventana ya seleccionada.
-
-    La llave del widget incluye los extremos de la ventana de la consulta, así
-    que cambiar la consulta crea un deslizador nuevo que abre completo. Sale
-    gratis lo que si no habría que manejar a mano: un recorte guardado que
-    apunta a dekads que la consulta ya no incluye. Y nadie le escribe la llave,
-    que es lo que costó dos defectos en el selector de la consulta.
-    """
-    disponibles = sorted(ventana["dekad_id"].unique())
-    if len(disponibles) < 3:
-        return ventana
-    desde, hasta = st.select_slider(
-        texts.RAIN_BARS_RANGE, options=disponibles,
-        value=(disponibles[0], disponibles[-1]), format_func=dekad_label,
-        help=texts.RAIN_BARS_RANGE_HELP,
-        key=f"anomalia_{disponibles[0]}_{disponibles[-1]}")
-    return ventana[(ventana["dekad_id"] >= desde)
-                   & (ventana["dekad_id"] <= hasta)]
+    # Vuelve a ser una sola descarga: el control de rango de la anomalia es de
+    # vista y no de datos, asi que las dos figuras contienen la misma ventana.
+    download(ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
 
 
 def _view_country_indicator(query: Query):
@@ -816,6 +799,20 @@ def readable_ink(hex_color: str, sobre="#ffffff", minimo=4.5) -> str:
             break
         rgb = [max(0, round(c * 0.88)) for c in rgb]
     return "#" + "".join(f"{c:02x}" for c in rgb)
+
+
+def kpi_plain(label: str, valor: str, separador=False):
+    """Una cifra sin clase ni color: los conteos que acompañan al promedio.
+
+    Comparte tipografía y separadores con `kpi()` para que las tres cifras de
+    encabezado se lean como una sola fila y no como dos estilos pegados.
+    """
+    clases = "asis-kpi asis-kpi-sep" if separador else "asis-kpi"
+    st.markdown(f"<div class='{clases}'>"
+                f"<div class='asis-kpi-label'>{label}</div>"
+                f"<div class='asis-kpi-row'>"
+                f"<span class='asis-kpi-value'>{valor}</span></div></div>",
+                unsafe_allow_html=True)
 
 
 def kpi(label: str, ultimo, family: str, ayuda: str, separador=False):
