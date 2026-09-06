@@ -606,8 +606,16 @@ def _country_indicator_block(query: Query, series_id: str):
         if df.empty:
             return
         serie = climatology_frame(to_country(df), None)
-        figure(_country_series_fig(query, series_id, serie), serie,
-               f"serie_nacional_{slug}", f"dl_serie_{series_id}")
+        fig = _country_series_fig(query, series_id, serie)
+        if fig is not None:
+            st.plotly_chart(fig, width="stretch")
+            # La misma nota que llevan el ASI y la lluvia: qué es el dato, cómo
+            # se calculó, de dónde sale la referencia y hasta dónde llega.
+            if panel.family_of(series_id) == "VCI":
+                st.caption(texts.VCI_NOTE)
+        else:
+            st.info(texts.NO_DATA)
+        download(serie, f"serie_nacional_{slug}", f"dl_serie_{series_id}")
         return
 
     frame = _season_frame(query, series_id)

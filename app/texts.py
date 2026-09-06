@@ -149,10 +149,29 @@ RAIN_BARS_RANGE_HELP = ("Recorta solo esta figura, dentro de la ventana ya "
 RAIN_BARS_SUBTITLE = ("Diferencia porcentual de cada dekad contra su promedio "
                       "de largo plazo: sobre cero llovió más que lo habitual")
 RAIN_NOTE = (
-    "Lluvia acumulada por dekad, ponderada por área de cultivo, y su promedio "
-    "de largo plazo. La referencia es la que publica FAO y no se recalcula. La "
-    "anomalía va sobre el eje del tiempo completo, sin cortar por temporada: la "
-    "lluvia no depende de la ventana de cultivo de ningún indicador.")
+    "Las dos figuras grafican la lluvia acumulada por dekad que publica FAO "
+    "para Honduras sobre las áreas de cultivo, agregada a país ponderando cada "
+    "departamento por su área de cultivo. Esa ponderación es espacial —decide "
+    "cuánto pesa cada departamento en el promedio— y no tiene relación con la "
+    "ventana de cultivo de una temporada, que es una restricción de fechas: la "
+    "lluvia se mide los treinta y seis dekads del año. El promedio de largo "
+    "plazo (LTA, por *long term average*) lo calcula y publica FAO; aquí se "
+    "toma tal cual y no se recalcula. La anomalía es la diferencia porcentual "
+    "de cada dekad contra ese promedio.")
+
+# Misma estructura que la nota del ASI y la de la lluvia: qué es el dato, cómo
+# se calculó, de dónde sale la referencia y hasta dónde llega en el tiempo.
+VCI_NOTE = (
+    "La figura grafica el índice de condición de la vegetación como promedio "
+    "nacional ponderado por píxeles válidos, calculado en este panel a partir "
+    "de las estimaciones satelitales por píxel que publica FAO para Honduras: "
+    "cada dekad se recorta a los municipios y se agrega ponderando por el área "
+    "que el propio ráster reconoce, sin pasar por la serie nacional de FAO. La "
+    "línea de 0,35 es el umbral bajo el cual FAO considera la vegetación en mal "
+    "estado, y coincide con un corte de su propia escala de clases. A "
+    "diferencia del índice de estrés agrícola, el VCI es continuo todo el año: "
+    "no depende de la ventana de cultivo de ninguna temporada, y por eso cada "
+    "línea es un año del calendario.")
 
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.
