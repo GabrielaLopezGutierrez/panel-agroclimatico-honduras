@@ -535,7 +535,7 @@ def climatology_matrix(national, title, subtitle="", value_col="value",
     return style_fig(fig, title, subtitle, legend="off", source_shift=78)
 
 
-def anomaly_bars_fig(rain, title, subtitle="", height=320, value_col="anom_pct",
+def anomaly_bars_fig(rain, title, subtitle="", height=420, value_col="anom_pct",
                      label="anomalía (%)"):
     """Anomalía de lluvia por dekad, sobre el eje del tiempo completo.
 
@@ -560,8 +560,13 @@ def anomaly_bars_fig(rain, title, subtitle="", height=320, value_col="anom_pct",
     if d.empty:
         return None
     colores = ["#3b7dd8" if v >= 0 else "#d99a2b" for v in d[value_col]]
+    # Ancho explícito, en milisegundos: sobre un eje de fechas Plotly lo deduce
+    # del hueco más chico entre puntos, y como los dekads miden 8, 10 u 11 días
+    # tomaba el más corto de todos y dejaba las barras flacas y separadas. Nueve
+    # días llenan el dekad y dejan una rendija para distinguirlas.
+    ancho_dekad = 9 * 24 * 60 * 60 * 1000
     fig = go.Figure(go.Bar(
-        x=d["date"], y=d[value_col], marker_color=colores,
+        x=d["date"], y=d[value_col], marker_color=colores, width=ancho_dekad,
         hovertemplate="%{x|%d %b %Y}<br>" + label
                       + ": %{y:+.0f}%<extra></extra>"))
     fig.add_hline(y=0, line=dict(color="#5b6270", width=1))
