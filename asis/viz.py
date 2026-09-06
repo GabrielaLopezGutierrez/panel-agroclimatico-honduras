@@ -567,9 +567,38 @@ def anomaly_bars_fig(rain, title, subtitle="", height=320, value_col="anom_pct",
     fig.add_hline(y=0, line=dict(color="#5b6270", width=1))
     fig.update_layout(
         height=height, yaxis_title=label,
-        xaxis=dict(type="date", rangeslider=dict(visible=True, thickness=0.12),
-                   tickfont=dict(size=9)))
-    return style_fig(fig, title, subtitle, legend="off", source_shift=104)
+        xaxis=dict(type="date", tickfont=dict(size=9),
+                   rangeselector=_range_buttons(d["date"])))
+    return style_fig(fig, title, subtitle, legend="off", source_shift=104,
+                     top=124)
+
+
+# Atajos del eje de tiempo, en meses. Los mismos tramos redondos del selector de
+# la consulta, porque son los que se piden de verdad.
+_RANGE_BUTTONS = ((6, "6 meses"), (12, "1 año"), (36, "3 años"),
+                  (60, "5 años"))
+
+
+def _range_buttons(fechas) -> dict:
+    """Botones de acercamiento del eje de tiempo.
+
+    Reemplazan al control de rango de Plotly, que dibujaba una miniatura de las
+    propias barras dentro de la banda: a esta densidad no es un asa que se pueda
+    agarrar, es una mancha. Un botón dice a las claras qué periodo deja a la
+    vista, y el gráfico sigue admitiendo el arrastre para acotar cualquier otro.
+
+    Solo se ofrecen los tramos más cortos que el periodo disponible: un botón de
+    cinco años sobre una ventana de dieciocho meses no haría nada.
+    """
+    fechas = pd.to_datetime(pd.Series(fechas))
+    meses = (fechas.max() - fechas.min()).days / 30.4
+    botones = [dict(count=n, label=etiqueta, step="month", stepmode="backward")
+               for n, etiqueta in _RANGE_BUTTONS if n < meses]
+    return dict(
+        buttons=botones + [dict(step="all", label="Todo")],
+        x=0, xanchor="left", y=1.06, yanchor="bottom",
+        font=dict(size=11), bgcolor="#eef0f3", activecolor="#d7dce3",
+        bordercolor="#e6e8ec", borderwidth=1)
 
 
 def rainfall_fig(rain, title, subtitle="", height=440):

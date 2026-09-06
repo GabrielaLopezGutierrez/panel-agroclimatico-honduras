@@ -204,11 +204,30 @@ def test_la_anomalia_colorea_por_signo():
     assert colores[0] == colores[2] != colores[1]
 
 
-def test_la_anomalia_lleva_el_control_de_rango_dentro_de_la_figura():
-    """El acercamiento vive en el grafico y no en un widget de la pagina: no
-    vuelve a correr la app, y la figura sigue conteniendo toda la ventana, asi
-    que su descarga sigue siendo la de lo que muestra."""
+def test_la_anomalia_lleva_botones_de_acercamiento_y_no_una_miniatura():
+    """El control de rango de Plotly dibuja una miniatura de las propias barras
+    dentro de la banda: a esta densidad no es un asa, es una mancha. Un boton
+    dice a las claras que periodo deja a la vista."""
     fig = viz.anomaly_bars_fig(_lluvia(), "t")
-    assert fig.layout.xaxis.rangeslider.visible
-    # Eje de fechas: el control de rango necesita un eje continuo.
-    assert fig.layout.xaxis.type == "date"
+    assert not fig.layout.xaxis.rangeslider.visible
+    assert fig.layout.xaxis.type == "date"      # el eje tiene que ser continuo
+    etiquetas = [b.label for b in fig.layout.xaxis.rangeselector.buttons]
+    assert etiquetas[-1] == "Todo"
+
+
+def test_solo_se_ofrecen_los_tramos_que_caben_en_el_periodo():
+    """Un boton de cinco anios sobre una ventana de dieciocho meses no haria
+    nada."""
+    from asis.calendar import dekad_date
+
+    largos = ["%d-%02d-D1" % (a, m) for a in range(2005, 2027)
+              for m in range(1, 13)]
+    corta = _lluvia()
+    larga = pd.DataFrame({"dekad_id": largos,
+                          "date": [dekad_date(d) for d in largos],
+                          "anom_pct": [0.0] * len(largos)})
+    def etiquetas(d):
+        fig = viz.anomaly_bars_fig(d, "t")
+        return [b.label for b in fig.layout.xaxis.rangeselector.buttons]
+    assert etiquetas(corta) == ["Todo"]         # un mes: ningun tramo cabe
+    assert "5 años" in etiquetas(larga)
