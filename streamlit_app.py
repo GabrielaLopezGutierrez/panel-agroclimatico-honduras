@@ -81,11 +81,11 @@ st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 # Estilo de las cifras de encabezado. Se define una vez porque `st.metric` no
 # admite color en el valor, y el color de la clase de FAO va justamente ahi.
 st.markdown("""<style>
-.asis-kpi {
-  border: 1px solid #e6e8ec; border-left: 5px solid #c9ced6;
-  border-radius: 10px; padding: .7rem .9rem .6rem; background: #fcfcfd;
-  line-height: 1.2; height: 100%;
-}
+/* Sin recuadro ni fondo: las cifras se separan con una línea divisoria, que
+   basta para agruparlas y no compite con el color del dato. La lleva la
+   segunda y la tercera, así que quedan dos líneas y no un marco. */
+.asis-kpi { line-height: 1.2; height: 100%; padding: .1rem 0 .2rem; }
+.asis-kpi-sep { border-left: 1px solid #e6e8ec; padding-left: 1.1rem; }
 .asis-kpi-label {
   font-size: .78rem; font-weight: 550; color: #5b6270;
   letter-spacing: .01em; margin-bottom: .3rem;
@@ -729,12 +729,14 @@ def summary_overview(query: Query):
     disponibles = [s for s in OVERVIEW_SERIES if s in panel.stored_series()]
     if not disponibles:
         return
-    for col, series_id in zip(st.columns(len(disponibles)), disponibles):
+    for i, (col, series_id) in enumerate(
+            zip(st.columns(len(disponibles)), disponibles)):
         ultimo = season_kpi(query, series_id)
         with col:
             kpi(panel.label_of(series_id), ultimo,
                 panel.family_of(series_id),
-                f"{panel.unit_of(series_id)}. Ponderado por píxeles válidos.")
+                f"{panel.unit_of(series_id)}. Ponderado por píxeles válidos.",
+                separador=i > 0)
     st.caption(texts.OVERVIEW_KPI_NOTE)
 
 
@@ -777,7 +779,7 @@ def readable_ink(hex_color: str, sobre="#ffffff", minimo=4.5) -> str:
     return "#" + "".join(f"{c:02x}" for c in rgb)
 
 
-def kpi(label: str, ultimo, family: str, ayuda: str):
+def kpi(label: str, ultimo, family: str, ayuda: str, separador=False):
     """Cifra de encabezado, como tarjeta.
 
     No usa `st.metric` porque solo admite color en el delta, y lo que hay que
@@ -786,9 +788,10 @@ def kpi(label: str, ultimo, family: str, ayuda: str):
     tinta del número, pero nunca solo: al lado va el nombre de la clase, así que
     quien no distinga esos tonos lee lo mismo.
     """
+    clases = "asis-kpi asis-kpi-sep" if separador else "asis-kpi"
     if ultimo is None:
         st.markdown(
-            f"<div class='asis-kpi' title='{ayuda}'>"
+            f"<div class='{clases}' title='{ayuda}'>"
             f"<div class='asis-kpi-label'>{label}</div>"
             f"<div class='asis-kpi-value asis-kpi-sin'>sin dato</div>"
             f"</div>", unsafe_allow_html=True)
@@ -797,8 +800,7 @@ def kpi(label: str, ultimo, family: str, ayuda: str):
     clase, color = class_color(valor, family)
     tinta = readable_ink(color)
     st.markdown(
-        f"<div class='asis-kpi' style='border-left-color:{color}' "
-        f"title='{ayuda} Clase FAO: {clase}.'>"
+        f"<div class='{clases}' title='{ayuda} Clase FAO: {clase}.'>"
         f"<div class='asis-kpi-label'>{label}</div>"
         f"<div class='asis-kpi-row'>"
         f"<span class='asis-kpi-value' style='color:{tinta}'>{valor:.2f}</span>"
