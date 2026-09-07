@@ -416,6 +416,24 @@ def thin_ticks(labels, maximo=12) -> list[str]:
     return labels[::paso]
 
 
+def season_wraps(columns) -> bool:
+    """Si la temporada cruza el año, como la postrera (sep a ene)."""
+    columns = list(columns)
+    return bool(columns) and columns[0] > columns[-1]
+
+
+def season_labels(years, columns) -> list[str]:
+    """Rótulo de cada temporada: "2025" si cabe en un año, "2025-26" si no.
+
+    Una temporada que cruza el año se guarda bajo el año en que **empieza**,
+    porque es una sola campaña agrícola. Rotularla solo con ese año la hacía
+    leer como atrasada: la fila decía 2025 cuando llegaba hasta enero de 2026.
+    """
+    if not season_wraps(columns):
+        return [str(int(y)) for y in years]
+    return [f"{int(y)}-{str(int(y) + 1)[-2:]}" for y in years]
+
+
 def dekad_labels(codes) -> list[str]:
     """Etiquetas de dekad del año: 13 -> "may D1". Las comparte el mapa de calor
     con las líneas por temporada, para que el mismo dekad se lea igual en las
@@ -456,6 +474,7 @@ def season_lines_fig(frame, columns, title, subtitle="", label="",
         return None
     etiquetas = dekad_labels(orden)
     temporadas = sorted(d[season_col].unique())
+    nombres = dict(zip(temporadas, season_labels(temporadas, orden)))
     reciente = temporadas[-1]
     color = color or ("#b0413e" if family == "ASI" else "#2f8f4e")
     fig = go.Figure()
@@ -465,7 +484,7 @@ def season_lines_fig(frame, columns, title, subtitle="", label="",
         ultima = anio == reciente
         fig.add_scatter(
             x=etiquetas, y=serie.values, mode="lines+markers",
-            name=str(int(anio)), connectgaps=False,
+            name=nombres[anio], connectgaps=False,
             line=dict(color=color if ultima else "#b9c0c7",
                       width=2.8 if ultima else 1.4),
             marker=dict(size=6 if ultima else 4),
@@ -522,7 +541,8 @@ def climatology_matrix(national, title, subtitle="", value_col="value",
     labels = dekad_labels(matrix.columns)
     lo, hi = range_for(family)
     fig = go.Figure(go.Heatmap(
-        z=matrix.values, x=labels, y=matrix.index.astype(int),
+        z=matrix.values, x=labels,
+        y=season_labels(matrix.index, orden),
         colorscale=scale_for(family), zmin=lo, zmax=hi,
         xgap=0.5, ygap=0.5,
         colorbar=dict(title=f"{family} {unit}".strip(), thickness=14, len=0.85),

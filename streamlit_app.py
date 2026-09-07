@@ -694,7 +694,9 @@ def _country_indicator_block(query: Query, series_id: str):
     st.caption(texts.SEASON_PAIR_NOTE.format(
         indicador=panel.label_of(series_id), ventana=query.window_label,
         temporada=cfg.SEASONS[season].split(" (")[0].lower(),
-        meses=season_months_label(season)))
+        meses=season_months_label(season),
+        cruce=(texts.SEASON_SPANS_YEARS
+               if viz.season_wraps(season_columns(season)) else "")))
     st.caption(texts.ALERT_DISCLAIMER)
     download(frame[["dekad_id", "date", "Year", "dekad_of_year", "mean",
                     "n_px", "n_muni"]],

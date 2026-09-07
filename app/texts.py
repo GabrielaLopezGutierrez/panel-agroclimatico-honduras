@@ -130,7 +130,15 @@ SEASON_PAIR_NOTE = (
     "{temporada} va de {meses}; cada mes se divide en tres periodos "
     "de unos diez días, llamados dekads, y el índice se evalúa en cada uno. "
     "Fuera de esa ventana el índice queda congelado en el valor con que cerró "
-    "la temporada, así que no se grafica.")
+    "la temporada, así que no se grafica.{cruce}")
+# La postrera empieza en un año y termina en el siguiente, así que cada campaña
+# se rotula con los dos. Sin esto, la última fila decía 2025 aunque llegara
+# hasta enero de 2026, y se leía como si el panel estuviera atrasado.
+SEASON_SPANS_YEARS = (
+    " Como esta temporada empieza en un año y termina en el siguiente, cada "
+    "campaña se rotula con los dos que abarca: la fila 2025-26 va de septiembre "
+    "de 2025 a enero de 2026. La campaña siguiente no aparece hasta que FAO "
+    "publica su primer dekad de septiembre.")
 
 # --- Precipitación -----------------------------------------------------------
 # Dos figuras en vez de una. La anterior superponía barras de lluvia, la línea

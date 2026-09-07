@@ -231,3 +231,19 @@ def test_solo_se_ofrecen_los_tramos_que_caben_en_el_periodo():
         return [b.label for b in fig.layout.xaxis.rangeselector.buttons]
     assert etiquetas(corta) == ["Todo"]         # un mes: ningun tramo cabe
     assert "5 años" in etiquetas(larga)
+
+
+def test_la_temporada_que_cruza_el_anio_se_rotula_con_los_dos():
+    """La postrera va de septiembre a enero y se guarda bajo el anio en que
+    empieza, porque es una sola campania. Rotularla solo con ese anio la hacia
+    leer como atrasada: la fila decia 2025 aunque llegara hasta enero de 2026."""
+    from asis.aggregate import season_columns
+
+    postrera = season_columns("GS2")
+    primera = season_columns("GS1")
+    assert viz.season_wraps(postrera)
+    assert not viz.season_wraps(primera)
+    assert viz.season_labels([2025], postrera) == ["2025-26"]
+    assert viz.season_labels([2025, 2026], primera) == ["2025", "2026"]
+    # El anio completo del VCI tampoco cruza.
+    assert not viz.season_wraps(season_columns(None))
