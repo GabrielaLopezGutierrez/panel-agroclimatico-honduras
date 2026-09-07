@@ -171,22 +171,39 @@ def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
     pesaría igual que uno con diez veces más área de cultivo, y son más de tres
     puntos de diferencia.
 
-    A nivel país con un indicador estacional, la cifra es la del último dekad
-    **dentro de la temporada**, que es el que cierran sus figuras. En los otros
-    niveles se conserva el último dekad de la ventana, porque ahí las figuras sí
-    muestran los valores congelados de fuera de temporada.
+    Con un indicador estacional la cifra es la del último dekad **dentro de la
+    temporada**, en cualquier nivel. Fuera de esa ventana el ráster repite el
+    valor con que cerró la temporada, así que fechar la cifra en el último dekad
+    del rango la ponía a nombre de una fecha que ese valor no midió: en
+    departamento y municipio la postrera aparecía fechada en agosto cuando su
+    último dato real era de enero.
+
+    El conteo de dekads sigue otra regla, y a propósito: cuenta lo que las
+    figuras de esa vista dibujan. A nivel país son los de la temporada, porque
+    es lo que se grafica; en los otros niveles son los de la ventana, porque
+    ahí las figuras sí muestran los valores congelados.
     """
     with_data = cut.dropna(subset=["mean"])
     if with_data.empty:
         return
-    estacional = (query.level == "pais"
-                  and cfg.SERIES.get(query.series_id)
-                  and cfg.SERIES[query.series_id].season)
+    serie = cfg.SERIES.get(query.series_id)
+    estacional = bool(serie and serie.season)
     ultimo = season_kpi(query, query.series_id) if estacional else None
     referencia = ultimo[0] if ultimo else query.end
-    nacional = to_country(muni)
+    if referencia in set(muni["dekad_id"]):
+        base = muni
+    else:
+        # El dekad de referencia puede quedar fuera de la ventana consultada
+        # cuando esta es un solo dekad de fuera de temporada. Se trae ese dekad
+        # aparte para que la cifra y su fecha sean la misma observación.
+        base = load(query.series_id, referencia, referencia)
+        if len(base) and query.departments:
+            base = base[base["adm1_name"].isin(query.departments)]
+    nacional = to_country(base)
     nacional = nacional[nacional["dekad_id"] == referencia]
-    at_last = with_data[with_data["dekad_id"] == referencia]
+    en_nivel = at_level(base, query.level) if len(base) else base
+    at_last = (en_nivel[en_nivel["dekad_id"] == referencia].dropna(
+        subset=["mean"]) if len(en_nivel) else en_nivel)
     # Las mismas tarjetas del resumen nacional, en todos los niveles y también
     # con un indicador único: el promedio va con el color de su clase de FAO y
     # los conteos con la misma tipografía. Antes solo el resumen las tenía, así
@@ -208,10 +225,11 @@ def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
             kpi_plain(f"{PLURAL[query.level]} con dato", f"{len(at_last):,}",
                       separador=True)
     with c3:
-        if estacional:
-            # Los que se grafican, no los de la ventana: fuera de la temporada
-            # no se dibuja nada, y contarlos aquí prometería puntos que no
-            # están.
+        if estacional and query.level == "pais":
+            # Los que se grafican, no los de la ventana: a nivel país fuera de
+            # la temporada no se dibuja nada, y contarlos aquí prometería
+            # puntos que no están. En los otros niveles sí se dibujan, así que
+            # ahí el conteo sigue siendo el de la ventana.
             graficados = _season_frame(query, query.series_id)
             kpi_plain("Dekads en la temporada",
                       f"{graficados['dekad_id'].nunique():,}", separador=True)
@@ -570,7 +588,17 @@ def season_kpi(query: Query, series_id: str) -> tuple[str, float] | None:
     terminaban en 8,97 el 2026-01-D3: la cifra de titular y los graficos
     hablaban de fechas distintas.
     """
-    frame = _season_frame(query, series_id)
+    # Se mira hacia atrás desde el final de la ventana y no solo dentro de ella:
+    # si la ventana es un único dekad fuera de temporada —el caso corriente, con
+    # la postrera en agosto— dentro no hay ningún dato real, y fechar la cifra
+    # en ese dekad la pondría a nombre de una fecha que el valor no midió.
+    disponibles = dekads(series_id)
+    if not disponibles:
+        return None
+    completa = Query(level=query.level, series_id=series_id,
+                     start=disponibles[0], end=query.end,
+                     departments=query.departments)
+    frame = _season_frame(completa, series_id)
     if frame.empty:
         return None
     ultimo = frame.sort_values("dekad_id").iloc[-1]

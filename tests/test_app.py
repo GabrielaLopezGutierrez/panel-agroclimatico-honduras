@@ -537,3 +537,47 @@ def test_las_figuras_de_pais_tambien_llevan_nota():
     assert "Las dos figuras grafican el mismo dato" in texto   # ASI
     assert "La figura grafica el índice de condición" in texto  # VCI
     assert "Las dos figuras grafican la lluvia" in texto        # precipitacion
+
+
+def test_el_kpi_estacional_se_fecha_dentro_de_la_temporada_en_todo_nivel(last):
+    """Fuera de la ventana de cultivo el raster repite el valor con que cerro la
+    temporada. Fechar la cifra en el ultimo dekad del rango la ponia a nombre de
+    una fecha que ese valor no midio: en departamento y municipio la postrera
+    aparecia fechada en agosto cuando su ultimo dato real era de enero.
+    """
+    from asis.aggregate import season_columns
+    from asis.calendar import dekad_of_year
+
+    for level in ("pais", "departamento", "municipio"):
+        for series_id in ("asi_gs1", "asi_gs2"):
+            query = q(level, series_id, "2025-03-D1", last)
+            dekad, _valor = app.season_kpi(query, series_id)
+            propios = season_columns(cfg.SERIES[series_id].season)
+            assert dekad_of_year(dekad) in propios, f"{level}/{series_id}"
+
+
+def test_el_kpi_no_estacional_se_fecha_en_su_ultimo_dato(last):
+    """El VCI es continuo todo el anio: su ultimo dato es el de la ventana."""
+    query = q("pais", "vci", "2025-03-D1", last)
+    dekad, _valor = app.season_kpi(query, "vci")
+    serie = panel.load("vci", query.start, query.end)
+    assert dekad == max(serie["dekad_id"])
+
+
+def test_un_dekad_fuera_de_temporada_no_fecha_el_kpi_en_ese_dekad(last):
+    """El caso que quedaba roto: con la ventana en un solo dekad de agosto, la
+    postrera no tiene ningun dato real dentro de esa ventana, y el KPI caia al
+    extremo del rango. Ahora se mira hacia atras hasta el ultimo dekad en
+    temporada, que es el que la cifra representa de verdad.
+    """
+    from asis.aggregate import season_columns
+    from asis.calendar import dekad_of_year
+
+    for level in ("pais", "departamento", "municipio"):
+        query = q(level, "asi_gs2", last, last)      # un solo dekad, agosto
+        assert dekad_of_year(last) not in season_columns("GS2"), (
+            "el dekad de prueba deberia caer fuera de la postrera")
+        dekad, valor = app.season_kpi(query, "asi_gs2")
+        assert dekad_of_year(dekad) in season_columns("GS2"), level
+        assert dekad < last, level
+        assert valor == valor, level                 # no es NaN
