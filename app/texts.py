@@ -383,7 +383,8 @@ COLUMNS = {
         "Píxeles del ráster de ~1 km dentro de la unidad cuyo valor cae en el "
         "rango del indicador. Es el peso con el que se agrega a departamento y "
         "a país, y excluye las banderas 251 a 255.",
-    "km2": "Superficie de esos píxeles válidos, a 0,988 km2 por píxel.",
+    "km2": "Superficie de esos píxeles válidos, a 0,9494 km2 por píxel, que es "
+           "el área media de la celda de la malla sobre Honduras.",
     "media": "Promedio del indicador sobre los píxeles válidos de la unidad.",
     "mediana":
         "Percentil 50 del indicador dentro de la unidad. Solo existe a nivel "

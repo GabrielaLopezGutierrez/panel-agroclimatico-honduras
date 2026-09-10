@@ -40,7 +40,15 @@ START_YEAR = 2005
 # --- Malla nativa ASIS -------------------------------------------------------
 WKID = 4326
 PIX_DEG = 0.00892857143            # 1/112 de grado, malla nativa ASIS (~1 km)
-PIX_KM2 = 0.988                    # área media del píxel a la latitud de Honduras
+# Área media de la celda de la malla sobre Honduras, ponderada por píxeles. La
+# celda es un cuadro del graticulado, no un cuadrado: mide 0,99 km de norte a sur
+# pero solo 0,96 de este a oeste, porque el grado de longitud se acorta con el
+# coseno de la latitud. Sobre el elipsoide WGS84 va de 0,957 km2 en el extremo
+# sur del país a 0,941 en el norte, y el promedio ponderado por los píxeles de
+# zona da 0,9494. El valor anterior, 0,988, era el del ecuador: inflaba toda
+# superficie declarada en un 4,1%. Lo comprueba tests/test_config.py contra la
+# geometría equiárea versionada.
+PIX_KM2 = 0.9494
 HND_BBOX = (-89.40, 12.90, -83.10, 16.60)
 GRID_X0, GRID_Y0, GRID_STEP = -180.004464, 75.0044643, PIX_DEG
 NODATA = -9999.0
