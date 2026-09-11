@@ -129,7 +129,8 @@ def effective(query: Query) -> tuple[Query, bool]:
     if inicio == query.start:
         return query, False
     return Query(level=query.level, series_id=query.series_id, start=inicio,
-                 end=query.end, departments=query.departments), True
+                 end=query.end, departments=query.departments,
+                 out_of_range=query.out_of_range), True
 
 
 # --- Encabezado --------------------------------------------------------------
@@ -149,6 +150,24 @@ def header(mf: dict):
         dekad=dekad_label_long(ultimo) if ultimo else "sin datos"))
     st.caption(texts.PRELIMINARY_HEADER)
     st.write(texts.INTRO)
+
+
+def coverage_gap(query: Query):
+    """Por qué la pantalla quedó en blanco, cuando el período no tiene serie.
+
+    Se distingue a propósito del aviso general de "sin dato": ahí el panel sí
+    cubre el período y ninguna unidad tiene valor; aquí la serie no existe en
+    esas fechas, y el remedio no es el mismo.
+    """
+    disponibles = dekads(query.series_id)
+    desde, hasta = query.out_of_range
+    plantilla = (texts.COVERAGE_GAP_SINGLE if desde == hasta
+                 else texts.COVERAGE_GAP_RANGE)
+    st.info(texts.COVERAGE_GAP.format(
+        serie=query.label,
+        desde=dekad_label(disponibles[0]), hasta=dekad_label(disponibles[-1]),
+        pedido=plantilla.format(desde=dekad_label(desde),
+                                hasta=dekad_label(hasta))))
 
 
 def notices(query: Query, ampliada: bool):
@@ -259,7 +278,12 @@ def indicator_definition(query: Query):
         # cultivo" mientras la pantalla muestra pastura.
         extra = texts.COVER_DEFINITIONS.get(query.cover)
         if extra:
-            st.markdown(f"**{extra[0]}** — {extra[1]}")
+            # La cobertura temporal sale del panel y no de un año escrito a
+            # mano: el pastizal arranca cinco años después que el cultivo, y si
+            # FAO publicara hacia atrás el texto lo seguiría solo.
+            disponibles = dekads(query.series_id)
+            st.markdown(f"**{extra[0]}** — " + extra[1].format(
+                desde=dekad_label(disponibles[0]) if disponibles else "?"))
 
 
 # --- Preparación del corte ---------------------------------------------------
@@ -1002,6 +1026,15 @@ def main():
 
     query, ampliada = effective(sidebar(options))
     header(mf)
+
+    # No todas las series cubren el mismo período. Si el que está seleccionado
+    # queda entero fuera del de la serie, la pantalla se deja en blanco y se
+    # dice por qué: dibujar el primer dekad disponible presentaría como
+    # seleccionado un período que no se pidió.
+    if query.out_of_range:
+        coverage_gap(query)
+        return
+
     notices(query, ampliada)
 
     # El resumen nacional no es una serie, así que no pasa por slice_for: cada

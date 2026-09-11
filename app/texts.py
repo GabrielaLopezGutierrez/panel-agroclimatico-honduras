@@ -93,16 +93,37 @@ INDICATOR_DEFINITIONS = {
 # la de pastizal hace falta decirlo, porque la definición de arriba habla de
 # cultivo y la pregunta que responde el pastizal es otra: no cuánta cosecha se
 # pierde sino cuánto forraje le queda al ganado en pie.
+# El hueco {desde} lo llena la app con el primer dekad que la serie tiene en el
+# panel, no con un año escrito a mano: si FAO publica hacia atrás, el texto lo
+# sigue solo en vez de seguir afirmando la cobertura vieja.
 COVER_DEFINITIONS = {
     "pastizal": (
-        "Sobre pastizal, no sobre cultivo",
+        "Alimento del ganado, no cosecha",
         "Esta serie mide el mismo índice sobre la máscara de pastura de FAO, "
         "que es de donde sale el forraje del ganado. Un valor alto anticipa "
         "escasez de alimento en pie y presión para vender o mover animales, no "
         "pérdida de cosecha. No se compara con la serie de cultivo ni se "
-        "promedia con ella: son dos superficies distintas. La publicación "
-        "arranca en 2010, cinco años después que la de cultivo."),
+        "promedia con ella: son dos superficies distintas, cada una con su "
+        "propio denominador. Está disponible en los tres niveles —país, "
+        "departamento y municipio— desde {desde}, que es cuando arranca la "
+        "publicación de pastizal; la de cultivo empieza antes, así que las dos "
+        "no cubren el mismo período."),
 }
+
+# Cuando el período elegido queda entero fuera de lo que la serie publica, las
+# figuras no se dibujan. El motivo se dice aquí y no con el aviso general de
+# "sin dato": no es que no haya dato para esos municipios, es que la serie no
+# existe en esas fechas, y el remedio es mover el período, no cambiar de unidad.
+COVERAGE_GAP = "**{serie}** se publica desde {desde} hasta {hasta}. {pedido}"
+# El remedio no es el mismo en los dos modos de ventana: en "Un dekad" no hay
+# atajos que ofrecer.
+COVERAGE_GAP_RANGE = (
+    "El período seleccionado, de {desde} a {hasta}, queda entero fuera de esa "
+    "cobertura, así que no hay nada que graficar. Mueva el período o elija un "
+    "atajo para volver a ver datos.")
+COVERAGE_GAP_SINGLE = (
+    "El dekad seleccionado, {desde}, queda fuera de esa cobertura, así que no "
+    "hay nada que graficar. Elija un dekad dentro del período publicado.")
 
 # Título de la caja desplegable con las definiciones. Van plegadas: son la
 # referencia que se consulta una vez, no algo que haga falta leer en cada
@@ -375,8 +396,9 @@ SERIES_HELP = {
     "resumen": OVERVIEW_HELP,
     "asi_gs1": "Solo la temporada primera: mayo a octubre.",
     "asi_gs2": "Solo la temporada postrera: septiembre a enero.",
-    "asi_gs1_pasto": "Forraje del ganado, no cultivo. Primera. Desde 2010.",
-    "asi_gs2_pasto": "Forraje del ganado, no cultivo. Postrera. Desde 2010.",
+    # El {desde} lo llena controls.sidebar con el primer dekad del panel.
+    "asi_gs1_pasto": "Forraje del ganado, no cultivo. Primera. Desde {desde}.",
+    "asi_gs2_pasto": "Forraje del ganado, no cultivo. Postrera. Desde {desde}.",
     "vci": "Condición de la vegetación, 0 a 1. Todo el año. Umbral FAO 0,35.",
 }
 

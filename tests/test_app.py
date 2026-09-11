@@ -609,3 +609,77 @@ def test_la_serie_de_pastizal_se_declara_como_forraje_y_no_como_cultivo():
     at2.selectbox(key="serie").set_value("asi_gs1").run()
     assert texts.COVER_DEFINITIONS["pastizal"][0] not in " ".join(
         m.value for m in at2.markdown)
+
+
+# --- Series que no cubren el mismo periodo -----------------------------------
+def test_un_periodo_fuera_de_cobertura_se_detecta_antes_de_recortarlo():
+    """El defecto que esto fija: `_clamp` lleva cualquier codigo fuera de rango
+    al primer dekad disponible, asi que despues de recortar, un periodo de 2005
+    a 2008 sobre una serie que arranca en 2010 es indistinguible de haber pedido
+    ese primer dekad. La deteccion tiene que ocurrir sobre lo pedido."""
+    from app.controls import outside_coverage
+
+    disponibles = ["2010-01-D1", "2010-01-D2", "2010-01-D3"]
+    # Entero antes y entero despues: no hay nada que mostrar.
+    assert outside_coverage(("2005-01-D1", "2008-12-D3"), disponibles) == \
+        ("2005-01-D1", "2008-12-D3")
+    assert outside_coverage(("2026-01-D1", "2026-02-D1"), disponibles)
+    # Solapamiento parcial y contencion: ahi si hay dato y se recorta.
+    assert outside_coverage(("2008-01-D1", "2010-01-D2"), disponibles) is None
+    assert outside_coverage(("2010-01-D1", "2010-01-D3"), disponibles) is None
+    assert outside_coverage(("2010-01-D2", "2010-01-D2"), disponibles) is None
+
+
+def test_el_pastizal_fuera_de_su_periodo_queda_en_blanco_y_dice_por_que():
+    """El pastizal arranca cinco anios despues que el cultivo. Al cambiar de
+    indicador con una ventana vieja, la app mostraba el primer dekad del
+    pastizal como si fuera el periodo pedido. Ahora no dibuja nada y lo explica.
+
+    Se comprueba contra la app corriendo porque el defecto estaba en la
+    reconciliacion entre `session_state` y los widgets, que es justo lo que un
+    test de funcion pura no ve."""
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    if "asi_gs1_pasto" not in panel.stored_series():
+        pytest.skip("no hay panel de pastizal construido")
+    primero = panel.dekads("asi_gs1_pasto")[0]
+    anterior = panel.dekads("asi_gs1")[0]
+    assert anterior < primero, "el pastizal deberia arrancar despues"
+
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    at = AppTest.from_file(guion, default_timeout=300)
+    at.run()
+    at.radio(key="nivel").set_value("pais").run()
+    at.selectbox(key="serie").set_value("asi_gs1").run()
+    at.session_state["ventana"] = (anterior, "2008-12-D3")
+    at.run()
+    assert at.tabs, "el cultivo si cubre ese periodo"
+
+    at.selectbox(key="serie").set_value("asi_gs1_pasto").run()
+    assert not at.exception, str(at.exception[0].value)[:200]
+    assert not at.tabs, "sin cobertura no se dibuja ninguna vista"
+    aviso = " ".join(i.value for i in at.info)
+    assert "se publica desde" in aviso
+    assert "queda entero fuera" in aviso
+
+
+def test_el_encuadre_de_forraje_dice_niveles_y_cobertura():
+    """La nota de pastizal responde tres cosas: que mide, donde se puede ver y
+    desde cuando. La fecha sale del panel y no de un anio escrito a mano."""
+    from app.controls import series_help
+    from asis.calendar import dekad_label
+
+    if "asi_gs1_pasto" not in panel.stored_series():
+        pytest.skip("no hay panel de pastizal construido")
+    desde = dekad_label(panel.dekads("asi_gs1_pasto")[0])
+    nota = texts.COVER_DEFINITIONS["pastizal"][1].format(desde=desde)
+    assert "forraje del ganado" in nota
+    assert "país, departamento y municipio" in nota
+    assert desde in nota
+    assert "{" not in nota
+    # Y la ayuda del selector tambien se llena sola.
+    for sid in ("asi_gs1_pasto", "asi_gs2_pasto"):
+        ayuda = series_help(sid)
+        assert desde in ayuda and "{" not in ayuda

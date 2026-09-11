@@ -77,6 +77,14 @@ class Query:
     start: str
     end: str
     departments: list[str]
+    # Período que se pidió, cuando queda entero fuera de lo que la serie
+    # publica. No todas las series cubren el mismo período —el ASI de pastizal
+    # arranca cinco años después que el de cultivo—, así que cambiar de
+    # indicador puede dejar la ventana en un tramo que la serie nueva no tiene.
+    # Antes eso se resolvía en silencio llevando los dos extremos al primer
+    # dekad disponible, y la pantalla mostraba ese dekad como si fuera lo
+    # seleccionado. Guardarlo aquí deja que la app lo diga y no dibuje nada.
+    out_of_range: tuple[str, str] | None = None
 
     @property
     def single(self) -> bool:
@@ -273,6 +281,27 @@ def _clamp(code: str, available: list[str]) -> str:
     return earlier[-1] if earlier else available[0]
 
 
+def outside_coverage(window: tuple[str, str],
+                     available: list[str]) -> tuple[str, str] | None:
+    """El período pedido, si cae entero fuera de lo que la serie publica.
+
+    Se comprueba antes de recortar, que es lo único que deja ver la diferencia:
+    `_clamp` lleva cualquier código fuera de rango al primer dekad disponible,
+    así que después de recortar un período de 2005 a 2008 sobre una serie que
+    arranca en 2010 es indistinguible de haber pedido ese primer dekad.
+
+    Un solapamiento parcial no entra aquí: ahí sí hay algo que mostrar y el
+    recorte es la respuesta correcta.
+    """
+    if not available:
+        return None
+    lo, hi = window
+    if (dekad_index(lo) > dekad_index(available[-1])
+            or dekad_index(hi) < dekad_index(available[0])):
+        return lo, hi
+    return None
+
+
 def preset_range(available: list[str], n: int | None) -> tuple[str, str]:
     """Extremos de un atajo: los últimos `n` dekads, o todo si `n` es None."""
     if n is None:
@@ -339,6 +368,23 @@ def range_controls(available: list[str]) -> tuple[str, str]:
     return elegido
 
 
+def series_help(series_id: str) -> str:
+    """Ayuda del selector, con la cobertura de la serie puesta al vuelo.
+
+    Las series no cubren todas el mismo período y el hueco {desde} se llena con
+    el primer dekad que la serie tiene en el panel. Escribir el año a mano
+    envejecería mal: FAO puede publicar hacia atrás y el texto seguiría
+    afirmando la cobertura vieja.
+    """
+    ayuda = texts.SERIES_HELP.get(series_id, "")
+    if "{desde}" not in ayuda:
+        return ayuda
+    disponibles = dekads(series_id)
+    if not disponibles:
+        return ayuda.replace(" Desde {desde}.", "")
+    return ayuda.format(desde=dekad_label(disponibles[0]))
+
+
 def indicator_options(level: str, options: dict[str, str]) -> dict[str, str]:
     """Opciones de indicador mostradas según el nivel.
 
@@ -368,7 +414,7 @@ def sidebar(options: dict[str, str]) -> Query:
         st.session_state["serie"] = next(iter(opts))
     series_id = st.sidebar.selectbox(
         "Indicador", list(opts), format_func=lambda k: opts[k], key="serie",
-        help=texts.SERIES_HELP.get(st.session_state.get("serie", "")))
+        help=series_help(st.session_state.get("serie", "")))
 
     available = dekads(series_id)
     if not available:
@@ -384,12 +430,20 @@ def sidebar(options: dict[str, str]) -> Query:
         "Ventana", WINDOW_MODES, key=modo_key, horizontal=True,
         index=WINDOW_MODES.index(DEFAULT_MODE[level]), help=texts.WINDOW_HELP)
 
+    # Se mira lo guardado antes de que ningún widget lo recorte: después del
+    # recorte, un período fuera de cobertura es indistinguible del primer dekad
+    # de la serie.
     if mode == "Un dekad":
-        default = _clamp(st.session_state.get("dekad", available[-1]), available)
+        pedido = st.session_state.get("dekad", available[-1])
+        fuera = outside_coverage((pedido, pedido), available)
+        default = _clamp(pedido, available)
         start = end = st.sidebar.selectbox(
             "Dekad", available, index=available.index(default),
             format_func=dekad_label, key="dekad")
     else:
+        fuera = outside_coverage(
+            st.session_state.get("ventana", (available[0], available[-1])),
+            available)
         start, end = range_controls(available)
 
     departments: list[str] = []
@@ -401,7 +455,7 @@ def sidebar(options: dict[str, str]) -> Query:
             placeholder="Todo el país")
 
     return Query(level=level, series_id=series_id, start=start, end=end,
-                 departments=departments)
+                 departments=departments, out_of_range=fuera)
 
 
 # --- Temporadas ---------------------------------------------------------------
