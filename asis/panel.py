@@ -84,6 +84,11 @@ def unit_of(series_id: str) -> str:
     return cfg.SERIES[series_id].unit
 
 
+def cover_of(series_id: str) -> str:
+    """Sobre que mascara mide la serie: cultivo o pastizal."""
+    return cfg.SERIES[series_id].cover
+
+
 def unit_short_of(series_id: str) -> str:
     """Unidad abreviada, para barras de color y ejes donde la larga no cabe."""
     return cfg.SERIES[series_id].unit_short

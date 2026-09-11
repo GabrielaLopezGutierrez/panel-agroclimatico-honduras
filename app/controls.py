@@ -93,6 +93,12 @@ class Query:
         return "ASI" if self.overview else panel.family_of(self.series_id)
 
     @property
+    def cover(self) -> str:
+        """Cultivo o pastizal. El resumen nacional es de cultivo."""
+        return ("cultivo" if self.overview
+                else panel.cover_of(self.series_id))
+
+    @property
     def label(self) -> str:
         return (texts.OVERVIEW_LABEL if self.overview
                 else panel.label_of(self.series_id))

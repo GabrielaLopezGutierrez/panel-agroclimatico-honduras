@@ -89,6 +89,21 @@ INDICATOR_DEFINITIONS = {
             "de una ventana de cultivo."),
 }
 
+# El mismo índice se publica sobre dos máscaras. Cuando la serie en pantalla es
+# la de pastizal hace falta decirlo, porque la definición de arriba habla de
+# cultivo y la pregunta que responde el pastizal es otra: no cuánta cosecha se
+# pierde sino cuánto forraje le queda al ganado en pie.
+COVER_DEFINITIONS = {
+    "pastizal": (
+        "Sobre pastizal, no sobre cultivo",
+        "Esta serie mide el mismo índice sobre la máscara de pastura de FAO, "
+        "que es de donde sale el forraje del ganado. Un valor alto anticipa "
+        "escasez de alimento en pie y presión para vender o mover animales, no "
+        "pérdida de cosecha. No se compara con la serie de cultivo ni se "
+        "promedia con ella: son dos superficies distintas. La publicación "
+        "arranca en 2010, cinco años después que la de cultivo."),
+}
+
 # Título de la caja desplegable con las definiciones. Van plegadas: son la
 # referencia que se consulta una vez, no algo que haga falta leer en cada
 # consulta, y desplegadas empujaban las figuras fuera de la primera pantalla.
@@ -208,9 +223,12 @@ MAP_NOTE = (
 # tiene ventana y cubre todo el territorio, así que sus vacíos vienen de las
 # banderas del ráster, que el panel excluye del promedio en vez de contarlas
 # como valores del índice.
+# El texto del ASI lleva {cobertura} porque el mismo indicador se publica sobre
+# cultivo y sobre pastizal, y el motivo de un blanco no es el mismo: en una
+# faltan hectáreas sembradas y en la otra falta pastura.
 BLANKS_BY_FAMILY = {
-    "ASI": ("pueden estar fuera de la ventana de cultivo de la temporada o no "
-            "tener área agrícola que medir."),
+    "ASI": ("pueden estar fuera de la ventana de la temporada o no tener área "
+            "de {cobertura} que medir."),
     "VCI": ("ahí el ráster marca ausencia de dato, nube o nieve, y el panel las "
             "excluye del promedio en vez de tomarlas por un valor del índice."),
 }
@@ -357,6 +375,8 @@ SERIES_HELP = {
     "resumen": OVERVIEW_HELP,
     "asi_gs1": "Solo la temporada primera: mayo a octubre.",
     "asi_gs2": "Solo la temporada postrera: septiembre a enero.",
+    "asi_gs1_pasto": "Forraje del ganado, no cultivo. Primera. Desde 2010.",
+    "asi_gs2_pasto": "Forraje del ganado, no cultivo. Postrera. Desde 2010.",
     "vci": "Condición de la vegetación, 0 a 1. Todo el año. Umbral FAO 0,35.",
 }
 

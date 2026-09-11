@@ -254,6 +254,12 @@ def indicator_definition(query: Query):
         for familia in familias:
             nombre, definicion = texts.INDICATOR_DEFINITIONS[familia]
             st.markdown(f"**{nombre}** — {definicion}")
+        # La definición de arriba va por familia, y el ASI de pastizal comparte
+        # familia con el de cultivo. Sin esta nota la caja diría "área de
+        # cultivo" mientras la pantalla muestra pastura.
+        extra = texts.COVER_DEFINITIONS.get(query.cover)
+        if extra:
+            st.markdown(f"**{extra[0]}** — {extra[1]}")
 
 
 # --- Preparación del corte ---------------------------------------------------
@@ -382,7 +388,8 @@ def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
             indicador=query.label, unidad=query.unit_name,
             origen=texts.ORIGIN_BY_LEVEL[query.level],
             escala=texts.SCALE_BY_FAMILY[query.family],
-            blancos=texts.BLANKS_BY_FAMILY[query.family])
+            blancos=texts.BLANKS_BY_FAMILY[query.family].format(
+                cobertura=query.cover))
         st.caption(nota + ("" if query.single else texts.MAP_ANIMATED_NOTE))
 
 

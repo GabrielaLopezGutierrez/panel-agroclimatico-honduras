@@ -141,6 +141,7 @@ class Series:
     unit: str
     unit_short: str = ""
     suffix: str = ""                 # sufijo del nombre del ráster
+    cover: str = "cultivo"           # cultivo o pastizal: sobre qué máscara mide
     season: str | None = None        # GS1, GS2 o None si no es estacional
     seasonal: bool = False           # si solo existe dentro de la ventana de cultivo
     thresholds_gt: tuple = ()
@@ -166,6 +167,26 @@ SERIES: dict[str, Series] = {
         label="ASI · temporada postrera",
         unit="% del área de cultivo bajo estrés hídrico", unit_short="ASI %",
         note="Mismo índice sobre la ventana de cultivo de la postrera."),
+    # El mismo servicio publica el ASI sobre pastizal (sufijo LC-G) además de
+    # sobre cultivo (LC-C). No es una variante del indicador agrícola: mide el
+    # estrés hídrico de la pastura, que es de donde sale el forraje del ganado.
+    # Un ASI de pastizal alto anticipa escasez de alimento en pie, y esa es una
+    # pregunta distinta de la de la cosecha. La cobertura es comparable a la de
+    # cultivo: 56.271 píxeles en el pico de la primera contra 55.186.
+    "asi_gs1_pasto": Series(
+        id="asi_gs1_pasto", svc="ASI_D", suffix=".GS1.LC-G", season="GS1",
+        family="ASI", seasonal=True, thresholds_gt=ASI_THRESHOLDS,
+        cover="pastizal", label="ASI · pastizal, temporada primera",
+        unit="% del área de pastizal bajo estrés hídrico", unit_short="ASI %",
+        note="Estrés hídrico de la pastura dentro de la ventana de crecimiento "
+             "de la primera. Es una medida de disponibilidad de forraje para el "
+             "ganado, no de cultivo."),
+    "asi_gs2_pasto": Series(
+        id="asi_gs2_pasto", svc="ASI_D", suffix=".GS2.LC-G", season="GS2",
+        family="ASI", seasonal=True, thresholds_gt=ASI_THRESHOLDS,
+        cover="pastizal", label="ASI · pastizal, temporada postrera",
+        unit="% del área de pastizal bajo estrés hídrico", unit_short="ASI %",
+        note="Mismo índice de forraje sobre la ventana de la postrera."),
     "vci": Series(
         id="vci", svc="VCI_D", family="VCI", seasonal=False,
         thresholds_lt=VCI_THRESHOLDS,

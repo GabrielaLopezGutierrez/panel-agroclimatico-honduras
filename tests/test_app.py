@@ -581,3 +581,31 @@ def test_un_dekad_fuera_de_temporada_no_fecha_el_kpi_en_ese_dekad(last):
         assert dekad_of_year(dekad) in season_columns("GS2"), level
         assert dekad < last, level
         assert valor == valor, level                 # no es NaN
+
+
+def test_la_serie_de_pastizal_se_declara_como_forraje_y_no_como_cultivo():
+    """El pastizal comparte familia con el cultivo, asi que la caja de
+    definiciones dice "area de cultivo" por su cuenta. Sin la nota de cobertura,
+    la pantalla mostraria pastura mientras el texto habla de cosecha."""
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    from app import texts
+
+    if "asi_gs1_pasto" not in panel.stored_series():
+        pytest.skip("no hay panel de pastizal construido")
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    at = AppTest.from_file(guion, default_timeout=300)
+    at.run()
+    at.selectbox(key="serie").set_value("asi_gs1_pasto").run()
+    assert not at.exception, str(at.exception[0].value)[:200]
+    texto = " ".join(m.value for m in at.markdown)
+    assert texts.COVER_DEFINITIONS["pastizal"][0] in texto
+    assert "forraje del ganado" in texto
+    # Y la de cultivo no debe arrastrar la nota de pastura.
+    at2 = AppTest.from_file(guion, default_timeout=300)
+    at2.run()
+    at2.selectbox(key="serie").set_value("asi_gs1").run()
+    assert texts.COVER_DEFINITIONS["pastizal"][0] not in " ".join(
+        m.value for m in at2.markdown)

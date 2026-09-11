@@ -99,3 +99,37 @@ def test_el_area_del_pixel_cuadra_con_la_geometria_del_panel():
     muni = panel.municipios()
     medida = muni["area_km2"].sum() / muni["zone_px"].sum()
     assert cfg.PIX_KM2 == pytest.approx(medida, rel=0.01)
+
+
+# --- ASI sobre pastizal ------------------------------------------------------
+def test_el_pastizal_es_otra_mascara_del_mismo_indicador():
+    """FAO publica el ASI sobre cultivo (LC-C) y sobre pastizal (LC-G) en el
+    mismo servicio. Son superficies distintas, no variantes de una cifra: cada
+    una tiene su propio n_px y su propio denominador."""
+    for sid, sufijo in (("asi_gs1_pasto", ".GS1.LC-G"),
+                        ("asi_gs2_pasto", ".GS2.LC-G")):
+        s = cfg.SERIES[sid]
+        assert s.svc == "ASI_D" and s.suffix == sufijo
+        assert s.cover == "pastizal"
+        assert s.family == "ASI"          # misma paleta y mismas clases
+        assert s.seasonal and s.season in cfg.SEASON_WINDOW
+        assert "pastizal" in s.unit and "cultivo" not in s.unit
+
+
+def test_las_series_de_cultivo_siguen_declarandose_de_cultivo():
+    """El campo tiene valor por omision, asi que un olvido pasaria inadvertido:
+    esto fija que las cuatro series del ASI digan sobre que miden."""
+    for sid in ("asi_gs1", "asi_gs2"):
+        assert cfg.SERIES[sid].cover == "cultivo"
+    assert cfg.SERIES["vci"].cover == "cultivo"
+
+
+def test_la_nota_de_blancos_del_mapa_nombra_la_cobertura():
+    """El mapa explica por que una unidad sale en blanco, y el motivo no es el
+    mismo en cultivo que en pastizal. El texto lleva un hueco para eso."""
+    from app import texts
+
+    plantilla = texts.BLANKS_BY_FAMILY["ASI"]
+    assert "{cobertura}" in plantilla
+    assert "pastizal" in plantilla.format(cobertura="pastizal")
+    assert "{" not in texts.BLANKS_BY_FAMILY["VCI"]     # el VCI no lo necesita
