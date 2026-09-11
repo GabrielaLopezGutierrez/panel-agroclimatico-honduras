@@ -491,7 +491,9 @@ def test_cada_indicador_dibuja_en_cada_nivel():
 
     guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
     for nivel in ("pais", "departamento", "municipio"):
-        for serie in panel.stored_series():
+        # Las ofrecidas, no las guardadas: el selector no acepta un valor que
+        # no este entre sus opciones, y hay series construidas sin publicar.
+        for serie in panel.available_series():
             at = AppTest.from_file(guion, default_timeout=300)
             at.run()
             at.radio(key="nivel").set_value(nivel).run()
@@ -593,8 +595,10 @@ def test_la_serie_de_pastizal_se_declara_como_forraje_y_no_como_cultivo():
 
     from app import texts
 
-    if "asi_gs1_pasto" not in panel.stored_series():
-        pytest.skip("no hay panel de pastizal construido")
+    if "asi_gs1_pasto" not in panel.available_series():
+        pytest.skip("el pastizal esta construido pero no se ofrece en el "
+                    "selector (config.SERIES, offered=False); esta prueba "
+                    "vuelve sola en cuanto se publique")
     guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
     at = AppTest.from_file(guion, default_timeout=300)
     at.run()
@@ -642,8 +646,10 @@ def test_el_pastizal_fuera_de_su_periodo_queda_en_blanco_y_dice_por_que():
 
     from streamlit.testing.v1 import AppTest
 
-    if "asi_gs1_pasto" not in panel.stored_series():
-        pytest.skip("no hay panel de pastizal construido")
+    if "asi_gs1_pasto" not in panel.available_series():
+        pytest.skip("hace falta una serie ofrecida con otra cobertura temporal; "
+                    "el pastizal la tiene pero hoy no se ofrece. La logica "
+                    "sigue fijada por test_un_periodo_fuera_de_cobertura_*")
     primero = panel.dekads("asi_gs1_pasto")[0]
     anterior = panel.dekads("asi_gs1")[0]
     assert anterior < primero, "el pastizal deberia arrancar despues"
@@ -673,6 +679,8 @@ def test_el_encuadre_de_forraje_dice_niveles_y_cobertura():
 
     if "asi_gs1_pasto" not in panel.stored_series():
         pytest.skip("no hay panel de pastizal construido")
+    # Esta no depende de que se ofrezca: el texto y su relleno existen igual, y
+    # es lo que hay que tener listo para cuando se publique.
     desde = dekad_label(panel.dekads("asi_gs1_pasto")[0])
     nota = texts.COVER_DEFINITIONS["pastizal"][1].format(desde=desde)
     assert "forraje del ganado" in nota

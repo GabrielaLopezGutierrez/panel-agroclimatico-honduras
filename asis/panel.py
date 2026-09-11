@@ -68,8 +68,15 @@ def available_series() -> dict[str, str]:
     """Series ofrecidas al usuario. Cada una es una serie real del panel: las
     dos temporadas del ASI nunca se mezclan en un solo indicador, porque cada
     una se mide sobre su propia máscara de cultivo y combinarlas obligaba a
-    elegir un ponderador entre denominadores distintos."""
-    return {s: cfg.SERIES[s].label for s in stored_series()}
+    elegir un ponderador entre denominadores distintos.
+
+    No es lo mismo que `stored_series()`: una serie puede estar construida y
+    versionada sin estar publicada. El ASI de pastizal lo está, porque como
+    entrada suelta del selector no informa (ver el comentario de `SERIES` en
+    config). El panel la conserva para análisis y para la vista comparativa que
+    todavía no existe."""
+    return {s: cfg.SERIES[s].label for s in stored_series()
+            if cfg.SERIES[s].offered}
 
 
 def family_of(series_id: str) -> str:

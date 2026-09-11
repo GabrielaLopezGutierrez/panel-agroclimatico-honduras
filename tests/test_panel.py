@@ -68,7 +68,28 @@ def test_no_se_ofrece_ninguna_serie_derivada():
     país ponderando por píxeles válidos el combinado quedaba por debajo de la
     primera sola."""
     assert not (cfg.PANEL_DIR / cfg.ASI_COMBINED).exists()
-    assert set(panel.available_series()) == set(panel.stored_series())
+    assert set(panel.available_series()) <= set(panel.stored_series())
+    for sid in panel.available_series():
+        assert sid in cfg.SERIES, f"{sid} no es una serie declarada"
+
+
+def test_una_serie_puede_estar_construida_sin_estar_publicada():
+    """Construir y publicar son decisiones distintas. El ASI de pastizal está
+    en el panel y versionado, pero no se ofrece en el selector: como entrada
+    suelta no informa, porque su cifra nacional corre a menos de dos puntos de
+    la de cultivo. Lo que se conserva es el dato, para análisis y para la vista
+    comparativa que todavía no existe.
+
+    Esto fija que esconder una serie sea una línea del registro y no un borrado:
+    si alguien quita `offered=False`, vuelve al selector y nada más cambia."""
+    ofrecidas = set(panel.available_series())
+    guardadas = set(panel.stored_series())
+    escondidas = guardadas - ofrecidas
+    for sid in escondidas:
+        assert cfg.SERIES[sid].offered is False
+        assert len(panel.load(sid)), f"{sid}: escondida pero sin dato en disco"
+    for sid in ofrecidas:
+        assert cfg.SERIES[sid].offered is True
 
 
 def test_particion_por_anio_coincide_con_el_contenido():

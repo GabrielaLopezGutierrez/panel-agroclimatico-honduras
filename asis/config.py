@@ -142,6 +142,10 @@ class Series:
     unit_short: str = ""
     suffix: str = ""                 # sufijo del nombre del ráster
     cover: str = "cultivo"           # cultivo o pastizal: sobre qué máscara mide
+    # Si se ofrece en el selector de indicador. Una serie puede estar
+    # construida y versionada sin estar publicada: el panel la conserva para
+    # análisis y la app no la muestra. Es una decisión editorial, no técnica.
+    offered: bool = True
     season: str | None = None        # GS1, GS2 o None si no es estacional
     seasonal: bool = False           # si solo existe dentro de la ventana de cultivo
     thresholds_gt: tuple = ()
@@ -173,7 +177,18 @@ SERIES: dict[str, Series] = {
     # Un ASI de pastizal alto anticipa escasez de alimento en pie, y esa es una
     # pregunta distinta de la de la cosecha. La cobertura es comparable a la de
     # cultivo: 56.271 píxeles en el pico de la primera contra 55.186.
+    #
+    # No se ofrecen en el selector (`offered=False`). Como indicador suelto,
+    # al lado del ASI de cultivo, no informa: la cifra nacional de las dos
+    # coberturas corre a menos de dos puntos —25,71 contra 23,90 en el último
+    # dekad— porque promediando 290 municipios manda la lluvia, que es la misma
+    # para las dos. La diferencia está en el detalle municipal, donde el 43% de
+    # los municipios difiere en más de 10 puntos y hay casos opuestos (Guayape,
+    # Olancho: cultivo 84 y pastura 0), y eso pide una vista que confronte las
+    # dos coberturas, no una entrada más en una lista. Las series se conservan
+    # construidas y versionadas para esa vista y para análisis.
     "asi_gs1_pasto": Series(
+        offered=False,
         id="asi_gs1_pasto", svc="ASI_D", suffix=".GS1.LC-G", season="GS1",
         family="ASI", seasonal=True, thresholds_gt=ASI_THRESHOLDS,
         cover="pastizal", label="ASI · pastizal, temporada primera",
@@ -182,6 +197,7 @@ SERIES: dict[str, Series] = {
              "de la primera. Es una medida de disponibilidad de forraje para el "
              "ganado, no de cultivo."),
     "asi_gs2_pasto": Series(
+        offered=False,
         id="asi_gs2_pasto", svc="ASI_D", suffix=".GS2.LC-G", season="GS2",
         family="ASI", seasonal=True, thresholds_gt=ASI_THRESHOLDS,
         cover="pastizal", label="ASI · pastizal, temporada postrera",
