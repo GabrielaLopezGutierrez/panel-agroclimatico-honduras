@@ -94,6 +94,23 @@ CLASSES = {
 }
 PALETTE = {fam: dict(zip(v[1], v[2])) for fam, v in CLASSES.items()}
 
+# Píxeles mínimos para que el valor de una unidad se pueda comparar con el de
+# otra cobertura. No es un umbral de calidad sino de resolución: la media sobre
+# n píxeles solo puede tomar valores de 100/n en 100/n, así que con 12 píxeles
+# el ASI salta de ocho en ocho y no distingue las clases de alerta, que están a
+# diez y a quince puntos. Con 25 salta de cuatro en cuatro.
+#
+# Se prefirió contar píxeles antes que medir la fracción del área del municipio
+# que cubre la máscara. Esa fracción tiene su propio ruido: los píxeles se
+# asignan enteros según dónde cae su centro, así que sobre un borde irregular la
+# suma se pasa o se queda corta del área real —±2% en la mediana, hasta 18% en
+# municipios chicos como Amapala, que es una isla—. Un conteo no se divide por
+# nada y no arrastra ese error. Y una fracción fija tampoco serviría para las
+# dos temporadas: la máscara de la primera cubre el 65% del municipio en la
+# mediana y la de la postrera el 11%, de modo que un mismo piso deja la primera
+# casi entera y borra la postrera.
+MIN_PX_COMPARABLE = 25
+
 # Umbrales de severidad del ASI que usa GIEWS para alertas.
 ASI_THRESHOLDS = (30, 40, 55, 70)
 # Umbral FAO por debajo del cual el VCI indica vegetación en mal estado.

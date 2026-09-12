@@ -759,3 +759,144 @@ def ranking_fig(df, value_col, title, subtitle="", family="ASI", top=20,
     fig.update_layout(height=height, xaxis_title=label or value_col,
                       yaxis=dict(tickfont=dict(size=9.5), automargin=True))
     return style_fig(fig, title, subtitle, y_source=-0.10, legend="off")
+
+
+# --- Contraste entre coberturas: cultivo y pastura ---------------------------
+# El mismo índice se publica sobre la máscara de cultivo y sobre la de pastura.
+# No son dos versiones de una cifra: miden superficies distintas y responden
+# preguntas distintas, la cosecha y el forraje del ganado. Nunca se promedian
+# ni se restan en una sola serie; se ponen a la vista una al lado de la otra y
+# quien mira saca su conclusión.
+#
+# El color es el mismo par en las dos figuras: tierra para el cultivo, verde
+# para la pastura. No sale de CLASSES a propósito, porque aquí el color no
+# codifica severidad sino de qué superficie viene el dato.
+COVER_COLORS = {"cultivo": "#8a6d3b", "pastizal": "#2f7d4f"}
+
+
+def cover_lines_grid(crop, pasture, title, subtitle="", value_col="mean",
+                     codes=None, label="", ncols=4, height_per_row=165):
+    """Una celda por municipio, con la serie de las dos coberturas.
+
+    Es la vista de una ventana larga: interesa el ciclo de cada municipio y
+    dónde se separan las dos curvas, no el ranking de un instante.
+
+    `pasture` puede venir vacío —la pastura se publica cinco años después que el
+    cultivo—, y entonces se dibuja solo la línea de cultivo. Se dibuja igual en
+    vez de no dibujar nada: la pregunta principal de la vista es el cultivo y el
+    contraste es contexto.
+    """
+    d = crop.dropna(subset=[value_col]).copy()
+    if d.empty:
+        return None
+    if codes is not None:
+        d = d[d["adm2_code"].isin(codes)]
+        if d.empty:
+            return None
+    p = (pasture.dropna(subset=[value_col]).copy()
+         if pasture is not None and len(pasture) else None)
+
+    nombres = (d[["adm2_code", "adm2_name", "adm1_name"]]
+               .drop_duplicates("adm2_code").set_index("adm2_code"))
+    orden = sorted(nombres.index,
+                   key=lambda c: str(nombres.loc[c, "adm2_name"]))
+    nrows = int(np.ceil(len(orden) / ncols))
+    titulos = [f"{nombres.loc[c, 'adm2_name']}" for c in orden]
+    fig = make_subplots(rows=nrows, cols=ncols, subplot_titles=titulos,
+                        shared_xaxes=True, shared_yaxes=True,
+                        vertical_spacing=min(0.09, 0.55 / max(nrows, 1)),
+                        horizontal_spacing=0.025)
+    lo, hi = range_for(_family_of(d, value_col))
+    dekads = sorted(d["dekad_id"].unique())
+    ticks = thin_ticks(dekads, 6)
+    for i, code in enumerate(orden):
+        r, k = i // ncols + 1, i % ncols + 1
+        for fuente, cover in ((d, "cultivo"), (p, "pastizal")):
+            if fuente is None:
+                continue
+            s = fuente[fuente["adm2_code"] == code].sort_values("dekad_id")
+            if s.empty:
+                continue
+            fig.add_scatter(
+                x=s["dekad_id"], y=s[value_col], mode="lines",
+                line=dict(color=COVER_COLORS[cover], width=1.5),
+                name=cover, legendgroup=cover, showlegend=(i == 0),
+                customdata=s[["n_px"]] if "n_px" in s else None,
+                hovertemplate=(f"{nombres.loc[code, 'adm2_name']} · {cover}"
+                               "<br>%{x}: %{y:.1f}"
+                               + ("<br>%{customdata[0]:,.0f} píxeles"
+                                  if "n_px" in s else "")
+                               + "<extra></extra>"),
+                row=r, col=k)
+    fig.update_yaxes(range=[lo, hi])
+    fig.update_xaxes(categoryorder="array", categoryarray=dekads,
+                     tickmode="array", tickvals=ticks, tickangle=-90,
+                     tickfont=dict(size=8))
+    for a in fig.layout.annotations:
+        a.font.size = 10.5
+    fig.update_layout(height=max(340, height_per_row * nrows + 130),
+                      yaxis_title=label or value_col)
+    return style_fig(fig, title, subtitle, top=104, source_shift=56)
+
+
+def _family_of(d, value_col):
+    """La familia se deduce del rango del dato: el VCI vive en 0-1."""
+    v = d[value_col].dropna()
+    return "VCI" if len(v) and v.max() <= 1.0001 else "ASI"
+
+
+def cover_scatter(crop, pasture, title, subtitle="", value_col="mean",
+                  min_px=None, label="", height=560):
+    """Las dos coberturas de un mismo dekad, una contra la otra.
+
+    Sobre la diagonal las dos dicen lo mismo. Fuera de ella, una de las dos
+    superficies está peor que la otra, y esa es toda la información que la
+    figura tiene que transmitir.
+
+    Los municipios con pocos píxeles se dibujan huecos en vez de excluirse. La
+    media sobre n píxeles solo toma valores de 100/n en 100/n, así que con una
+    máscara chica la cifra no distingue clases; pero borrarlos cambiaría en
+    silencio cuántos municipios se están viendo.
+    """
+    min_px = cfg.MIN_PX_COMPARABLE if min_px is None else min_px
+    if pasture is None or not len(pasture):
+        return None
+    cols = ["adm2_code", "adm2_name", "adm1_name", value_col, "n_px"]
+    a = crop.dropna(subset=[value_col])[cols]
+    b = pasture.dropna(subset=[value_col])[cols]
+    d = a.merge(b, on=["adm2_code", "adm2_name", "adm1_name"],
+                suffixes=("_c", "_p"))
+    if d.empty:
+        return None
+    d["etiqueta"] = (d["adm2_name"].astype(str) + " · "
+                     + d["adm1_name"].astype(str))
+    d["firme"] = (d["n_px_c"] >= min_px) & (d["n_px_p"] >= min_px)
+    lo, hi = range_for(_family_of(a, value_col))
+    fig = go.Figure()
+    fig.add_scatter(x=[lo, hi], y=[lo, hi], mode="lines", showlegend=False,
+                    line=dict(color="#d7263d", width=1.2, dash="dash"),
+                    hoverinfo="skip")
+    for firme, etq in ((True, "con muestra suficiente"),
+                       (False, f"menos de {min_px} píxeles en alguna cobertura")):
+        s = d[d["firme"] == firme]
+        if s.empty:
+            continue
+        fig.add_scatter(
+            x=s[f"{value_col}_c"], y=s[f"{value_col}_p"], mode="markers",
+            name=etq, text=s["etiqueta"],
+            marker=dict(size=10 if firme else 9,
+                        color=COVER_COLORS["cultivo"] if firme else "white",
+                        opacity=0.8 if firme else 1,
+                        line=dict(width=1 if firme else 1.4,
+                                  color="#ffffff" if firme else "#9aa0aa")),
+            customdata=np.stack([s["n_px_c"], s["n_px_p"]], axis=-1),
+            hovertemplate="<b>%{text}</b><br>cultivo %{x:.1f}"
+                          "<br>pastura %{y:.1f}"
+                          "<br>píxeles: %{customdata[0]:,.0f} de cultivo, "
+                          "%{customdata[1]:,.0f} de pastura<extra></extra>")
+    fig.update_layout(
+        height=height,
+        xaxis=dict(title=f"{label or value_col} · cultivo", range=[lo, hi]),
+        yaxis=dict(title=f"{label or value_col} · pastura", range=[lo, hi],
+                   scaleanchor="x", scaleratio=1))
+    return style_fig(fig, title, subtitle, y_source=-0.12)

@@ -68,7 +68,8 @@ for _intento in (1, 2):
                                     climatology_frame, season_columns,
                                     severity_area, to_country)
         from asis.calendar import (dekad_label,                   # noqa: E402
-                                   dekad_label_long, dekad_window)
+                                   dekad_label_long, dekad_of_year,
+                                   dekad_window)
         break
     except ImportError:
         if _intento == 2:
@@ -448,6 +449,10 @@ def view_municipal_ranking(query: Query, muni: pd.DataFrame):
                     key="top_ranking")
     agg = "max" if query.family == "ASI" else "min"
 
+    # La pastura es contexto y nunca reemplaza al cultivo: si la serie elegida
+    # no tiene contraparte —el VCI no la tiene— la vista es la de siempre.
+    pastura = panel.pasture_counterpart(query.series_id)
+
     if query.single:
         base = muni[muni["dekad_id"] == query.end]
         elegidos = (base.nlargest(top, "mean") if query.family == "ASI"
@@ -456,33 +461,113 @@ def view_municipal_ranking(query: Query, muni: pd.DataFrame):
             base, "mean", f"Los {top} municipios con {peor} valor",
             dekad_label(query.end), family=query.family, top=top,
             label=query.unit_short, height=max(420, 17 * top))
-    else:
+        figure(fig, elegidos, f"ranking_{query.slug()}", "dl_ranking")
+        if fig is not None:
+            st.caption(texts.MUNI_RANKING_NOTE.format(
+                top=top, peor=peor, dekad=dekad_label(query.end)))
+        if pastura:
+            _cover_scatter_block(query, pastura, base)
+        return
+
+    if not pastura:
+        # Sin contraparte se conserva la matriz: es la vista que resume un
+        # periodo largo para muchos municipios a la vez.
         orden = muni.groupby("adm2_code", observed=True)["mean"].agg(agg)
         codigos = (orden.nlargest(top).index if query.family == "ASI"
                    else orden.nsmallest(top).index)
-        elegidos = muni[muni["adm2_code"].isin(codigos)]
         fig = viz.heatmap_panel(
             muni, "mean", f"Los {top} municipios con {peor} valor",
             f"{query.window_label} · orden por el {peor} valor del periodo",
             family=query.family, top=top, ref_dekad=None,
             label=query.unit_short, height=max(480, 16 * top))
-    figure(fig, elegidos, f"ranking_{query.slug()}", "dl_ranking")
-    if fig is not None:
-        st.caption(
-            texts.MUNI_RANKING_NOTE.format(top=top, peor=peor,
-                                           dekad=dekad_label(query.end))
-            if query.single else
-            texts.MUNI_MATRIX_NOTE.format(top=top, peor=peor,
-                                          ventana=query.window_label))
+        figure(fig, muni[muni["adm2_code"].isin(codigos)],
+               f"ranking_{query.slug()}", "dl_ranking")
+        if fig is not None:
+            st.caption(texts.MUNI_MATRIX_NOTE.format(
+                top=top, peor=peor, ventana=query.window_label))
+        return
 
-    if not query.single:
-        area = viz.severity_area_fig(
-            muni, query.family, "Superficie por clase de severidad",
-            "km2 en cada clase, dekad por dekad")
-        figure(area, severity_area(muni, query.family).reset_index(),
-               f"superficie_{query.slug()}", "dl_area")
-        if area is not None:
-            st.caption(texts.SEVERITY_NOTE)
+    _cover_lines_block(query, pastura, muni, top, peor, agg)
+
+
+def _municipios_de_la_figura(muni: pd.DataFrame, top: int, agg: str) -> list:
+    """Qué municipios entran en la rejilla: los del ranking, o los que se elijan.
+
+    El selector arranca vacío y eso significa "los del ranking automático". Se
+    prefirió eso a precargarlo con esos municipios porque el ranking cambia con
+    el deslizador y con la ventana: un selector precargado quedaría afirmando
+    una selección vieja, que es el mismo defecto que ya nos costó el atajo del
+    rango marcándose solo como Personalizado.
+    """
+    nombres = (muni[["adm2_code", "adm2_name", "adm1_name"]]
+               .drop_duplicates("adm2_code"))
+    nombres["etq"] = (nombres["adm2_name"].astype(str) + " · "
+                      + nombres["adm1_name"].astype(str))
+    opciones = dict(zip(nombres["etq"], nombres["adm2_code"]))
+    elegidos = st.multiselect(
+        "Municipios en la figura", sorted(opciones), default=[],
+        key="munis_figura", help=texts.MUNI_PICK_HELP,
+        placeholder=f"Los {top} del ranking automático")
+    if elegidos:
+        return [opciones[e] for e in elegidos]
+    orden = muni.groupby("adm2_code", observed=True)["mean"].agg(agg)
+    return list(orden.nlargest(top).index if agg == "max"
+                else orden.nsmallest(top).index)
+
+
+def _cover_lines_block(query: Query, pastura: str, muni: pd.DataFrame,
+                       top: int, peor: str, agg: str):
+    """La rejilla de series por municipio, con las dos coberturas.
+
+    Reemplaza a la matriz de calor en la ventana de rango. La matriz ordenaba
+    municipios por su peor valor y mostraba un solo dato; aquí interesa el ciclo
+    de cada uno y dónde se separa del forraje, que una escala de color no puede
+    mostrar sin duplicar la figura.
+    """
+    codigos = _municipios_de_la_figura(muni, top, agg)
+    pasto = load(pastura, query.start, query.end)
+    if len(pasto) and query.departments:
+        pasto = pasto[pasto["adm1_name"].isin(query.departments)]
+    fig = viz.cover_lines_grid(
+        muni, pasto, texts.COVER_GRID_TITLE.format(n=len(codigos)),
+        texts.COVER_GRID_SUBTITLE.format(ventana=query.window_compact,
+                                         peor=peor),
+        codes=codigos, label=query.unit_short)
+    datos = muni[muni["adm2_code"].isin(codigos)]
+    if len(pasto):
+        datos = pd.concat([datos, pasto[pasto["adm2_code"].isin(codigos)]],
+                          ignore_index=True)
+    figure(fig, datos, f"coberturas_{query.slug()}", "dl_ranking")
+    if fig is not None:
+        st.caption(texts.COVER_GRID_NOTE.format(
+            n=len(codigos), peor=peor,
+            desde=dekad_label(panel.dekads(pastura)[0]))
+            if len(pasto) else texts.COVER_GRID_SIN_PASTO.format(
+                desde=dekad_label(panel.dekads(pastura)[0])))
+
+
+def _cover_scatter_block(query: Query, pastura: str, base: pd.DataFrame):
+    """Las dos coberturas de un dekad, una contra la otra.
+
+    Se suma debajo del ranking en vez de reemplazarlo: el ranking responde
+    quién está peor, que es la pregunta principal, y esto responde si el
+    forraje acompaña, que es contexto.
+    """
+    pasto = load(pastura, query.end, query.end)
+    if len(pasto) and query.departments:
+        pasto = pasto[pasto["adm1_name"].isin(query.departments)]
+    fig = viz.cover_scatter(
+        base, pasto, texts.COVER_SCATTER_TITLE,
+        texts.COVER_SCATTER_SUBTITLE.format(dekad=dekad_label(query.end)),
+        label=query.unit_short)
+    if fig is None:
+        st.caption(texts.COVER_SCATTER_SIN_PASTO.format(
+            desde=dekad_label(panel.dekads(pastura)[0])))
+        return
+    st.plotly_chart(fig, width="stretch")
+    st.caption(texts.COVER_SCATTER_NOTE.format(px=cfg.MIN_PX_COMPARABLE))
+    download(pd.concat([base, pasto], ignore_index=True),
+             f"coberturas_{query.slug()}", "dl_coberturas")
 
 
 def view_department_series(query: Query, cut: pd.DataFrame):
@@ -732,6 +817,38 @@ def _country_indicator_block(query: Query, series_id: str):
     download(frame[["dekad_id", "date", "Year", "dekad_of_year", "mean",
                     "n_px", "n_muni"]],
              f"temporada_{slug}", f"dl_temporada_{series_id}")
+    _severity_block(query, series_id)
+
+
+def _severity_block(query: Query, series_id: str):
+    """Cuánta superficie hay en cada clase, dekad por dekad.
+
+    Vivía en el ranking de municipio, donde se calculaba sobre los municipios
+    que hubiera en pantalla: con un filtro de departamento activo los km2 eran
+    los de ese subconjunto y el título no lo decía. A nivel país la cifra es
+    inequívoca, y va dentro del bloque de cada temporada y no como sección
+    aparte, para que se lea junto a las figuras del dato que resume.
+
+    Se recorta a la ventana de cultivo por la misma razón que las otras dos
+    figuras de la temporada: fuera de ella el valor está congelado y la
+    superficie que implica no describe esa fecha.
+    """
+    muni = load(series_id, query.start, query.end)
+    season = cfg.SERIES[series_id].season
+    if len(muni) and season:
+        muni = muni[muni["dekad_id"].map(dekad_of_year).isin(
+            season_columns(season))]
+    if muni.empty:
+        return
+    familia = panel.family_of(series_id)
+    area = viz.severity_area_fig(
+        muni, familia,
+        texts.SEVERITY_TITLE.format(indicador=panel.label_of(series_id)),
+        texts.SEVERITY_SUBTITLE.format(ventana=query.window_compact))
+    figure(area, severity_area(muni, familia).reset_index(),
+           f"superficie_{series_id}_{query.slug()}", f"dl_area_{series_id}")
+    if area is not None:
+        st.caption(texts.SEVERITY_NOTE)
 
 
 def _view_country_overview(query: Query):

@@ -276,15 +276,53 @@ MUNI_MATRIX_NOTE = (
     "justo el que hay que ver.")
 MUNI_RANKING_NOTE = (
     "Los {top} municipios de {peor} valor en {dekad}, sobre el dato municipal "
-    "del panel. Con un rango de fechas esta vista pasa a ser una matriz de "
-    "municipio por dekad, ordenada por el {peor} valor del periodo.")
+    "del panel. Con un rango de fechas esta vista pasa a ser una cuadrícula "
+    "con la serie de cada municipio.")
 
+# --- Contraste entre coberturas, solo en el ASI y solo a nivel municipio -----
+# FAO publica el mismo índice sobre la máscara de cultivo y sobre la de pastura.
+# En la app manda el cultivo; la pastura entra como contexto en el ranking,
+# porque la diferencia entre las dos es municipal: a nivel departamental las dos
+# series corren a 0,94 de correlación en la primera y a nivel nacional a menos
+# de dos puntos.
+COVER_GRID_TITLE = "Cultivo y pastura en {n} municipios"
+COVER_GRID_SUBTITLE = "{ventana} · los de {peor} valor del cultivo"
+COVER_GRID_NOTE = (
+    "Una celda por municipio con las dos coberturas del mismo índice: en café "
+    "el cultivo, que es el indicador principal, y en verde la pastura, que mide "
+    "el forraje del ganado en pie. Son superficies distintas y no se promedian "
+    "entre sí. Se muestran los {n} municipios de {peor} valor del cultivo, o "
+    "los que se elijan en el selector de arriba. La pastura se publica desde "
+    "{desde}; antes de esa fecha solo se dibuja la línea del cultivo.")
+COVER_GRID_SIN_PASTO = (
+    "Solo se dibuja el cultivo: la serie de pastura se publica desde {desde} y "
+    "el periodo seleccionado es anterior.")
+
+COVER_SCATTER_TITLE = "El forraje frente al cultivo"
+COVER_SCATTER_SUBTITLE = "Cada punto es un municipio en {dekad}"
+COVER_SCATTER_NOTE = (
+    "Cada municipio con su índice de cultivo en el eje horizontal y el de "
+    "pastura en el vertical. Sobre la línea roja las dos coberturas dicen lo "
+    "mismo; arriba de ella la pastura está peor que el cultivo, y abajo al "
+    "revés. Los puntos huecos tienen menos de {px} píxeles en alguna de las dos "
+    "máscaras: ahí la media salta de a varios puntos y no distingue clases, así "
+    "que se marcan en vez de esconderse.")
+COVER_SCATTER_SIN_PASTO = (
+    "Sin contraste de pastura para este dekad: la serie se publica desde "
+    "{desde}.")
+
+MUNI_PICK_HELP = ("Vacío muestra los del ranking automático. Elija municipios "
+                  "para seguir a los que le interesan en vez de a los peores.")
+
+SEVERITY_TITLE = "Superficie por clase de severidad · {indicador}"
+SEVERITY_SUBTITLE = "km2 en cada clase, dekad por dekad · {ventana}"
 SEVERITY_NOTE = (
     "Superficie en kilómetros cuadrados dentro de cada clase de severidad, "
     "dekad por dekad, sumando el área de los municipios que caen en cada una. "
     "Responde cuánta superficie está afectada y no solo cuán intenso es el "
     "índice: un valor alto en pocos municipios chicos y otro moderado en medio "
-    "país se leen distinto aquí.")
+    "país se leen distinto aquí. Cubre el país entero y solo los dekads dentro "
+    "de la ventana de cultivo de la temporada.")
 
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.

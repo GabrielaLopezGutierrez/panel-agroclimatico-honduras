@@ -450,8 +450,14 @@ def test_la_seccion_de_lluvia_tiene_una_sola_descarga(last):
     at = _app()
     nombres = [d.label for d in at.get("download_button")]
     por_figura = [n for n in nombres if texts.FIG_DOWNLOAD in n]
-    # Dos temporadas, VCI y lluvia.
-    assert len(por_figura) == 4, nombres
+    # Dos temporadas, cada una con su serie y su superficie por clase; el VCI,
+    # que no tiene temporada ni superficie; y la lluvia, que es una sola para
+    # sus dos figuras.
+    assert len(por_figura) == 6, nombres
+    # Lo que esta prueba fija de verdad: la lluvia no tiene dos. Sus dos
+    # figuras comparten ventana, asi que comparten descarga.
+    claves = [d.key for d in at.get("download_button") if d.key]
+    assert sum(1 for k in claves if "lluvia" in k) <= 1, claves
 
 
 def test_la_anomalia_ya_no_usa_un_deslizador_de_la_pagina(last):
@@ -519,8 +525,10 @@ def test_cada_figura_lleva_su_nota_en_cada_vista():
         ("departamento", "Rango"): ("El mapa pinta",
                                     "Cada recuadro es un departamento"),
         ("municipio", "Un dekad"): ("El mapa pinta", "municipios de "),
-        ("municipio", "Rango"): ("El mapa pinta", "Matriz de municipio por dekad",
-                                 "Superficie en kil"),
+        # En rango el municipio ya no muestra la matriz de calor sino la
+        # cuadricula con las dos coberturas, y la superficie por clase se
+        # mudo al resumen nacional.
+        ("municipio", "Rango"): ("El mapa pinta", "Una celda por municipio"),
     }
     for (nivel, modo), marcas in esperado.items():
         at = AppTest.from_file(guion, default_timeout=300)
@@ -691,3 +699,131 @@ def test_el_encuadre_de_forraje_dice_niveles_y_cobertura():
     for sid in ("asi_gs1_pasto", "asi_gs2_pasto"):
         ayuda = series_help(sid)
         assert desde in ayuda and "{" not in ayuda
+
+
+# --- Contraste entre coberturas ----------------------------------------------
+def test_la_pastura_se_empareja_por_temporada_y_no_por_el_nombre():
+    """El id es una convencion. Emparejar por texto ataria el contraste a que
+    nadie renombre una carpeta, y dejaria pasar una pareja de otra temporada."""
+    assert panel.pasture_counterpart("asi_gs1") == "asi_gs1_pasto"
+    assert panel.pasture_counterpart("asi_gs2") == "asi_gs2_pasto"
+    for sid, s in cfg.SERIES.items():
+        pareja = panel.pasture_counterpart(sid)
+        if pareja is None:
+            continue
+        otra = cfg.SERIES[pareja]
+        assert s.cover == "cultivo" and otra.cover == "pastizal"
+        assert s.season == otra.season and s.family == otra.family
+    # El VCI no tiene contraparte y una serie de pastura no es la suya propia.
+    assert panel.pasture_counterpart("vci") is None
+    assert panel.pasture_counterpart("asi_gs1_pasto") is None
+
+
+def test_los_municipios_de_poca_muestra_se_marcan_y_no_se_borran():
+    """Con pocos pixeles la media salta de a varios puntos y no distingue
+    clases, pero borrarlos cambiaria en silencio cuantos municipios se ven."""
+    from asis import viz
+
+    if "asi_gs1_pasto" not in panel.stored_series():
+        pytest.skip("no hay panel de pastizal construido")
+    dk = panel.dekads("asi_gs1")[-1]
+    cul = panel.load("asi_gs1", dk, dk)
+    pas = panel.load("asi_gs1_pasto", dk, dk)
+    fig = viz.cover_scatter(cul, pas, "t", min_px=cfg.MIN_PX_COMPARABLE)
+    puntos = [t for t in fig.data if t.mode == "markers"]
+    dibujados = sum(len(t.x) for t in puntos)
+    # Ningun municipio con las dos coberturas queda fuera de la figura.
+    juntos = cul.dropna(subset=["mean"]).merge(
+        pas.dropna(subset=["mean"]), on="adm2_code", suffixes=("_c", "_p"))
+    assert dibujados == len(juntos)
+    # Y los de poca muestra estan, en su propia traza.
+    flacos = ((juntos["n_px_c"] < cfg.MIN_PX_COMPARABLE)
+              | (juntos["n_px_p"] < cfg.MIN_PX_COMPARABLE)).sum()
+    if flacos:
+        traza = [t for t in puntos if "píxeles" in t.name][0]
+        assert len(traza.x) == flacos
+
+
+def test_el_piso_de_pixeles_se_justifica_por_resolucion():
+    """No es un umbral de calidad sino de resolucion: la media sobre n pixeles
+    solo toma valores de 100/n en 100/n. El piso tiene que dejar el salto por
+    debajo de la banda de alerta mas angosta del ASI, que son diez puntos."""
+    cortes = cfg.CLASSES["ASI"][0]
+    banda = min(b - a for a, b in zip(cortes, cortes[1:]))
+    assert 100 / cfg.MIN_PX_COMPARABLE < banda
+
+
+def test_en_rango_el_municipio_muestra_la_cuadricula_y_no_la_matriz():
+    """El cambio de vista: con contraparte de pastura la matriz de calor deja
+    su lugar a la cuadricula de series, que es la unica que puede mostrar las
+    dos coberturas sin duplicar la figura. Sin contraparte, el VCI conserva la
+    matriz."""
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    if "asi_gs1_pasto" not in panel.stored_series():
+        pytest.skip("no hay panel de pastizal construido")
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    at = AppTest.from_file(guion, default_timeout=300)
+    at.run()
+    at.radio(key="nivel").set_value("municipio").run()
+    at.selectbox(key="serie").set_value("asi_gs1").run()
+    at.radio(key="modo_municipio").set_value("Rango").run()
+    assert not at.exception, str(at.exception[0].value)[:200]
+    texto = " ".join(c.value for c in at.caption)
+    assert "Una celda por municipio" in texto
+    assert "Matriz de municipio por dekad" not in texto
+    assert [m for m in at.multiselect if m.label == "Municipios en la figura"]
+
+    at.selectbox(key="serie").set_value("vci").run()
+    texto = " ".join(c.value for c in at.caption)
+    assert "Matriz de municipio por dekad" in texto
+    assert "pastura" not in texto
+
+
+def test_antes_de_2010_se_dibuja_el_cultivo_y_no_la_pastura():
+    """La pastura se publica cinco anios despues. La vista no se vacia: la
+    pregunta principal es el cultivo y el contraste es contexto."""
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    if "asi_gs1_pasto" not in panel.stored_series():
+        pytest.skip("no hay panel de pastizal construido")
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    at = AppTest.from_file(guion, default_timeout=300)
+    at.run()
+    at.radio(key="nivel").set_value("municipio").run()
+    at.selectbox(key="serie").set_value("asi_gs1").run()
+    at.radio(key="modo_municipio").set_value("Rango").run()
+    at.session_state["ventana"] = ("2006-05-D1", "2008-10-D3")
+    at.run()
+    assert not at.exception, str(at.exception[0].value)[:200]
+    assert at.get("plotly_chart"), "la figura del cultivo tiene que dibujarse"
+    texto = " ".join(c.value for c in at.caption)
+    assert "Solo se dibuja el cultivo" in texto
+
+
+def test_la_superficie_por_clase_vive_en_pais_y_una_por_temporada():
+    """Vivia en el ranking de municipio, donde se calculaba sobre los municipios
+    en pantalla: con un filtro de departamento los km2 eran los de ese
+    subconjunto y el titulo no lo decia. En pais la cifra es inequivoca, y va
+    una por temporada porque las dos nunca se combinan."""
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+
+    guion = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
+    at = AppTest.from_file(guion, default_timeout=300)
+    at.run()
+    assert not at.exception, str(at.exception[0].value)[:200]
+    notas = [c.value for c in at.caption if "clase de severidad" in c.value]
+    assert len(notas) == 2, notas
+
+    at2 = AppTest.from_file(guion, default_timeout=300)
+    at2.run()
+    at2.radio(key="nivel").set_value("municipio").run()
+    at2.radio(key="modo_municipio").set_value("Rango").run()
+    texto = " ".join(c.value for c in at2.caption)
+    assert "clase de severidad" not in texto

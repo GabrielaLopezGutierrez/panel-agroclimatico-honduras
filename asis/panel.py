@@ -79,6 +79,27 @@ def available_series() -> dict[str, str]:
             if cfg.SERIES[s].offered}
 
 
+def pasture_counterpart(series_id: str) -> str | None:
+    """La serie de pastizal que mide lo mismo sobre la otra máscara, si existe.
+
+    Empareja por temporada y familia, no por el nombre: el id es una convención
+    y emparejar por texto ataría el contraste a que nadie renombre una carpeta.
+    Devuelve None cuando no hay pareja —el VCI no la tiene, y una serie de
+    pastizal no es contraparte de sí misma—, y también cuando la pareja existe
+    en el registro pero no está construida en disco.
+    """
+    s = cfg.SERIES.get(series_id)
+    if s is None or s.cover != "cultivo" or not s.season:
+        return None
+    guardadas = set(stored_series())
+    for sid, otra in cfg.SERIES.items():
+        if (otra.cover == "pastizal" and otra.season == s.season
+                and otra.family == s.family and otra.svc == s.svc
+                and sid in guardadas):
+            return sid
+    return None
+
+
 def family_of(series_id: str) -> str:
     return cfg.SERIES[series_id].family
 
