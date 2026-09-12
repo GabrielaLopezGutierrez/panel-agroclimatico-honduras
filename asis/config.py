@@ -265,6 +265,11 @@ GEOJSON_TOL = 0.004                  # ~400 m: mantiene la forma, pesa 10x menos
 # Portal oficial de FAO GIEWS para Honduras. Toda cita de la fuente en la app,
 # en los cuadernos y en el README apunta aquí: quien lee una cifra tiene que
 # poder llegar al dato original sin buscarlo.
+# El repositorio, que es público. De aquí sale el enlace a los archivos que
+# viajan con el código y que la app no puede servir por su cuenta.
+REPO = "GabrielaLopezGutierrez/panel-agroclimatico-honduras"
+REPO_URL = f"https://github.com/{REPO}"
+
 SOURCE_URL = ("https://www.fao.org/giews/earthobservation/country/index.jsp"
               "?code=HND&type=11#")
 SOURCE_NAME = "FAO GIEWS ASIS"

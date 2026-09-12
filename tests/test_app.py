@@ -830,27 +830,42 @@ def test_la_superficie_por_clase_vive_en_pais_y_una_por_temporada():
 
 
 # --- Acceso a la nota metodologica -------------------------------------------
-def test_la_nota_metodologica_se_sirve_desde_el_repositorio():
-    """El PDF viaja con el codigo y no se enlaza de un sitio externo: la
-    metodologia es parte de la herramienta, y un enlace de afuera puede
-    cambiar o caerse sin que este repositorio se entere."""
+def test_la_nota_metodologica_viaja_con_el_codigo():
+    """El PDF esta en el repositorio y no en un sitio ajeno: la metodologia es
+    parte de la herramienta, y un documento de afuera puede cambiar o caerse sin
+    que este repositorio se entere."""
     from asis import config as cfg
 
-    pdf = cfg.ROOT / "static" / texts.NOTE_FILE
+    pdf = cfg.ROOT / texts.NOTE_PATH
     assert pdf.exists(), f"falta {pdf}"
     assert pdf.read_bytes()[:5] == b"%PDF-", "no parece un PDF"
-    # La ruta que publica la app tiene que apuntar a ese archivo.
-    assert texts.NOTE_URL.endswith(texts.NOTE_FILE)
-    assert texts.NOTE_URL.startswith("/app/static/")
 
 
-def test_streamlit_tiene_encendido_el_servido_estatico():
-    """Sin esta opcion la carpeta static/ no se publica y el enlace da 404."""
+def test_el_enlace_de_la_nota_apunta_al_archivo_que_esta_en_el_repositorio():
+    """El enlace pasa por GitHub porque Streamlit Community Cloud no sirve la
+    carpeta static/. Eso lo vuelve fragil de una forma concreta: si el archivo
+    se mueve o se renombra, la URL queda apuntando a un 404 sin que nada falle
+    en la app. Esto ata la URL a la ruta real."""
+    from asis import config as cfg
+
+    assert texts.NOTE_URL.startswith(f"{cfg.REPO_URL}/blob/main/")
+    assert texts.NOTE_URL.endswith(texts.NOTE_PATH)
+    # `blob` abre el PDF en un visor; `raw` lo entrega como octet-stream y el
+    # navegador lo descarga, que no es lo que se quiere de un icono.
+    assert "raw" not in texts.NOTE_URL
+
+
+def test_no_queda_configuracion_que_prometa_el_servido_estatico():
+    """Se probo `enableStaticServing` y en el despliegue la ruta app/static/
+    devuelve el HTML de la app en vez del archivo. Dejar la opcion encendida
+    invitaria a creer que esa ruta funciona."""
     from asis import config as cfg
 
     cfgtoml = (cfg.ROOT / ".streamlit" / "config.toml").read_text(
         encoding="utf-8")
-    assert "enableStaticServing = true" in cfgtoml
+    activas = [l for l in cfgtoml.splitlines()
+               if "enableStaticServing" in l and not l.strip().startswith("#")]
+    assert not activas, activas
 
 
 def test_el_encabezado_ofrece_la_nota_en_la_esquina_superior():

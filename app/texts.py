@@ -15,13 +15,24 @@ from asis import config as cfg
 TITLE = "Panel agroclimático de Honduras"
 HELP_TAB = "Cómo leer"
 
-# La nota metodológica, accesible desde la esquina superior izquierda. El PDF va
-# en static/, que Streamlit sirve bajo app/static/ cuando enableStaticServing
-# está activo; la ruta es absoluta desde la raíz para que funcione igual en el
-# despliegue y en local. Se enlaza el documento y no una página que lo describa:
-# quien duda de una cifra quiere las ecuaciones, no una introducción.
+# La nota metodológica, accesible desde la esquina superior izquierda. Se enlaza
+# el documento y no una página que lo describa: quien duda de una cifra quiere
+# las ecuaciones, no una introducción.
+#
+# El PDF viaja con el código, en static/, pero se enlaza a través de GitHub y no
+# de la propia app. La vía directa era `enableStaticServing`, que publica esa
+# carpeta bajo app/static/; funciona en local pero no en Streamlit Community
+# Cloud, donde la ruta devuelve el HTML de la app en vez del archivo —200 con
+# text/html— y el navegador se queda cargando una sesión que nunca llega. Se
+# comprobó con la opción activa y tras reiniciar la app.
+#
+# De las dos URL que ofrece GitHub se usa la de `blob` y no la de `raw`: raw
+# entrega el archivo como application/octet-stream, que el navegador descarga,
+# mientras que blob lo abre en un visor. El enlace sigue la rama principal, así
+# que muestra la nota vigente.
 NOTE_FILE = "nota-metodologica.pdf"
-NOTE_URL = f"/app/static/{NOTE_FILE}"
+NOTE_PATH = f"static/{NOTE_FILE}"
+NOTE_URL = f"{cfg.REPO_URL}/blob/main/{NOTE_PATH}"
 NOTE_LABEL = "Nota metodológica"
 # El glifo va como SVG en línea y no como emoji ni como icono de una fuente
 # externa: un emoji cambia de dibujo según el sistema operativo y una fuente

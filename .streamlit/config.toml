@@ -16,7 +16,9 @@ gatherUsageStats = false
 # el detalle va al log del servidor y en pantalla queda el aviso de la app.
 showErrorDetails = "none"
 
-[server]
-# Sirve la carpeta static/ en app/static/. Es lo que deja enlazar la nota
-# metodologica desde la app sin sacar al lector a otro sitio.
-enableStaticServing = true
+# Aqui estuvo [server] enableStaticServing, para publicar static/ bajo
+# app/static/ y enlazar la nota metodologica desde la propia app. Funciona en
+# local pero no en Streamlit Community Cloud: alli la ruta devuelve el HTML de
+# la app en vez del archivo y el navegador se queda cargando. Se quito para no
+# dejar configuracion que promete algo que el despliegue no cumple; la nota se
+# enlaza desde GitHub (ver app/texts.py).
