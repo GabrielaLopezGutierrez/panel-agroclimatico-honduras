@@ -15,6 +15,24 @@ from asis import config as cfg
 TITLE = "Panel agroclimático de Honduras"
 HELP_TAB = "Cómo leer"
 
+# La nota metodológica, accesible desde la esquina superior izquierda. El PDF va
+# en static/, que Streamlit sirve bajo app/static/ cuando enableStaticServing
+# está activo; la ruta es absoluta desde la raíz para que funcione igual en el
+# despliegue y en local. Se enlaza el documento y no una página que lo describa:
+# quien duda de una cifra quiere las ecuaciones, no una introducción.
+NOTE_FILE = "nota-metodologica.pdf"
+NOTE_URL = f"/app/static/{NOTE_FILE}"
+NOTE_LABEL = "Nota metodológica"
+# El glifo va como SVG en línea y no como emoji ni como icono de una fuente
+# externa: un emoji cambia de dibujo según el sistema operativo y una fuente
+# externa es una petición de red que puede no llegar. Es la sigma de una suma,
+# porque lo que hay detrás del enlace son las ecuaciones del cálculo.
+NOTE_GLYPH = (
+    "<svg width='13' height='13' viewBox='0 0 24 24' fill='none' "
+    "stroke='currentColor' stroke-width='2' stroke-linecap='round' "
+    "stroke-linejoin='round' aria-hidden='true'>"
+    "<path d='M18 4H6l8 8-8 8h12'/></svg>")
+
 # Toda cita de la fuente enlaza al portal oficial de FAO GIEWS para Honduras.
 # El enlace vive en config.SOURCE_URL, que es de donde lo toman también la nota
 # al pie de cada figura y los cuadernos.

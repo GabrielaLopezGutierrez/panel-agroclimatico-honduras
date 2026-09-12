@@ -78,6 +78,20 @@ for _intento in (1, 2):
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🌾", layout="wide")
 
+# Estilo del acceso a la nota metodologica, que va en la esquina superior
+# izquierda. No se uso `st.logo` porque su parametro `link` solo admite URLs
+# externas con http, y el PDF es un archivo propio servido desde static/: la
+# metodologia es parte de la herramienta y no una referencia de afuera.
+st.markdown("""<style>
+.asis-nota { margin: -.6rem 0 .1rem; }
+.asis-nota a {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .8rem; color: #5b6270; text-decoration: none;
+  border: 1px solid #e6e8ec; border-radius: 999px; padding: .18rem .7rem;
+}
+.asis-nota a:hover { color: #0b6fa4; border-color: #0b6fa4; }
+</style>""", unsafe_allow_html=True)
+
 # Estilo de las cifras de encabezado. Se define una vez porque `st.metric` no
 # admite color en el valor, y el color de la clase de FAO va justamente ahi.
 st.markdown("""<style>
@@ -145,6 +159,13 @@ def header(mf: dict):
     """
     ultimo = max((s.get("ultimo") or "" for s in mf.get("series", {}).values()),
                  default="")
+    # Antes del título, arriba a la izquierda: quien duda de una cifra tiene las
+    # ecuaciones a un clic, sin salir de la herramienta ni buscarlas en otro
+    # sitio. Se abre en otra pestaña para no perder la consulta en curso.
+    st.markdown(
+        f"<div class='asis-nota'><a href='{texts.NOTE_URL}' target='_blank' "
+        f"rel='noopener'>{texts.NOTE_GLYPH}&nbsp;{texts.NOTE_LABEL}</a></div>",
+        unsafe_allow_html=True)
     st.title(texts.TITLE)
     st.caption(texts.HEADER_SOURCE)
     st.caption(texts.HEADER_UPDATED.format(

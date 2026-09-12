@@ -15,3 +15,8 @@ gatherUsageStats = false
 # Un error de lectura del panel es un problema de despliegue, no del analista:
 # el detalle va al log del servidor y en pantalla queda el aviso de la app.
 showErrorDetails = "none"
+
+[server]
+# Sirve la carpeta static/ en app/static/. Es lo que deja enlazar la nota
+# metodologica desde la app sin sacar al lector a otro sitio.
+enableStaticServing = true

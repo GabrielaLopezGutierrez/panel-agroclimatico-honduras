@@ -827,3 +827,37 @@ def test_la_superficie_por_clase_vive_en_pais_y_una_por_temporada():
     at2.radio(key="modo_municipio").set_value("Rango").run()
     texto = " ".join(c.value for c in at2.caption)
     assert "clase de severidad" not in texto
+
+
+# --- Acceso a la nota metodologica -------------------------------------------
+def test_la_nota_metodologica_se_sirve_desde_el_repositorio():
+    """El PDF viaja con el codigo y no se enlaza de un sitio externo: la
+    metodologia es parte de la herramienta, y un enlace de afuera puede
+    cambiar o caerse sin que este repositorio se entere."""
+    from asis import config as cfg
+
+    pdf = cfg.ROOT / "static" / texts.NOTE_FILE
+    assert pdf.exists(), f"falta {pdf}"
+    assert pdf.read_bytes()[:5] == b"%PDF-", "no parece un PDF"
+    # La ruta que publica la app tiene que apuntar a ese archivo.
+    assert texts.NOTE_URL.endswith(texts.NOTE_FILE)
+    assert texts.NOTE_URL.startswith("/app/static/")
+
+
+def test_streamlit_tiene_encendido_el_servido_estatico():
+    """Sin esta opcion la carpeta static/ no se publica y el enlace da 404."""
+    from asis import config as cfg
+
+    cfgtoml = (cfg.ROOT / ".streamlit" / "config.toml").read_text(
+        encoding="utf-8")
+    assert "enableStaticServing = true" in cfgtoml
+
+
+def test_el_encabezado_ofrece_la_nota_en_la_esquina_superior():
+    """Va antes del titulo: quien duda de una cifra tiene las ecuaciones a un
+    clic sin salir de la herramienta."""
+    at = _app()
+    crudo = " ".join(m.value for m in at.markdown)
+    assert texts.NOTE_URL in crudo
+    assert texts.NOTE_LABEL in crudo
+    assert 'target="_blank"' in crudo or "target='_blank'" in crudo
