@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-09-10T21:25:24+00:00",
+  "actualizado": "2026-09-14T15:53:32+00:00",
   "start_year": 2005,
   "pais": "Honduras",
   "municipios": 290,
@@ -3634,17 +3634,17 @@
   "oficiales": {
     "asi_dekad_s1": {
       "estado": "ok",
-      "origen": "instantánea",
+      "origen": "vivo",
       "descargado": "2026-09-04"
     },
     "rain_dekad": {
       "estado": "ok",
-      "origen": "instantánea",
+      "origen": "vivo",
       "descargado": "2026-09-04"
     },
     "vci_dekad": {
       "estado": "ok",
-      "origen": "instantánea",
+      "origen": "vivo",
       "descargado": "2026-09-04"
     }
   },
