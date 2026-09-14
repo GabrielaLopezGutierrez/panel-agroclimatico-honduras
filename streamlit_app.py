@@ -297,7 +297,7 @@ def indicator_definition(query: Query):
             st.markdown(f"**{nombre}** — {definicion}")
         # La definición de arriba va por familia, y el ASI de pastizal comparte
         # familia con el de cultivo. Sin esta nota la caja diría "área de
-        # cultivo" mientras la pantalla muestra pastura.
+        # cultivo" mientras la pantalla muestra pastizal.
         extra = texts.COVER_DEFINITIONS.get(query.cover)
         if extra:
             # La cobertura temporal sale del panel y no de un año escrito a
@@ -470,7 +470,7 @@ def view_municipal_ranking(query: Query, muni: pd.DataFrame):
                     key="top_ranking")
     agg = "max" if query.family == "ASI" else "min"
 
-    # La pastura es contexto y nunca reemplaza al cultivo: si la serie elegida
+    # El pastizal es contexto y nunca reemplaza al cultivo: si la serie elegida
     # no tiene contraparte —el VCI no la tiene— la vista es la de siempre.
     pastura = panel.pasture_counterpart(query.series_id)
 
@@ -542,7 +542,7 @@ def _cover_lines_block(query: Query, pastura: str, muni: pd.DataFrame,
 
     Reemplaza a la matriz de calor en la ventana de rango. La matriz ordenaba
     municipios por su peor valor y mostraba un solo dato; aquí interesa el ciclo
-    de cada uno y dónde se separa del forraje, que una escala de color no puede
+    de cada uno y dónde se separa del pastizal, que una escala de color no puede
     mostrar sin duplicar la figura.
     """
     codigos = _municipios_de_la_figura(muni, top, agg)
@@ -572,7 +572,7 @@ def _cover_scatter_block(query: Query, pastura: str, base: pd.DataFrame):
 
     Se suma debajo del ranking en vez de reemplazarlo: el ranking responde
     quién está peor, que es la pregunta principal, y esto responde si el
-    forraje acompaña, que es contexto.
+    pastizal acompaña, que es contexto.
     """
     pasto = load(pastura, query.end, query.end)
     if len(pasto) and query.departments:
@@ -586,7 +586,7 @@ def _cover_scatter_block(query: Query, pastura: str, base: pd.DataFrame):
             desde=dekad_label(panel.dekads(pastura)[0])))
         return
     st.plotly_chart(fig, width="stretch")
-    st.caption(texts.COVER_SCATTER_NOTE.format(px=cfg.MIN_PX_COMPARABLE))
+    st.caption(texts.COVER_SCATTER_NOTE)
     download(pd.concat([base, pasto], ignore_index=True),
              f"coberturas_{query.slug()}", "dl_coberturas")
 

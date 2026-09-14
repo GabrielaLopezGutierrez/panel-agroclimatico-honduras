@@ -596,7 +596,7 @@ def test_un_dekad_fuera_de_temporada_no_fecha_el_kpi_en_ese_dekad(last):
 def test_la_serie_de_pastizal_se_declara_como_forraje_y_no_como_cultivo():
     """El pastizal comparte familia con el cultivo, asi que la caja de
     definiciones dice "area de cultivo" por su cuenta. Sin la nota de cobertura,
-    la pantalla mostraria pastura mientras el texto habla de cosecha."""
+    la pantalla mostraria pastizal mientras el texto habla de cosecha."""
     from pathlib import Path
 
     from streamlit.testing.v1 import AppTest
@@ -615,7 +615,7 @@ def test_la_serie_de_pastizal_se_declara_como_forraje_y_no_como_cultivo():
     texto = " ".join(m.value for m in at.markdown)
     assert texts.COVER_DEFINITIONS["pastizal"][0] in texto
     assert "forraje del ganado" in texto
-    # Y la de cultivo no debe arrastrar la nota de pastura.
+    # Y la de cultivo no debe arrastrar la nota de pastizal.
     at2 = AppTest.from_file(guion, default_timeout=300)
     at2.run()
     at2.selectbox(key="serie").set_value("asi_gs1").run()
@@ -702,7 +702,7 @@ def test_el_encuadre_de_forraje_dice_niveles_y_cobertura():
 
 
 # --- Contraste entre coberturas ----------------------------------------------
-def test_la_pastura_se_empareja_por_temporada_y_no_por_el_nombre():
+def test_el_pastizal_se_empareja_por_temporada_y_no_por_el_nombre():
     """El id es una convencion. Emparejar por texto ataria el contraste a que
     nadie renombre una carpeta, y dejaria pasar una pareja de otra temporada."""
     assert panel.pasture_counterpart("asi_gs1") == "asi_gs1_pasto"
@@ -714,47 +714,72 @@ def test_la_pastura_se_empareja_por_temporada_y_no_por_el_nombre():
         otra = cfg.SERIES[pareja]
         assert s.cover == "cultivo" and otra.cover == "pastizal"
         assert s.season == otra.season and s.family == otra.family
-    # El VCI no tiene contraparte y una serie de pastura no es la suya propia.
+    # El VCI no tiene contraparte y una serie de pastizal no es la suya propia.
     assert panel.pasture_counterpart("vci") is None
     assert panel.pasture_counterpart("asi_gs1_pasto") is None
 
 
-def test_los_municipios_de_poca_muestra_se_marcan_y_no_se_borran():
-    """Con pocos pixeles la media salta de a varios puntos y no distingue
-    clases, pero borrarlos cambiaria en silencio cuantos municipios se ven."""
+def test_el_contraste_no_pierde_ningun_municipio_al_agrupar_los_puntos():
+    """El ASI llega resuelto por unidad administrativa y con valores redondos,
+    asi que muchos municipios caen exactamente en la misma coordenada: en el
+    pico de la primera de 2010 son 234 en un solo punto. La figura los agrupa y
+    usa el tamanio para decir cuantos son. Lo que hay que fijar es que el
+    agrupado sume todos, porque un punto que se coma municipios en silencio es
+    peor que doscientos dibujados encima.
+
+    Fija tambien que ninguno se dibuje distinto de otro. Hubo un piso de pixeles
+    que marcaba en hueco a los de mascara chica; se retiro porque su premisa era
+    falsa: el ASI es constante dentro de cada municipio, de modo que la media es
+    exacta con ocho pixeles o con cuatro mil."""
     from asis import viz
 
     if "asi_gs1_pasto" not in panel.stored_series():
         pytest.skip("no hay panel de pastizal construido")
     dk = panel.dekads("asi_gs1")[-1]
-    cul = panel.load("asi_gs1", dk, dk)
-    pas = panel.load("asi_gs1_pasto", dk, dk)
-    fig = viz.cover_scatter(cul, pas, "t", min_px=cfg.MIN_PX_COMPARABLE)
+    cul, pas = panel.load("asi_gs1", dk, dk), panel.load("asi_gs1_pasto", dk, dk)
+    fig = viz.cover_scatter(cul, pas, "t")
     puntos = [t for t in fig.data if t.mode == "markers"]
-    dibujados = sum(len(t.x) for t in puntos)
-    # Ningun municipio con las dos coberturas queda fuera de la figura.
+    # La leyenda dice cuantos municipios hay en cada grupo, y entre los tres
+    # tienen que estar todos los que el panel emparejo.
+    contados = sum(int(t.name.rsplit("(", 1)[1].rstrip(")")) for t in puntos)
     juntos = cul.dropna(subset=["mean"]).merge(
         pas.dropna(subset=["mean"]), on="adm2_code", suffixes=("_c", "_p"))
-    assert dibujados == len(juntos)
-    # Y los de poca muestra estan, en su propia traza.
-    flacos = ((juntos["n_px_c"] < cfg.MIN_PX_COMPARABLE)
-              | (juntos["n_px_p"] < cfg.MIN_PX_COMPARABLE)).sum()
-    if flacos:
-        traza = [t for t in puntos if "píxeles" in t.name][0]
-        assert len(traza.x) == flacos
+    assert contados == len(juntos)
+    # El color separa por cual cobertura esta peor, no por calidad del dato: el
+    # relleno es solido en los tres grupos y el borde es el mismo.
+    for t in puntos:
+        assert t.marker.opacity == 0.8
+        assert t.marker.line.color == "#ffffff"
+        # El conteo de pixeles sigue en el detalle: es cuanta superficie hay
+        # detras de la cifra, que importa aunque ya no filtre nada.
+        assert "píxeles" in t.hovertemplate
 
 
-def test_el_piso_de_pixeles_se_justifica_por_resolucion():
-    """No es un umbral de calidad sino de resolucion: la media sobre n pixeles
-    solo toma valores de 100/n en 100/n. El piso tiene que dejar el salto por
-    debajo de la banda de alerta mas angosta del ASI, que son diez puntos."""
-    cortes = cfg.CLASSES["ASI"][0]
-    banda = min(b - a for a, b in zip(cortes, cortes[1:]))
-    assert 100 / cfg.MIN_PX_COMPARABLE < banda
+def test_la_banda_de_acuerdo_sale_de_la_clase_de_alerta_mas_angosta():
+    """El ancho no se escribe a mano: si la clasificacion de la leyenda cambia,
+    la banda tiene que cambiar con ella."""
+    from asis import viz
+
+    assert viz.narrowest_band("ASI") == 10
+    assert viz.narrowest_band("VCI") == pytest.approx(0.10)
+
+
+def test_el_asi_es_constante_dentro_de_cada_municipio():
+    """El hallazgo que retiro el piso, fijado como prueba porque de el dependen
+    varias decisiones. FAO calcula el ASI por unidad administrativa y lo pinta
+    sobre los pixeles de esa unidad, asi que los percentiles municipales del ASI
+    no informan nada. El VCI si varia dentro del municipio."""
+    asi = panel.load("asi_gs1").dropna(subset=["p10", "p90"])
+    asi = asi[asi["n_px"] > 0]
+    assert (asi["p90"] == asi["p10"]).all(), "el ASI deberia ser constante"
+
+    vci = panel.load("vci").dropna(subset=["p10", "p90"])
+    vci = vci[vci["n_px"] > 0]
+    assert (vci["p90"] > vci["p10"]).mean() > 0.9, "el VCI si deberia variar"
 
 
 def test_en_rango_el_municipio_muestra_la_cuadricula_y_no_la_matriz():
-    """El cambio de vista: con contraparte de pastura la matriz de calor deja
+    """El cambio de vista: con contraparte de pastizal la matriz de calor deja
     su lugar a la cuadricula de series, que es la unica que puede mostrar las
     dos coberturas sin duplicar la figura. Sin contraparte, el VCI conserva la
     matriz."""
@@ -779,11 +804,11 @@ def test_en_rango_el_municipio_muestra_la_cuadricula_y_no_la_matriz():
     at.selectbox(key="serie").set_value("vci").run()
     texto = " ".join(c.value for c in at.caption)
     assert "Matriz de municipio por dekad" in texto
-    assert "pastura" not in texto
+    assert "pastizal" not in texto
 
 
-def test_antes_de_2010_se_dibuja_el_cultivo_y_no_la_pastura():
-    """La pastura se publica cinco anios despues. La vista no se vacia: la
+def test_antes_de_2010_se_dibuja_el_cultivo_y_no_el_pastizal():
+    """El pastizal se publica cinco anios despues. La vista no se vacia: la
     pregunta principal es el cultivo y el contraste es contexto."""
     from pathlib import Path
 

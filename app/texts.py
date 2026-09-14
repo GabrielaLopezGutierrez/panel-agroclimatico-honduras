@@ -128,7 +128,7 @@ INDICATOR_DEFINITIONS = {
 COVER_DEFINITIONS = {
     "pastizal": (
         "Alimento del ganado, no cosecha",
-        "Esta serie mide el mismo índice sobre la máscara de pastura de FAO, "
+        "Esta serie mide el mismo índice sobre la máscara de pastizal de FAO, "
         "que es de donde sale el forraje del ganado. Un valor alto anticipa "
         "escasez de alimento en pie y presión para vender o mover animales, no "
         "pérdida de cosecha. No se compara con la serie de cultivo ni se "
@@ -275,7 +275,7 @@ MAP_NOTE = (
 # como valores del índice.
 # El texto del ASI lleva {cobertura} porque el mismo indicador se publica sobre
 # cultivo y sobre pastizal, y el motivo de un blanco no es el mismo: en una
-# faltan hectáreas sembradas y en la otra falta pastura.
+# faltan hectáreas sembradas y en la otra falta pasto.
 BLANKS_BY_FAMILY = {
     "ASI": ("pueden estar fuera de la ventana de la temporada o no tener área "
             "de {cobertura} que medir."),
@@ -309,35 +309,39 @@ MUNI_RANKING_NOTE = (
     "con la serie de cada municipio.")
 
 # --- Contraste entre coberturas, solo en el ASI y solo a nivel municipio -----
-# FAO publica el mismo índice sobre la máscara de cultivo y sobre la de pastura.
-# En la app manda el cultivo; la pastura entra como contexto en el ranking,
+# FAO publica el mismo índice sobre la máscara de cultivo y sobre la de pastizal.
+# En la app manda el cultivo; el pastizal entra como contexto en el ranking,
 # porque la diferencia entre las dos es municipal: a nivel departamental las dos
 # series corren a 0,94 de correlación en la primera y a nivel nacional a menos
 # de dos puntos.
-COVER_GRID_TITLE = "Cultivo y pastura en {n} municipios"
+COVER_GRID_TITLE = "Cultivo y pastizal en {n} municipios"
 COVER_GRID_SUBTITLE = "{ventana} · los de {peor} valor del cultivo"
 COVER_GRID_NOTE = (
     "Una celda por municipio con las dos coberturas del mismo índice: en café "
-    "el cultivo, que es el indicador principal, y en verde la pastura, que mide "
+    "el cultivo, que es el indicador principal, y en verde el pastizal, que mide "
     "el forraje del ganado en pie. Son superficies distintas y no se promedian "
     "entre sí. Se muestran los {n} municipios de {peor} valor del cultivo, o "
-    "los que se elijan en el selector de arriba. La pastura se publica desde "
+    "los que se elijan en el selector de arriba. El pastizal se publica desde "
     "{desde}; antes de esa fecha solo se dibuja la línea del cultivo.")
 COVER_GRID_SIN_PASTO = (
-    "Solo se dibuja el cultivo: la serie de pastura se publica desde {desde} y "
+    "Solo se dibuja el cultivo: la serie de pastizal se publica desde {desde} y "
     "el periodo seleccionado es anterior.")
 
-COVER_SCATTER_TITLE = "El forraje frente al cultivo"
+COVER_SCATTER_TITLE = "El pastizal frente al cultivo"
 COVER_SCATTER_SUBTITLE = "Cada punto es un municipio en {dekad}"
 COVER_SCATTER_NOTE = (
     "Cada municipio con su índice de cultivo en el eje horizontal y el de "
-    "pastura en el vertical. Sobre la línea roja las dos coberturas dicen lo "
-    "mismo; arriba de ella la pastura está peor que el cultivo, y abajo al "
-    "revés. Los puntos huecos tienen menos de {px} píxeles en alguna de las dos "
-    "máscaras: ahí la media salta de a varios puntos y no distingue clases, así "
-    "que se marcan en vez de esconderse.")
+    "pastizal en el vertical. Dentro de la banda gris la diferencia entre las "
+    "dos es menor que la clase de alerta más angosta y el punto sale gris; "
+    "arriba de ella el pastizal está peor que el cultivo y abajo al revés, y el "
+    "color dice cuál. Los municipios que comparten cifra caen en la misma "
+    "coordenada, así "
+    "que el tamaño del punto es cuántos son: el más grande suele ser el de los "
+    "que no registran estrés en ninguna de las dos coberturas. Se rotulan los "
+    "casos de mayor discrepancia; el detalle muestra cuántos píxeles hay detrás "
+    "de cada cifra, que es cuánta superficie describe.")
 COVER_SCATTER_SIN_PASTO = (
-    "Sin contraste de pastura para este dekad: la serie se publica desde "
+    "Sin contraste de pastizal para este dekad: la serie se publica desde "
     "{desde}.")
 
 MUNI_PICK_HELP = ("Vacío muestra los del ranking automático. Elija municipios "
@@ -464,8 +468,8 @@ SERIES_HELP = {
     "asi_gs1": "Solo la temporada primera: mayo a octubre.",
     "asi_gs2": "Solo la temporada postrera: septiembre a enero.",
     # El {desde} lo llena controls.sidebar con el primer dekad del panel.
-    "asi_gs1_pasto": "Forraje del ganado, no cultivo. Primera. Desde {desde}.",
-    "asi_gs2_pasto": "Forraje del ganado, no cultivo. Postrera. Desde {desde}.",
+    "asi_gs1_pasto": "Pastizal, no cultivo: el forraje del ganado. Primera. Desde {desde}.",
+    "asi_gs2_pasto": "Pastizal, no cultivo: el forraje del ganado. Postrera. Desde {desde}.",
     "vci": "Condición de la vegetación, 0 a 1. Todo el año. Umbral FAO 0,35.",
 }
 

@@ -761,15 +761,15 @@ def ranking_fig(df, value_col, title, subtitle="", family="ASI", top=20,
     return style_fig(fig, title, subtitle, y_source=-0.10, legend="off")
 
 
-# --- Contraste entre coberturas: cultivo y pastura ---------------------------
-# El mismo índice se publica sobre la máscara de cultivo y sobre la de pastura.
+# --- Contraste entre coberturas: cultivo y pastizal --------------------------
+# El mismo índice se publica sobre la máscara de cultivo y sobre la de pastizal.
 # No son dos versiones de una cifra: miden superficies distintas y responden
 # preguntas distintas, la cosecha y el forraje del ganado. Nunca se promedian
 # ni se restan en una sola serie; se ponen a la vista una al lado de la otra y
 # quien mira saca su conclusión.
 #
 # El color es el mismo par en las dos figuras: tierra para el cultivo, verde
-# para la pastura. No sale de CLASSES a propósito, porque aquí el color no
+# para el pastizal. No sale de CLASSES a propósito, porque aquí el color no
 # codifica severidad sino de qué superficie viene el dato.
 COVER_COLORS = {"cultivo": "#8a6d3b", "pastizal": "#2f7d4f"}
 
@@ -781,7 +781,7 @@ def cover_lines_grid(crop, pasture, title, subtitle="", value_col="mean",
     Es la vista de una ventana larga: interesa el ciclo de cada municipio y
     dónde se separan las dos curvas, no el ranking de un instante.
 
-    `pasture` puede venir vacío —la pastura se publica cinco años después que el
+    `pasture` puede venir vacío —el pastizal se publica cinco años después que el
     cultivo—, y entonces se dibuja solo la línea de cultivo. Se dibuja igual en
     vez de no dibujar nada: la pregunta principal de la vista es el cultivo y el
     contraste es contexto.
@@ -845,20 +845,73 @@ def _family_of(d, value_col):
     return "VCI" if len(v) and v.max() <= 1.0001 else "ASI"
 
 
+def narrowest_band(family: str) -> float:
+    """El ancho de la clase de alerta más angosta del indicador.
+
+    Es la unidad natural para decir si dos cifras del mismo índice dicen lo
+    mismo: una diferencia menor que la banda más angosta no alcanza para
+    separarlas ni en la clase más estrecha de la leyenda. Da 10 puntos en el ASI
+    y 0,10 en el VCI, y sale de `config.CLASSES` en vez de escribirse a mano
+    para que siga a la leyenda si la clasificación cambia.
+    """
+    edges, _labels, _colors = cfg.CLASSES[family]
+    return min(float(b) - float(a) for a, b in zip(edges, edges[1:]))
+
+
+def _pile_hover(nombres, tope=6):
+    """El texto de un punto que agrupa varios municipios.
+
+    Se nombran unos pocos y se dice cuántos faltan. Listar los doscientos que
+    caen en el origen no cabe en un globo de ayuda, y no nombrar ninguno deja
+    al punto más grande de la figura sin decir de quién habla.
+    """
+    nombres = sorted(nombres)
+    if len(nombres) == 1:
+        return nombres[0]
+    visibles = ", ".join(nombres[:tope])
+    resto = len(nombres) - tope
+    return f"{len(nombres)} municipios: {visibles}" + (
+        f" y {resto} más" if resto > 0 else "")
+
+
 def cover_scatter(crop, pasture, title, subtitle="", value_col="mean",
-                  min_px=None, label="", height=560):
+                  label="", height=560, top_labels=6):
     """Las dos coberturas de un mismo dekad, una contra la otra.
 
     Sobre la diagonal las dos dicen lo mismo. Fuera de ella, una de las dos
     superficies está peor que la otra, y esa es toda la información que la
     figura tiene que transmitir.
 
-    Los municipios con pocos píxeles se dibujan huecos en vez de excluirse. La
-    media sobre n píxeles solo toma valores de 100/n en 100/n, así que con una
-    máscara chica la cifra no distingue clases; pero borrarlos cambiaría en
-    silencio cuántos municipios se están viendo.
+    Tres cosas cambiaron respecto de la primera versión, y las tres salen de
+    mirar el dato:
+
+    Los puntos se agrupan por coordenada y el tamaño dice cuántos municipios
+    comparten esa cifra. El ASI llega resuelto por unidad administrativa y con
+    valores redondos, así que los municipios sin estrés caen todos exactamente
+    en el origen: en el pico de la primera de 2010 hay 237 municipios en cuatro
+    coordenadas distintas, 234 de ellos en un solo punto. Dibujados sueltos, la
+    figura mostraba cuatro marcas y el ojo leía cuatro municipios.
+
+    El color dice cuál de las dos coberturas está peor —verde el pastizal, café
+    el cultivo, gris cuando coinciden— y la leyenda cuántos son de cada grupo.
+    Antes todo era del mismo color y había que medir a ojo de qué lado de la
+    diagonal cae cada punto. La banda gris marca dónde la diferencia es menor
+    que la clase de alerta más angosta.
+
+    Se rotulan los municipios de mayor discrepancia, hasta `top_labels`, y solo
+    si de verdad discrepan y están solos en su coordenada. En un dekad donde
+    las dos coberturas coinciden en todo el país no se rotula nada, que es lo
+    correcto: no hay caso que señalar.
+
+    Todos los municipios se dibujan igual. Hubo un piso de píxeles que marcaba
+    en hueco a los de máscara chica, con el argumento de que la media sobre
+    pocos píxeles pierde resolución; se retiró porque el ASI no funciona así.
+    Medido sobre 161.685 filas municipio-dekad, p90 = p10 en el 100%: todos los
+    píxeles de un municipio comparten un mismo valor, de modo que la media es
+    exacta con ocho píxeles o con cuatro mil y no hay imprecisión que señalar.
+    El conteo sigue en el hover, que es donde importa saber cuánta superficie
+    hay detrás de la cifra.
     """
-    min_px = cfg.MIN_PX_COMPARABLE if min_px is None else min_px
     if pasture is None or not len(pasture):
         return None
     cols = ["adm2_code", "adm2_name", "adm1_name", value_col, "n_px"]
@@ -868,35 +921,92 @@ def cover_scatter(crop, pasture, title, subtitle="", value_col="mean",
                 suffixes=("_c", "_p"))
     if d.empty:
         return None
-    d["etiqueta"] = (d["adm2_name"].astype(str) + " · "
-                     + d["adm1_name"].astype(str))
-    d["firme"] = (d["n_px_c"] >= min_px) & (d["n_px_p"] >= min_px)
-    lo, hi = range_for(_family_of(a, value_col))
+    familia = _family_of(a, value_col)
+    lo, hi = range_for(familia)
+    banda = narrowest_band(familia)
+    decimales = 1 if familia == "ASI" else 2
+    xc, yp = f"{value_col}_c", f"{value_col}_p"
+
+    # Un punto por coordenada, no por municipio: los empates son la regla y no
+    # la excepción. `observed=True` porque los nombres vienen como categoría.
+    d["adm2_name"] = d["adm2_name"].astype(str)
+    g = (d.groupby([xc, yp], observed=True)
+           .agg(n=("adm2_code", "size"), nombres=("adm2_name", list),
+                px_c=("n_px_c", "sum"), px_p=("n_px_p", "sum"))
+           .reset_index())
+    g["brecha"] = g[yp] - g[xc]
+    g["quienes"] = [_pile_hover(v) for v in g["nombres"]]
+    # Diámetro entre 8,5 y 34 píxeles, creciendo con la raíz del conteo: el
+    # área del punto queda proporcional a cuántos municipios agrupa.
+    salto = max(int(g["n"].max()) - 1, 1)
+    g["tam"] = 8.5 + 25.5 * np.sqrt((g["n"] - 1) / salto)
+
     fig = go.Figure()
+    # La banda de acuerdo va primero para quedar debajo de todo lo demás.
+    fig.add_scatter(
+        x=[lo, hi, hi, lo], y=[lo - banda, hi - banda, hi + banda, lo + banda],
+        mode="lines", fill="toself", fillcolor="rgba(120,128,140,0.10)",
+        line=dict(width=0), showlegend=False, hoverinfo="skip")
     fig.add_scatter(x=[lo, hi], y=[lo, hi], mode="lines", showlegend=False,
-                    line=dict(color="#d7263d", width=1.2, dash="dash"),
+                    line=dict(color="#5b6270", width=1, dash="dash"),
                     hoverinfo="skip")
-    for firme, etq in ((True, "con muestra suficiente"),
-                       (False, f"menos de {min_px} píxeles en alguna cobertura")):
-        s = d[d["firme"] == firme]
+
+    # Gris primero: los discrepantes se dibujan encima, que son los que
+    # interesan cuando los puntos se encabalgan.
+    grupos = (
+        ("coinciden", g["brecha"].abs() <= banda, "#9aa1ad"),
+        ("el pastizal está peor", g["brecha"] > banda,
+         COVER_COLORS["pastizal"]),
+        ("el cultivo está peor", g["brecha"] < -banda,
+         COVER_COLORS["cultivo"]),
+    )
+    for nombre, mascara, color in grupos:
+        s = g[mascara]
         if s.empty:
             continue
         fig.add_scatter(
-            x=s[f"{value_col}_c"], y=s[f"{value_col}_p"], mode="markers",
-            name=etq, text=s["etiqueta"],
-            marker=dict(size=10 if firme else 9,
-                        color=COVER_COLORS["cultivo"] if firme else "white",
-                        opacity=0.8 if firme else 1,
-                        line=dict(width=1 if firme else 1.4,
-                                  color="#ffffff" if firme else "#9aa0aa")),
-            customdata=np.stack([s["n_px_c"], s["n_px_p"]], axis=-1),
-            hovertemplate="<b>%{text}</b><br>cultivo %{x:.1f}"
-                          "<br>pastura %{y:.1f}"
-                          "<br>píxeles: %{customdata[0]:,.0f} de cultivo, "
-                          "%{customdata[1]:,.0f} de pastura<extra></extra>")
+            x=s[xc], y=s[yp], mode="markers",
+            name=f"{nombre} ({int(s['n'].sum())})", text=s["quienes"],
+            marker=dict(size=s["tam"], color=color, opacity=0.8,
+                        line=dict(width=1, color="#ffffff")),
+            customdata=np.stack([s["px_c"], s["px_p"], s["brecha"]], axis=-1),
+            hovertemplate=(f"<b>%{{text}}</b><br>cultivo %{{x:.{decimales}f}}"
+                           f"<br>pastizal %{{y:.{decimales}f}}"
+                           f"<br>diferencia %{{customdata[2]:+.{decimales}f}}"
+                           "<br>píxeles: %{customdata[0]:,.0f} de cultivo, "
+                           "%{customdata[1]:,.0f} de pastizal<extra></extra>"))
+
+    # Rótulos de los casos extremos, solo donde hay un municipio en el punto.
+    # El texto va del lado contrario a la diagonal: los de arriba a la
+    # izquierda y los de abajo a la derecha, así se aleja de la nube.
+    e = g[(g["n"] == 1) & (g["brecha"].abs() > banda)]
+    if top_labels and not e.empty:
+        e = e.reindex(e["brecha"].abs().sort_values(ascending=False).index)
+        # Se toman de mayor a menor discrepancia y se saltan los que caerían
+        # encima de uno ya puesto: dos nombres encimados no se leen, y el que
+        # se pierde sigue en el hover.
+        sep = 0.05 * (hi - lo)
+        puestos = []
+        for fila in e.itertuples():
+            xy = (getattr(fila, xc), getattr(fila, yp))
+            if any(abs(xy[0] - q[0]) < sep and abs(xy[1] - q[1]) < sep
+                   for q in puestos):
+                continue
+            puestos.append(xy)
+            if len(puestos) == top_labels:
+                break
+        e = e[[(x, y) in puestos for x, y in zip(e[xc], e[yp])]]
+        fig.add_scatter(
+            x=e[xc], y=e[yp], mode="text", showlegend=False, hoverinfo="skip",
+            text=[v[0] for v in e["nombres"]],
+            textposition=["middle left" if v > 0 else "middle right"
+                          for v in e["brecha"]],
+            textfont=dict(size=9.5, color="#3b4250"))
+
     fig.update_layout(
         height=height,
-        xaxis=dict(title=f"{label or value_col} · cultivo", range=[lo, hi]),
-        yaxis=dict(title=f"{label or value_col} · pastura", range=[lo, hi],
-                   scaleanchor="x", scaleratio=1))
+        xaxis=dict(title=f"{label or value_col} · cultivo", range=[lo, hi],
+                   zeroline=False),
+        yaxis=dict(title=f"{label or value_col} · pastizal", range=[lo, hi],
+                   zeroline=False, scaleanchor="x", scaleratio=1))
     return style_fig(fig, title, subtitle, y_source=-0.12)
