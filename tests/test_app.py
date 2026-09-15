@@ -221,11 +221,19 @@ def test_la_cuadricula_trae_un_recuadro_por_departamento(last):
 
 def test_el_mapa_con_rango_se_anima_en_vez_de_promediar(last):
     """El promedio respondia otra pregunta: en un mapa lo que se busca es
-    cuando empezo y cuando aflojo, y colapsar la ventana lo escondia."""
+    cuando empezo y cuando aflojo, y colapsar la ventana lo escondia.
+
+    La ventana se cuenta hacia atras desde el final del panel y no arranca en
+    una fecha escrita a mano. Con una fecha fija la ventana crece un dekad cada
+    vez que FAO publica, y el dia que pasa de MAX_FRAMES la animacion empieza a
+    ralear: la prueba fallaba por el tamanio de la ventana y no por el defecto
+    que vigila. Paso de verdad, con 2026-09-D1.
+    """
     from app.controls import MAX_FRAMES
 
+    desde = panel.dekads("asi_gs1")[-MAX_FRAMES:][0]
     for level in ("departamento", "municipio"):
-        query = q(level, "asi_gs1", "2026-01-D1", last)
+        query = q(level, "asi_gs1", desde, last)
         _muni, cut = app.slice_for(query)
         datos = _muni if level == "municipio" else cut
         todos = sorted(datos["dekad_id"].unique())
@@ -574,22 +582,32 @@ def test_el_kpi_no_estacional_se_fecha_en_su_ultimo_dato(last):
     assert dekad == max(serie["dekad_id"])
 
 
-def test_un_dekad_fuera_de_temporada_no_fecha_el_kpi_en_ese_dekad(last):
-    """El caso que quedaba roto: con la ventana en un solo dekad de agosto, la
-    postrera no tiene ningun dato real dentro de esa ventana, y el KPI caia al
-    extremo del rango. Ahora se mira hacia atras hasta el ultimo dekad en
-    temporada, que es el que la cifra representa de verdad.
+def test_un_dekad_fuera_de_temporada_no_fecha_el_kpi_en_ese_dekad():
+    """El caso que quedaba roto: con la ventana en un solo dekad fuera de la
+    postrera, la temporada no tiene ningun dato real dentro de esa ventana, y el
+    KPI caia al extremo del rango. Ahora se mira hacia atras hasta el ultimo
+    dekad en temporada, que es el que la cifra representa de verdad.
+
+    El dekad de prueba se busca en el panel en vez de tomar el ultimo. La
+    postrera va de septiembre a enero, asi que el ultimo dekad del panel esta
+    fuera de ella la mayor parte del anio y dentro el resto: la prueba se
+    apagaba sola cada septiembre. Paso de verdad, con 2026-09-D1.
     """
     from asis.aggregate import season_columns
     from asis.calendar import dekad_of_year
 
+    if not panel.stored_series():
+        pytest.skip("no hay panel construido")
+    propios = season_columns("GS2")
+    fuera = [d for d in panel.dekads("asi_gs2")
+             if dekad_of_year(d) not in propios]
+    assert fuera, "el panel deberia cubrir algun dekad fuera de la postrera"
+    dk = fuera[-1]
     for level in ("pais", "departamento", "municipio"):
-        query = q(level, "asi_gs2", last, last)      # un solo dekad, agosto
-        assert dekad_of_year(last) not in season_columns("GS2"), (
-            "el dekad de prueba deberia caer fuera de la postrera")
+        query = q(level, "asi_gs2", dk, dk)          # un solo dekad, fuera
         dekad, valor = app.season_kpi(query, "asi_gs2")
-        assert dekad_of_year(dekad) in season_columns("GS2"), level
-        assert dekad < last, level
+        assert dekad_of_year(dekad) in propios, level
+        assert dekad < dk, level
         assert valor == valor, level                 # no es NaN
 
 
