@@ -59,6 +59,22 @@ def dekad_of_date(ts) -> str:
     return dekad_code(ts.year, ts.month, d)
 
 
+def last_closed_dekad(today=None) -> str:
+    """El dekad más reciente cuyo período ya terminó.
+
+    El dekad que contiene a hoy todavía está corriendo, así que el último
+    cerrado es el anterior. Es el techo de lo que FAO puede llegar a publicar:
+    un panel que ya lo alcanzó no tiene nada pendiente, y uno que se quedó atrás
+    sí, aunque FAO todavía no lo haya publicado.
+    """
+    # En UTC, que es el reloj del runner que corre la actualización. Honduras
+    # va seis horas atrás, así que un dekad cierra aquí unas horas antes que
+    # allá; no importa, porque FAO publica con días de retraso y no con horas.
+    hoy = (pd.Timestamp.now(tz="UTC").tz_localize(None) if today is None
+           else pd.Timestamp(today))
+    return dekad_from_index(dekad_index(dekad_of_date(hoy)) - 1)
+
+
 def dekad_of_year(code: str) -> int:
     """Posición del dekad dentro del año, de 1 a 36. Es el eje con el que se
     compara un año contra su propia climatología."""

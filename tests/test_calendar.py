@@ -7,7 +7,8 @@ import pytest
 from asis.calendar import (dekad_between, dekad_code, dekad_date,
                            dekad_from_index, dekad_index, dekad_label,
                            dekad_label_long, dekad_of_date, dekad_of_year,
-                           dekad_range, dekad_window, dekad_year)
+                           dekad_range, dekad_window, dekad_year,
+                           last_closed_dekad)
 
 
 def test_index_ida_y_vuelta():
@@ -71,3 +72,29 @@ def test_dekad_range_cruza_anios():
     r = dekad_range(2020, 10, 1, 2021, 2, 3)
     assert r[0] == "2020-10-D1" and r[-1] == "2021-02-D3"
     assert len(r) == 15
+
+
+# --- Ultimo dekad cerrado -----------------------------------------------------
+# Gobierna la actualizacion automatica: es el techo de lo que FAO puede haber
+# publicado, y por lo tanto la diferencia entre "no hay nada" y "todavia no
+# llega".
+@pytest.mark.parametrize("dia, esperado", [
+    # El dekad que contiene a hoy sigue corriendo: el ultimo cerrado es el
+    # anterior. Los bordes son los tres dias en que cambia.
+    ("2026-09-10", "2026-08-D3"),   # ultimo dia de D1, D1 aun abierto
+    ("2026-09-11", "2026-09-D1"),   # primer dia de D2, D1 ya cerro
+    ("2026-09-20", "2026-09-D1"),
+    ("2026-09-21", "2026-09-D2"),
+    ("2026-09-30", "2026-09-D2"),
+    ("2026-10-01", "2026-09-D3"),   # cruza de mes
+    ("2027-01-01", "2026-12-D3"),   # cruza de anio
+])
+def test_el_ultimo_dekad_cerrado_es_el_anterior_al_de_hoy(dia, esperado):
+    assert last_closed_dekad(dia) == esperado
+
+
+def test_el_ultimo_dekad_cerrado_sin_argumento_no_es_futuro():
+    """Sin fecha usa el reloj del runner. Lo unico que se puede fijar es que no
+    devuelva un dekad que todavia no cerro."""
+    hoy = pd.Timestamp.now(tz="UTC").tz_localize(None)
+    assert dekad_index(last_closed_dekad()) < dekad_index(dekad_of_date(hoy))

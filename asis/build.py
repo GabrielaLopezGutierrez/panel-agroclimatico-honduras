@@ -48,7 +48,7 @@ import pandas as pd
 from asis import client, config as cfg
 from asis.aggregate import (department_weights, national_from_csv,
                             to_department)
-from asis.calendar import dekad_index, dekad_year
+from asis.calendar import dekad_index, dekad_year, last_closed_dekad
 from asis.panel import MANIFEST, series_dir
 
 # Series oficiales derivadas que la app lee, con el CSV del que salen.
@@ -130,6 +130,29 @@ def preliminary_dekads(all_available, n: int = PRELIMINARY_DEKADS) -> list[str]:
 def is_preliminary(dekad_id: str, preliminaries) -> bool:
     """Si un dekad cae dentro de la ventana preliminar de su serie."""
     return dekad_id in set(preliminaries or ())
+
+
+def behind_series(ids=None, today=None) -> dict[str, str | None]:
+    """Series cuyo último dekad guardado es anterior al último dekad cerrado.
+
+    Es la pregunta "¿queda algo que FAO pueda haber publicado?", contestada
+    contra el disco y sin tocar la red. Gobierna la actualización automática:
+    mientras haya series atrasadas se vuelve a consultar al día siguiente, y en
+    cuanto todas alcanzan el último dekad cerrado se deja de consultar hasta que
+    cierre el siguiente. Una corrida vacía no significa lo mismo en los dos
+    casos, y por eso no alcanza con contar cuántos dekads nuevos trajo.
+
+    El valor de cada serie atrasada es su último dekad guardado, o None si la
+    serie no tiene nada en disco.
+    """
+    atrasadas = {}
+    cierre = dekad_index(last_closed_dekad(today))
+    for sid in (ids or list(cfg.SERIES)):
+        have = stored_dekads(sid)
+        ultimo = max(have) if have else None
+        if ultimo is None or dekad_index(ultimo) < cierre:
+            atrasadas[sid] = ultimo
+    return atrasadas
 
 
 def build_series(series_id: str, start: str, end: str, recheck: int,
@@ -464,6 +487,10 @@ def parse_args(argv=None):
                    help="usa las instantáneas versionadas sin llamar a fao.org.")
     p.add_argument("--sin-geometria", action="store_true",
                    help="no regenera la geometría simplificada.")
+    p.add_argument("--solo-si-falta", action="store_true",
+                   help="sale sin hacer nada si el panel ya llegó al último "
+                        "dekad cerrado. Es lo que usa la corrida diaria "
+                        "automática. Se ignora si se pasa --desde.")
     p.add_argument("--workers", type=int, default=cfg.WORKERS)
     return p.parse_args(argv)
 
@@ -479,6 +506,17 @@ def main(argv=None) -> int:
 
     log(f"panel: {cfg.PANEL_DIR}")
     log(f"cache de rasteres: {cfg.CACHE}")
+
+    if args.solo_si_falta and not args.desde:
+        cierre = last_closed_dekad()
+        atrasadas = behind_series(ids)
+        if not atrasadas:
+            log(f"\nel panel llega al ultimo dekad cerrado ({cierre}): no hay "
+                f"nada que FAO pueda haber publicado todavia. Sin consultar.")
+            return 0
+        log(f"\nultimo dekad cerrado {cierre} - atrasadas: "
+            + ", ".join(f"{s} en {d or 'vacia'}"
+                        for s, d in sorted(atrasadas.items())))
 
     series_info, republished, preliminares = {}, [], []
     if not args.solo_oficiales:

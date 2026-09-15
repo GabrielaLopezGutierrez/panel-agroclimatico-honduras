@@ -1,11 +1,18 @@
 name: Actualizar panel
 
-# FAO publica un dekad cada diez dias, con retraso variable. Se corre tres veces
-# al mes, unos dias despues de cada cierre de dekad, y ademas a mano cuando se
-# necesita. Si no hay nada nuevo la corrida no cambia nada y no commitea.
+# FAO publica un dekad cada diez dias, con retraso variable, y ese retraso es el
+# problema: con tres fechas fijas al mes, una corrida que caia antes de que FAO
+# publicara dejaba el panel parado hasta la siguiente, diez dias despues.
+#
+# Ahora se mira todos los dias, pero solo se consulta a FAO cuando puede haber
+# algo: --solo-si-falta compara el panel en disco contra el ultimo dekad cerrado
+# y sale sin tocar la red si ya lo alcanzo. En la practica eso consulta desde el
+# dia siguiente al cierre de cada dekad -el 11, el 21 y el 1- hasta que FAO
+# publica, y deja de consultar en cuanto llega. Una corrida a mano no lleva la
+# compuerta y siempre consulta.
 on:
   schedule:
-    - cron: "17 9 4,14,24 * *"
+    - cron: "17 9 * * *"
   workflow_dispatch:
     inputs:
       desde:
@@ -64,6 +71,7 @@ jobs:
         id: construir
         run: |
           python -m asis.build \
+            ${{ github.event_name == 'schedule' && '--solo-si-falta' || '' }} \
             ${{ inputs.desde && format('--desde {0}', inputs.desde) || '' }} \
             ${{ inputs.series && format('--series {0}', inputs.series) || '' }} \
             ${{ inputs.aceptar_republicacion && '--aceptar-republicacion' || '' }} \

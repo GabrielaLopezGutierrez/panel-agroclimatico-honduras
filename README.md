@@ -64,9 +64,13 @@ relleno histórico completo es `python -m asis.build --desde 2005-01-D1` y tarda
 alrededor de una hora la primera vez, porque descarga unos 2.300 rásteres; todo
 queda en `asis_cache/` y las corridas siguientes son rápidas.
 
-Esto ya corre solo: `.github/workflows/actualizar-panel.yml` se ejecuta tres
-veces al mes, reconstruye lo nuevo, corre las pruebas y commitea `data/` si algo
-cambió. También se puede lanzar a mano desde la pestaña Actions.
+Esto ya corre solo: `.github/workflows/actualizar-panel.yml` se ejecuta a
+diario, reconstruye lo nuevo, corre las pruebas y commitea `data/` si algo
+cambió. La corrida diaria lleva `--solo-si-falta`, que sale sin consultar a FAO
+cuando el panel ya llegó al último dekad cerrado; en la práctica consulta desde
+el día siguiente a cada cierre —el 11, el 21 y el 1— hasta que FAO publica, y
+deja de consultar en cuanto llega. También se puede lanzar a mano desde la
+pestaña Actions, y a mano siempre consulta.
 
 ### Las pruebas
 
