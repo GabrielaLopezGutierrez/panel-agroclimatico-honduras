@@ -176,24 +176,39 @@ def season_columns(season: str | None) -> list[int]:
     return list(range(lo, 37)) + list(range(1, hi + 1))
 
 
+def campaign_year(dekad_ids, season: str | None = None) -> pd.Series:
+    """El año de la campaña a la que pertenece cada dekad.
+
+    Una temporada que cruza el año —la postrera va de septiembre a enero— es
+    una sola campaña agrícola y se guarda bajo el año en que empieza. Sin esto,
+    los dekads de enero caerían en la campaña siguiente y media postrera
+    quedaría separada de la otra media.
+
+    Lo usan el mapa de calor por temporada y la superficie por clase, que parte
+    su eje por campaña. Vive aquí y no en cada figura porque es la misma regla:
+    dos copias se habrían separado en cuanto una cambiara.
+    """
+    s = dekad_ids if isinstance(dekad_ids, pd.Series) else pd.Series(
+        list(dekad_ids), dtype="object")
+    year = s.map(dekad_year)
+    if season and season in cfg.SEASON_WINDOW:
+        lo, hi = cfg.SEASON_WINDOW[season]
+        if lo > hi:
+            year = year.where(s.map(dekad_of_year) > hi, year - 1)
+    return year
+
+
 def climatology_frame(country: pd.DataFrame, season: str | None = None,
                       value_col="mean") -> pd.DataFrame:
     """Serie nacional del panel propio en la forma que espera el mapa de calor.
 
-    Agrega `Year` y `dekad_of_year`. En una temporada que cruza el año, los
-    dekads de enero pertenecen a la temporada que arrancó el año anterior, y
-    por eso se les resta uno: si no, media postrera aparecería en una fila y la
-    otra media en la siguiente, como si fueran dos temporadas distintas.
+    Agrega `Year`, que es el año de la campaña, y `dekad_of_year`.
     """
     d = country.dropna(subset=[value_col]).copy()
     if d.empty:
         return d
     d["dekad_of_year"] = d["dekad_id"].map(dekad_of_year)
-    d["Year"] = d["dekad_id"].map(dekad_year)
-    if season and season in cfg.SEASON_WINDOW:
-        lo, hi = cfg.SEASON_WINDOW[season]
-        if lo > hi:
-            d.loc[d["dekad_of_year"] <= hi, "Year"] -= 1
+    d["Year"] = campaign_year(d["dekad_id"], season)
     return d.sort_values(["Year", "dekad_of_year"]).reset_index(drop=True)
 
 

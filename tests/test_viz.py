@@ -13,11 +13,15 @@ from asis.calendar import dekad_date
 DEKADS = ["2019-06-D1", "2019-06-D2", "2019-06-D3", "2019-07-D1"]
 
 
-def panel(valores: dict) -> pd.DataFrame:
-    """valores: {municipio: [valor por dekad]}."""
+def panel(valores: dict, dekads=None) -> pd.DataFrame:
+    """valores: {municipio: [valor por dekad]}.
+
+    `dekads` sirve para las figuras que dependen de donde cae el dekad en el
+    calendario, como el corte por campania de la superficie por clase.
+    """
     filas = []
     for i, (nombre, serie) in enumerate(valores.items()):
-        for dk, v in zip(DEKADS, serie):
+        for dk, v in zip(dekads or DEKADS, serie):
             filas.append(dict(adm2_code=str(100 + i), adm2_name=nombre,
                               adm1_code="10", adm1_name="Dep", dekad_id=dk,
                               mean=v, km2=100.0, n_px=100,
@@ -247,3 +251,45 @@ def test_la_temporada_que_cruza_el_anio_se_rotula_con_los_dos():
     assert viz.season_labels([2025, 2026], primera) == ["2025", "2026"]
     # El anio completo del VCI tampoco cruza.
     assert not viz.season_wraps(season_columns(None))
+
+
+def test_la_superficie_se_parte_en_un_panel_por_campania():
+    """El ASI solo existe dentro de la ventana de cultivo, asi que en un eje
+    corrido el ultimo dekad de una campania queda pegado al primero de la
+    siguiente con siete meses de por medio: el paso mide diez dias de ancho y la
+    caida se lee como si el estres hubiera cedido. Un panel por campania hace
+    imposible ese empalme, porque no hay traza que lo cruce."""
+    d = panel({"Verde": [5, 5, 5, 5], "Rojo": [90, 90, 90, 90]},
+              dekads=["2024-07-D1", "2024-07-D2", "2025-07-D1", "2025-07-D2"])
+    fig = viz.severity_area_fig(d, "ASI", "t", season="GS1")
+    ejes = {t.xaxis or "x" for t in fig.data}
+    assert len(ejes) == 2, "una campania, un panel"
+    # Ninguna traza mezcla campanias: cada una vive en un solo eje, y los
+    # apilados son independientes entre paneles.
+    assert len({t.stackgroup for t in fig.data}) == 2
+    # El eje es el mismo en los dos: es la posicion dentro de la temporada.
+    assert list(fig.layout.xaxis.categoryarray) == \
+        list(fig.layout.xaxis2.categoryarray) == ["jul D1", "jul D2"]
+    # Y la leyenda no repite las clases una vez por campania.
+    assert sum(1 for t in fig.data if t.showlegend is not False) == \
+        len({t.name for t in fig.data})
+
+
+def test_la_postrera_rotula_sus_campanias_con_los_dos_anios():
+    """Una campania que cruza el anio rotulada solo con el primero se lee como
+    atrasada: el panel dice 2025 y llega hasta enero de 2026."""
+    d = panel({"Verde": [5, 5]}, dekads=["2025-10-D1", "2026-01-D1"])
+    fig = viz.severity_area_fig(d, "ASI", "t", season="GS2")
+    rotulos = [a.text for a in fig.layout.annotations if a.text == "2025-26"]
+    assert rotulos, "la postrera de 2025 se rotula 2025-26"
+    assert len({t.xaxis or "x" for t in fig.data}) == 1, "es una sola campania"
+
+
+def test_sin_temporada_la_superficie_sigue_siendo_una_sola_area():
+    """El VCI es continuo todo el anio: no tiene ventana de cultivo ni campanias
+    que separar, y partirlo inventaria un corte que el dato no tiene."""
+    d = panel({"Verde": [0.5, 0.5, 0.5, 0.5]},
+              dekads=["2025-12-D3", "2026-01-D1", "2026-01-D2", "2026-01-D3"])
+    fig = viz.severity_area_fig(d, "VCI", "t")
+    assert len({t.xaxis or "x" for t in fig.data}) == 1
+    assert len({t.stackgroup for t in fig.data}) == 1

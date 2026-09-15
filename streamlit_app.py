@@ -64,9 +64,9 @@ for _intento in (1, 2):
                                   manifest, national, season_months_label,
                                   sidebar, series_options)
         from asis import config as cfg, panel, viz               # noqa: E402
-        from asis.aggregate import (at_level, classify,          # noqa: E402
-                                    climatology_frame, season_columns,
-                                    severity_area, to_country)
+        from asis.aggregate import (at_level, campaign_year,     # noqa: E402
+                                    classify, climatology_frame,
+                                    season_columns, severity_area, to_country)
         from asis.calendar import (dekad_label,                   # noqa: E402
                                    dekad_label_long, dekad_of_year,
                                    dekad_window)
@@ -865,8 +865,13 @@ def _severity_block(query: Query, series_id: str):
     area = viz.severity_area_fig(
         muni, familia,
         texts.SEVERITY_TITLE.format(indicador=panel.label_of(series_id)),
-        texts.SEVERITY_SUBTITLE.format(ventana=query.window_compact))
-    figure(area, severity_area(muni, familia).reset_index(),
+        texts.SEVERITY_SUBTITLE.format(ventana=query.window_compact),
+        # Un panel por campaña necesita más alto que la versión de un tirón:
+        # arriba lleva el rótulo de cada campaña y abajo el eje rotado.
+        height=470, season=season)
+    datos = severity_area(muni, familia).reset_index()
+    datos.insert(1, "campania", campaign_year(datos["dekad_id"], season))
+    figure(area, datos,
            f"superficie_{series_id}_{query.slug()}", f"dl_area_{series_id}")
     if area is not None:
         st.caption(texts.SEVERITY_NOTE)

@@ -139,3 +139,30 @@ def test_en_la_primera_el_anio_es_el_del_calendario():
     assert out.loc["2026-05-D1", "Year"] == 2026
     assert out.loc["2026-08-D3", "Year"] == 2026
     assert out.loc["2026-08-D3", "dekad_of_year"] == 24
+
+
+def test_la_campania_de_enero_es_la_que_arranco_en_septiembre():
+    """La postrera va de septiembre a enero: es una sola campania agricola y se
+    guarda bajo el anio en que empieza. Si enero cayera en la campania de su
+    propio anio, media postrera quedaria separada de la otra media, y la figura
+    de superficie la dibujaria como dos campanias de medio largo cada una."""
+    from asis.aggregate import campaign_year
+
+    dekads = ["2025-09-D1", "2025-12-D3", "2026-01-D1", "2026-01-D3",
+              "2026-02-D1"]
+    assert list(campaign_year(dekads, "GS2")) == [2025, 2025, 2025, 2025, 2026]
+    # La primera no cruza el anio: su campania es su anio.
+    assert list(campaign_year(dekads, "GS1")) == [2025, 2025, 2026, 2026, 2026]
+    # Sin temporada tampoco se corrige nada.
+    assert list(campaign_year(dekads, None)) == [2025, 2025, 2026, 2026, 2026]
+
+
+def test_la_campania_conserva_el_indice_de_la_serie_que_recibe():
+    """La usa climatology_frame sobre una columna de un DataFrame: si devolviera
+    un indice nuevo, la asignacion desalinearia los anios."""
+    import pandas as pd
+
+    from asis.aggregate import campaign_year
+
+    s = pd.Series(["2026-01-D1", "2025-09-D1"], index=[7, 3])
+    assert list(campaign_year(s, "GS2").index) == [7, 3]

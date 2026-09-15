@@ -16,8 +16,9 @@ import plotly.io as pio
 from plotly.subplots import make_subplots
 
 from asis import config as cfg
-from asis.aggregate import classify, severity_area
-from asis.calendar import MONTH_ES, dekad_label
+from asis.aggregate import (campaign_year, classify, season_columns,
+                            severity_area)
+from asis.calendar import MONTH_ES, dekad_label, dekad_of_year
 
 pio.templates["asis"] = pio.templates["plotly_white"]
 pio.templates["asis"].layout.update(
@@ -315,28 +316,96 @@ def heatmap_panel(df, value_col, title, subtitle="", family="ASI", top=30,
 
 
 def severity_area_fig(df, family, title, subtitle="", value_col="mean",
-                      height=430):
+                      height=430, season=None):
     """Área apilada: km2 en cada clase de severidad por dekad.
 
     Responde cuánta superficie y no solo cuán intenso, que es la pregunta de
     quien tiene que asignar recursos.
+
+    Con `season` la figura se parte en un panel por campaña. El ASI solo existe
+    dentro de la ventana de cultivo de su temporada, así que en un eje continuo
+    el último dekad de una campaña queda pegado al primero de la siguiente con
+    siete meses de por medio: el paso mide diez días de ancho y cualquier
+    pendiente que se lea cruzándolo es falsa. En la primera de 2023 a 2026 esos
+    empalmes inventados son tres.
+
+    Los paneles llevan todos el mismo eje, la posición dentro de la temporada,
+    de modo que la misma década de julio cae en el mismo lugar de cada uno y una
+    campaña incompleta se ve incompleta: la de 2026 dibuja trece de las
+    dieciocho posiciones y las otras cinco quedan en blanco. El costo es que con
+    una ventana larga los paneles se angostan; se acepta porque la figura vive
+    dentro del bloque de una temporada, donde la ventana corriente son unas
+    pocas campañas.
+
+    Sin `season` la serie se dibuja de un tirón, que es el caso del VCI: es
+    continuo todo el año, no depende de una ventana de cultivo y no tiene
+    campañas que separar.
     """
     _, labels, colors = cfg.CLASSES[family]
     g = severity_area(df, family, value_col)
     if g.empty:
         return None
-    fig = go.Figure()
-    x = [dekad_label(c) for c in g.index]
-    for cl, color in zip(labels, colors):
-        if cl in g:
-            fig.add_scatter(x=x, y=g[cl], name=cl, mode="lines",
-                            stackgroup="uno",
-                            line=dict(width=0.5, color=color), fillcolor=color,
-                            hovertemplate="%{x}<br>" + cl
-                                          + ": %{y:,.0f} km2<extra></extra>")
-    fig.update_layout(height=height, yaxis_title="km2",
-                      xaxis=dict(tickangle=-45, tickfont=dict(size=9)))
-    return style_fig(fig, title, subtitle, y_source=-0.22, legend="top")
+    if not season or season not in cfg.SEASON_WINDOW:
+        fig = go.Figure()
+        x = [dekad_label(c) for c in g.index]
+        for cl, color in zip(labels, colors):
+            if cl in g:
+                fig.add_scatter(x=x, y=g[cl], name=cl, mode="lines",
+                                stackgroup="uno",
+                                line=dict(width=0.5, color=color),
+                                fillcolor=color,
+                                hovertemplate="%{x}<br>" + cl
+                                              + ": %{y:,.0f} km2<extra></extra>")
+        fig.update_layout(height=height, yaxis_title="km2",
+                          xaxis=dict(tickangle=-45, tickfont=dict(size=9)))
+        return style_fig(fig, title, subtitle, y_source=-0.22, legend="top")
+
+    columnas = season_columns(season)
+    orden = {p: i for i, p in enumerate(columnas)}
+    presentes = sorted({dekad_of_year(c) for c in g.index},
+                       key=lambda p: orden.get(p, len(columnas)))
+    eje = dekad_labels(presentes)
+    etiqueta = dict(zip(presentes, eje))
+    campanias = campaign_year(pd.Series(list(g.index)), season).tolist()
+    anios = sorted(set(campanias))
+    rotulos = season_labels(anios, columnas)
+    # Menos marcas cuando hay más paneles: el eje es el mismo en todos, así que
+    # una de cada tres alcanza para ubicarse y el resto sigue en el hover.
+    ticks = thin_ticks(eje, 9 if len(anios) <= 3 else 5)
+
+    fig = make_subplots(rows=1, cols=len(anios), shared_yaxes=True,
+                        horizontal_spacing=0.012, subplot_titles=rotulos)
+    for k, (anio, rotulo) in enumerate(zip(anios, rotulos), start=1):
+        tramo = g[[a == anio for a in campanias]]
+        x = [etiqueta[dekad_of_year(c)] for c in tramo.index]
+        for cl, color in zip(labels, colors):
+            if cl not in tramo:
+                continue
+            fig.add_scatter(
+                x=x, y=tramo[cl], name=cl, legendgroup=cl,
+                showlegend=(k == 1), mode="lines", stackgroup=f"campania{anio}",
+                line=dict(width=0.5, color=color), fillcolor=color,
+                hovertemplate=f"{rotulo} " + "%{x}<br>" + cl
+                              + ": %{y:,.0f} km2<extra></extra>",
+                row=1, col=k)
+        # El rango se fija a las posiciones de la temporada entera y no se deja
+        # al autoescalado: si no, el panel de una campaña en curso se estira
+        # hasta llenar su ancho y una campaña de trece dekads se ve igual de
+        # larga que una de dieciocho, que es justo lo que hay que poder ver.
+        fig.update_xaxes(categoryorder="array", categoryarray=eje,
+                         range=[-0.5, len(eje) - 0.5],
+                         tickmode="array", tickvals=ticks, tickangle=-90,
+                         tickfont=dict(size=8), row=1, col=k)
+    for a in fig.layout.annotations:
+        # Los rótulos de campaña suben una fila: la leyenda horizontal arranca
+        # justo encima del área de dibujo y tapaba al del primer panel, que es
+        # el que queda a la izquierda, donde la leyenda empieza.
+        a.font.size = 11
+        a.yshift = 26
+    fig.update_yaxes(title_text="km2", row=1, col=1)
+    fig.update_layout(height=height)
+    return style_fig(fig, title, subtitle, y_source=-0.24, legend="top",
+                     top=116)
 
 
 def series_fig(df, value_col, title, subtitle="", label="", family="ASI",

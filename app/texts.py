@@ -348,14 +348,19 @@ MUNI_PICK_HELP = ("Vacío muestra los del ranking automático. Elija municipios 
                   "para seguir a los que le interesan en vez de a los peores.")
 
 SEVERITY_TITLE = "Superficie por clase de severidad · {indicador}"
-SEVERITY_SUBTITLE = "km2 en cada clase, dekad por dekad · {ventana}"
+SEVERITY_SUBTITLE = "km2 en cada clase, un panel por campaña · {ventana}"
 SEVERITY_NOTE = (
     "Superficie en kilómetros cuadrados dentro de cada clase de severidad, "
     "dekad por dekad, sumando el área de los municipios que caen en cada una. "
     "Responde cuánta superficie está afectada y no solo cuán intenso es el "
     "índice: un valor alto en pocos municipios chicos y otro moderado en medio "
     "país se leen distinto aquí. Cubre el país entero y solo los dekads dentro "
-    "de la ventana de cultivo de la temporada.")
+    "de la ventana de cultivo de la temporada. Va un panel por campaña y no una "
+    "serie corrida porque entre el fin de una y el arranque de la siguiente hay "
+    "siete meses sin dato: dibujadas seguidas, ese salto mide diez días de "
+    "ancho y la caída se lee como si el estrés hubiera cedido. Los paneles "
+    "comparten el eje, que es la posición dentro de la temporada, así que una "
+    "campaña en curso llega hasta donde llega y el resto queda en blanco.")
 
 # Aclaración sobre las alertas de ASI, para no insinuar que son una
 # declaratoria oficial de sequía.
