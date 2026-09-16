@@ -8,7 +8,10 @@ sentido el panel se queda viejo sin avisar, y si se equivoca en el otro se
 consulta a FAO todos los dias para nada.
 
 No toca el manifiesto real: redirige la ruta a un archivo temporal, porque
-data/manifest.json esta versionado.
+data/manifest.json esta versionado. La ruta se parchea en los dos modulos que
+la nombran, como ya hace test_preliminar: `streamlit_app` purga `asis.*` de
+sys.modules al importarse -y pytest lo importa al recolectar-, asi que parchear
+uno solo deja al otro apuntando al archivo de verdad.
 """
 import json
 
@@ -24,6 +27,7 @@ def _manifiesto(tmp_path, monkeypatch, ultimos):
         "series": {sid: {"ultimo": ultimo}
                    for sid, ultimo in ultimos.items() if ultimo}
     }), encoding="utf-8")
+    monkeypatch.setattr(build, "MANIFEST", ruta)
     monkeypatch.setattr(panel, "MANIFEST", ruta)
     return ruta
 
@@ -74,6 +78,7 @@ def test_lo_que_falta_cuenta_como_atrasado(tmp_path, monkeypatch, contenido):
 def test_sin_manifiesto_tambien_se_consulta(tmp_path, monkeypatch):
     """Un repositorio recien clonado sin panel construido no debe quedarse
     callado: tiene todo por bajar."""
+    monkeypatch.setattr(build, "MANIFEST", tmp_path / "no-existe.json")
     monkeypatch.setattr(panel, "MANIFEST", tmp_path / "no-existe.json")
     assert set(build.behind_series(today="2026-09-11")) == set(cfg.SERIES)
 

@@ -159,12 +159,19 @@ def behind_series(ids=None, today=None) -> dict[str, str | None]:
     cuando no hacía falta cuesta dos minutos, y no consultar cuando hacía falta
     deja el panel viejo sin que nadie se entere, que es el defecto que esto
     vino a arreglar.
-    """
-    from asis.panel import PanelVacio, manifest
 
+    El archivo se lee por la ruta que este módulo importó, y no llamando a
+    `panel.manifest()`. La diferencia importa: `streamlit_app` purga `asis.*` de
+    `sys.modules` una vez por proceso para no quedarse con módulos viejos tras
+    un despliegue, y pytest importa ese archivo al recolectar. Un import
+    diferido dentro de esta función traía entonces un segundo `asis.panel`,
+    distinto del que las pruebas tenían a mano, y el manifiesto de prueba no
+    se veía.
+    """
     try:
-        series = manifest().get("series", {})
-    except PanelVacio:
+        series = json.loads(MANIFEST.read_text(encoding="utf-8")).get(
+            "series", {})
+    except (OSError, ValueError):
         series = {}
     atrasadas = {}
     cierre = dekad_index(last_closed_dekad(today))
