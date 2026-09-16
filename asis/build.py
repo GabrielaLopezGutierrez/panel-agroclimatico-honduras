@@ -143,14 +143,34 @@ def behind_series(ids=None, today=None) -> dict[str, str | None]:
     casos, y por eso no alcanza con contar cuántos dekads nuevos trajo.
 
     El valor de cada serie atrasada es su último dekad guardado, o None si la
-    serie no tiene nada en disco.
+    serie no tiene nada registrada.
+
+    El último dekad sale de `manifest.json` y no de abrir los parquets. Da lo
+    mismo —lo escribe esta misma construcción— pero leer ciento diez parquets
+    para contestar una pregunta de una línea hacía que la corrida diaria
+    arrancara el motor de Arrow y muriera al salir: el intérprete se cerraba
+    medio segundo después y el pool de hilos de Arrow abortaba el proceso con
+    "terminate called without an active exception", código 134. La corrida no
+    consultaba a FAO ni commiteaba nada, como debía, pero quedaba marcada en
+    rojo todos los días.
+
+    Cualquier cosa que falte —el manifiesto, una serie, su último dekad— cuenta
+    como atrasada. El error se prefiere hacia consultar de más: consultar
+    cuando no hacía falta cuesta dos minutos, y no consultar cuando hacía falta
+    deja el panel viejo sin que nadie se entere, que es el defecto que esto
+    vino a arreglar.
     """
+    from asis.panel import PanelVacio, manifest
+
+    try:
+        series = manifest().get("series", {})
+    except PanelVacio:
+        series = {}
     atrasadas = {}
     cierre = dekad_index(last_closed_dekad(today))
     for sid in (ids or list(cfg.SERIES)):
-        have = stored_dekads(sid)
-        ultimo = max(have) if have else None
-        if ultimo is None or dekad_index(ultimo) < cierre:
+        ultimo = (series.get(sid) or {}).get("ultimo")
+        if not ultimo or dekad_index(ultimo) < cierre:
             atrasadas[sid] = ultimo
     return atrasadas
 

@@ -28,6 +28,11 @@ on:
         required: false
         type: boolean
         default: false
+      solo_si_falta:
+        description: "Con la compuerta, como la corrida diaria. Para probarla sin esperar al cron."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   # Un bloque de permisos pone en none todo lo que no se declara: sin
@@ -71,7 +76,7 @@ jobs:
         id: construir
         run: |
           python -m asis.build \
-            ${{ github.event_name == 'schedule' && '--solo-si-falta' || '' }} \
+            ${{ (github.event_name == 'schedule' || inputs.solo_si_falta) && '--solo-si-falta' || '' }} \
             ${{ inputs.desde && format('--desde {0}', inputs.desde) || '' }} \
             ${{ inputs.series && format('--series {0}', inputs.series) || '' }} \
             ${{ inputs.aceptar_republicacion && '--aceptar-republicacion' || '' }} \
