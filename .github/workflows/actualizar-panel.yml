@@ -93,12 +93,35 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Pruebas
+      # Las pruebas de este workflow no son la CI del codigo -de eso se encarga
+      # pruebas.yml en cada push y cada pull request-, sino el blindaje del
+      # commit de datos: corren para que un panel que no valida contra el dato
+      # oficial de FAO no entre al repo por su propia cuenta. Si el panel no
+      # cambio no hay nada que validar ni que commitear, y con el cron diario
+      # eso es la mayoria de los dias.
+      #
+      # Se usa `git status --porcelain` y no `git diff --quiet`: en enero el
+      # primer dekad del anio estrena archivo, y un archivo nuevo sin seguir no
+      # aparece en un diff. Con diff, ese dia se saltarian las pruebas y el
+      # commit, y el anio entrante se perderia en silencio.
+      - name: Ver si el panel cambio
+        id: cambios
         if: steps.construir.outputs.salida == '0'
+        run: |
+          if [ -z "$(git status --porcelain -- data/)" ]; then
+            echo "hay=no" >> "$GITHUB_OUTPUT"
+            echo "data/ sin cambios: no hay nada que validar ni que commitear"
+          else
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+            git status --short -- data/
+          fi
+
+      - name: Pruebas
+        if: steps.cambios.outputs.hay == 'si'
         run: pytest tests/ -q
 
       - name: Commitear el panel
-        if: steps.construir.outputs.salida == '0'
+        if: steps.cambios.outputs.hay == 'si'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
