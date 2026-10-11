@@ -6,10 +6,10 @@
     "sha256": "0e5bb7a291ca527c21308066db8a031528641648d97f4c2cdac8ed82fb6718fc"
   },
   "rain_dekad": {
-    "descargado": "2026-10-03",
+    "descargado": "2026-10-11",
     "url": "https://www.fao.org/giews/earthobservation/asis/data/country/HND/GRAPH_RAIN_AGRI/rain_adm1_data.csv",
     "filas": 23104,
-    "sha256": "3018ad5b60fc2e1dbbda209ed5abfc4ea76db1529d30b6c20b798fec6ef5a362"
+    "sha256": "c3dd3d478b71364277085cbbe24151cf3ef76082244523e96a549c0584ef34e1"
   },
   "vci_dekad": {
     "descargado": "2026-10-03",
