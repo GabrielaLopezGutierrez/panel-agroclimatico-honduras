@@ -1,20 +1,20 @@
 {
   "asi_dekad_s1": {
-    "descargado": "2026-10-14",
+    "descargado": "2026-10-23",
     "url": "https://www.fao.org/giews/earthobservation/asis/data/country/HND/MAP_ASI/DATA/ASI_Dekad_Season1_data.csv",
-    "filas": 24226,
-    "sha256": "39c59c49c3e40b22bb65c413e5b03475062d91f4a4fe5cd2b7b8c685cc156398"
+    "filas": 24243,
+    "sha256": "3c075b3dce8a067b49e8e4a6112771a390b9f875051acbbb07cc5ea4c1f2191c"
   },
   "rain_dekad": {
-    "descargado": "2026-10-14",
+    "descargado": "2026-10-23",
     "url": "https://www.fao.org/giews/earthobservation/asis/data/country/HND/GRAPH_RAIN_AGRI/rain_adm1_data.csv",
-    "filas": 23121,
-    "sha256": "d5d2312b923fb344aef40b7028499af2f3c2c8a003d81696e098345fac2721c7"
+    "filas": 23138,
+    "sha256": "f694689cbb996aed5eed4ed071902103c64174a062f860646fae39703a0714c0"
   },
   "vci_dekad": {
-    "descargado": "2026-10-14",
+    "descargado": "2026-10-23",
     "url": "https://www.fao.org/giews/earthobservation/asis/data/country/HND/MAP_NDVI_ANOMALY/DATA/vci_adm1_dekad_data.csv",
-    "filas": 27721,
-    "sha256": "24b2449fad3c154d19f6e5cf84e3f8fe566e49e02b8859246d03c9a62b939794"
+    "filas": 27739,
+    "sha256": "cab8c9057152ea9afeaa7b1cf892529c40c1059d9edbd3ca8322dfa44c60253c"
   }
 }

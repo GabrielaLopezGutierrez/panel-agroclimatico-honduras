@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-10-14T14:33:33+00:00",
+  "actualizado": "2026-10-23T14:17:34+00:00",
   "start_year": 2005,
   "pais": "Honduras",
   "municipios": 290,
@@ -12,8 +12,8 @@
       "estacional": false,
       "unidad": "índice 0-1",
       "primero": "2005-01-D1",
-      "ultimo": "2026-10-D1",
-      "n_dekads": 784,
+      "ultimo": "2026-10-D2",
+      "n_dekads": 785,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -798,12 +798,13 @@
         "2026-09-D1",
         "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ],
       "preliminares": [
-        "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ]
     },
     "asi_gs1": {
@@ -813,8 +814,8 @@
       "estacional": true,
       "unidad": "% del área de cultivo bajo estrés hídrico",
       "primero": "2005-01-D1",
-      "ultimo": "2026-10-D1",
-      "n_dekads": 784,
+      "ultimo": "2026-10-D2",
+      "n_dekads": 785,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -1599,12 +1600,13 @@
         "2026-09-D1",
         "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ],
       "preliminares": [
-        "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ]
     },
     "asi_gs2": {
@@ -1614,8 +1616,8 @@
       "estacional": true,
       "unidad": "% del área de cultivo bajo estrés hídrico",
       "primero": "2005-01-D1",
-      "ultimo": "2026-10-D1",
-      "n_dekads": 784,
+      "ultimo": "2026-10-D2",
+      "n_dekads": 785,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -2400,12 +2402,13 @@
         "2026-09-D1",
         "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ],
       "preliminares": [
-        "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ]
     },
     "asi_gs1_pasto": {
@@ -2415,8 +2418,8 @@
       "estacional": true,
       "unidad": "% del área de pastizal bajo estrés hídrico",
       "primero": "2010-01-D1",
-      "ultimo": "2026-10-D1",
-      "n_dekads": 604,
+      "ultimo": "2026-10-D2",
+      "n_dekads": 605,
       "dekads": [
         "2010-01-D1",
         "2010-01-D2",
@@ -3021,12 +3024,13 @@
         "2026-09-D1",
         "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ],
       "preliminares": [
-        "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ]
     },
     "asi_gs2_pasto": {
@@ -3036,8 +3040,8 @@
       "estacional": true,
       "unidad": "% del área de pastizal bajo estrés hídrico",
       "primero": "2010-01-D1",
-      "ultimo": "2026-10-D1",
-      "n_dekads": 604,
+      "ultimo": "2026-10-D2",
+      "n_dekads": 605,
       "dekads": [
         "2010-01-D1",
         "2010-01-D2",
@@ -3642,12 +3646,13 @@
         "2026-09-D1",
         "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ],
       "preliminares": [
-        "2026-09-D2",
         "2026-09-D3",
-        "2026-10-D1"
+        "2026-10-D1",
+        "2026-10-D2"
       ]
     }
   },
@@ -3655,17 +3660,17 @@
     "asi_dekad_s1": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-10-14"
+      "descargado": "2026-10-23"
     },
     "rain_dekad": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-10-14"
+      "descargado": "2026-10-23"
     },
     "vci_dekad": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-10-14"
+      "descargado": "2026-10-23"
     }
   },
   "validacion": {
