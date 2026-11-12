@@ -451,21 +451,38 @@ def test_la_herramienta_dice_dekad_y_nunca_dekadal():
 
 
 # --- Precipitacion -----------------------------------------------------------
-def test_la_seccion_de_lluvia_tiene_una_sola_descarga(last):
-    """Las dos figuras contienen la misma ventana: el acercamiento de la
-    anomalia es de vista, no de datos. Dos botones identicos invitarian a
-    pensar que detras hay dos cortes distintos."""
+def test_la_lluvia_tiene_una_descarga_por_figura_y_no_son_la_misma(last):
+    """Llevaba una sola descarga para sus dos figuras, con el argumento de que
+    cubren la misma ventana y dos botones identicos invitan a pensar que detras
+    hay dos cortes distintos. El argumento se cayo cuando el boton paso a
+    entregar la tabla que se dibuja: las dos figuras tienen ejes distintos
+    -arriba los anios superpuestos sobre el dekad del anio, abajo la anomalia
+    sobre el tiempo corrido- asi que sus tablas son distintas de verdad y una
+    sola no puede ser las dos.
+
+    Lo que esta prueba fija es que sigan siendo distintas. Dos botones que
+    entregan lo mismo son el defecto que la version anterior evitaba, y volveria
+    sin aviso si alguien apuntara los dos a la misma tabla."""
     at = _app()
     nombres = [d.label for d in at.get("download_button")]
     por_figura = [n for n in nombres if texts.FIG_DOWNLOAD in n]
     # Dos temporadas, cada una con su serie y su superficie por clase; el VCI,
-    # que no tiene temporada ni superficie; y la lluvia, que es una sola para
-    # sus dos figuras.
-    assert len(por_figura) == 6, nombres
-    # Lo que esta prueba fija de verdad: la lluvia no tiene dos. Sus dos
-    # figuras comparten ventana, asi que comparten descarga.
-    claves = [d.key for d in at.get("download_button") if d.key]
-    assert sum(1 for k in claves if "lluvia" in k) <= 1, claves
+    # que no tiene temporada ni superficie; y la lluvia, que ahora aporta dos.
+    assert len(por_figura) == 7, nombres
+
+    from asis import wide
+
+    lluvia = panel.national("serie_nacional_lluvia")
+    if not len(lluvia):
+        pytest.skip("no hay serie de lluvia")
+    v = lluvia.tail(40)
+    lta = v.groupby("dekad_of_year")["lta"].mean()
+    lineas = wide.season_table(v, None, value_col="value", reference=lta,
+                               reference_label="promedio de largo plazo")
+    barras = wide.anomaly_table(v)
+    assert list(lineas.columns) != list(barras.columns)
+    assert list(lineas.columns)[0] == "dekad"
+    assert list(barras.columns)[0] == "fecha"
 
 
 def test_la_anomalia_ya_no_usa_un_deslizador_de_la_pagina(last):

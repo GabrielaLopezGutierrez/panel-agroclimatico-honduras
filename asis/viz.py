@@ -18,7 +18,9 @@ from plotly.subplots import make_subplots
 from asis import config as cfg
 from asis.aggregate import (campaign_year, classify, season_columns,
                             severity_area)
-from asis.calendar import MONTH_ES, dekad_label, dekad_of_year
+from asis.calendar import (MONTH_ES, dekad_label, dekad_labels,
+                           dekad_of_year, season_labels,
+                           season_wraps)
 
 pio.templates["asis"] = pio.templates["plotly_white"]
 pio.templates["asis"].layout.update(
@@ -483,31 +485,6 @@ def thin_ticks(labels, maximo=12) -> list[str]:
         return labels
     paso = -(-len(labels) // maximo)
     return labels[::paso]
-
-
-def season_wraps(columns) -> bool:
-    """Si la temporada cruza el año, como la postrera (sep a ene)."""
-    columns = list(columns)
-    return bool(columns) and columns[0] > columns[-1]
-
-
-def season_labels(years, columns) -> list[str]:
-    """Rótulo de cada temporada: "2025" si cabe en un año, "2025-26" si no.
-
-    Una temporada que cruza el año se guarda bajo el año en que **empieza**,
-    porque es una sola campaña agrícola. Rotularla solo con ese año la hacía
-    leer como atrasada: la fila decía 2025 cuando llegaba hasta enero de 2026.
-    """
-    if not season_wraps(columns):
-        return [str(int(y)) for y in years]
-    return [f"{int(y)}-{str(int(y) + 1)[-2:]}" for y in years]
-
-
-def dekad_labels(codes) -> list[str]:
-    """Etiquetas de dekad del año: 13 -> "may D1". Las comparte el mapa de calor
-    con las líneas por temporada, para que el mismo dekad se lea igual en las
-    dos figuras."""
-    return [f"{MONTH_ES[(k - 1) // 3 + 1]} D{(k - 1) % 3 + 1}" for k in codes]
 
 
 def season_lines_fig(frame, columns, title, subtitle="", label="",

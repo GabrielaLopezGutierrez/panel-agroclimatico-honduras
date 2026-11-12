@@ -93,6 +93,14 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Las tablas que Flourish lee por URL salen del panel recien construido y
+      # viajan en el mismo commit que los datos de los que salen. Van antes de
+      # mirar si data/ cambio, para que cuenten como parte del cambio: si un
+      # dekad nuevo mueve la ventana de dieciocho meses, el CSV se mueve con el.
+      - name: Tablas para Flourish
+        if: steps.construir.outputs.salida == '0'
+        run: python scripts/tablas_flourish.py
+
       # Las pruebas de este workflow no son la CI del codigo -de eso se encarga
       # pruebas.yml en cada push y cada pull request-, sino el blindaje del
       # commit de datos: corren para que un panel que no valida contra el dato

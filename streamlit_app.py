@@ -63,7 +63,7 @@ for _intento in (1, 2):
                                   Query, data_version, dekads, geojson, load,
                                   manifest, national, season_months_label,
                                   sidebar, series_options)
-        from asis import config as cfg, panel, viz               # noqa: E402
+        from asis import config as cfg, panel, viz, wide         # noqa: E402
         from asis.aggregate import (at_level, campaign_year,     # noqa: E402
                                     classify, climatology_frame,
                                     season_columns, severity_area, to_country)
@@ -476,13 +476,16 @@ def view_municipal_ranking(query: Query, muni: pd.DataFrame):
 
     if query.single:
         base = muni[muni["dekad_id"] == query.end]
-        elegidos = (base.nlargest(top, "mean") if query.family == "ASI"
-                    else base.nsmallest(top, "mean"))
+        # La seleccion de los `top` peores la hacen la figura y la tabla por su
+        # cuenta, con el mismo criterio: antes se calculaba aqui una tercera vez
+        # solo para la descarga.
         fig = viz.ranking_fig(
             base, "mean", f"Los {top} municipios con {peor} valor",
             dekad_label(query.end), family=query.family, top=top,
             label=query.unit_short, height=max(420, 17 * top))
-        figure(fig, elegidos, f"ranking_{query.slug()}", "dl_ranking")
+        figure(fig, wide.ranking_table(base, query.unit_short,
+                                       family=query.family, top=top),
+               f"ranking_{query.slug()}", "dl_ranking")
         if fig is not None:
             st.caption(texts.MUNI_RANKING_NOTE.format(
                 top=top, peor=peor, dekad=dekad_label(query.end)))
@@ -587,7 +590,7 @@ def _cover_scatter_block(query: Query, pastura: str, base: pd.DataFrame):
         return
     st.plotly_chart(fig, width="stretch")
     st.caption(texts.COVER_SCATTER_NOTE)
-    download(pd.concat([base, pasto], ignore_index=True),
+    download(wide.cover_table(base, pasto),
              f"coberturas_{query.slug()}", "dl_coberturas")
 
 
@@ -604,7 +607,10 @@ def view_department_series(query: Query, cut: pd.DataFrame):
             etiquetado, "mean", f"{query.label} por departamento",
             dekad_label(query.end), family=query.family, top=18,
             label=query.unit_short, height=520)
-        figure(fig, d, f"departamentos_{query.slug()}", "dl_dept")
+        figure(fig, wide.ranking_table(
+            d, query.unit_short, family=query.family,
+            name_col="adm1_name", group_col=None),
+            f"departamentos_{query.slug()}", "dl_dept")
         if fig is not None:
             st.caption(texts.DEPT_RANKING_NOTE.format(
                 dekad=dekad_label(query.end)))
@@ -801,7 +807,8 @@ def _country_indicator_block(query: Query, series_id: str):
                 st.caption(texts.VCI_NOTE)
         else:
             st.info(texts.NO_DATA)
-        download(serie, f"serie_nacional_{slug}", f"dl_serie_{series_id}")
+        download(wide.season_table(serie, None),
+                 f"serie_nacional_{slug}", f"dl_serie_{series_id}")
         return
 
     frame = _season_frame(query, series_id)
@@ -835,8 +842,9 @@ def _country_indicator_block(query: Query, series_id: str):
         cruce=(texts.SEASON_SPANS_YEARS
                if viz.season_wraps(season_columns(season)) else "")))
     st.caption(texts.ALERT_DISCLAIMER)
-    download(frame[["dekad_id", "date", "Year", "dekad_of_year", "mean",
-                    "n_px", "n_muni"]],
+    # Las dos figuras son la misma tabla: la fila de un anio en la matriz
+    # es una linea en la otra, y aqui es una columna.
+    download(wide.season_table(frame, season),
              f"temporada_{slug}", f"dl_temporada_{series_id}")
     _severity_block(query, series_id)
 
@@ -924,15 +932,25 @@ def _rainfall_block(query: Query):
         color="#3b7dd8", reference=lta, reference_label="promedio de largo plazo")
     if lineas is not None:
         st.plotly_chart(lineas, width="stretch")
+        download(wide.season_table(
+            ventana, None, value_col="value", reference=lta,
+            reference_label="promedio de largo plazo"),
+            f"lluvia_nacional_{query.slug()}", "dl_lluvia")
     barras = viz.anomaly_bars_fig(
         ventana, texts.RAIN_BARS_TITLE.format(ventana=query.window_compact),
         texts.RAIN_BARS_SUBTITLE)
     if barras is not None:
         st.plotly_chart(barras, width="stretch")
+        # La lluvia es el único bloque con dos descargas, y no por descuido.
+        # Antes llevaba una sola porque las dos figuras cubren la misma ventana
+        # y dos botones idénticos invitaban a pensar que había dos cortes. Ahora
+        # el botón entrega la tabla que se dibuja, y estas dos tablas tienen
+        # ejes distintos: arriba los años superpuestos sobre el dekad del año,
+        # abajo la anomalía sobre el tiempo corrido. Una sola no puede ser las
+        # dos, y la diferencia ahora sí es visible en lo que se descarga.
+        download(wide.anomaly_table(ventana),
+                 f"lluvia_anomalia_{query.slug()}", "dl_anomalia")
     st.caption(texts.RAIN_NOTE)
-    # Vuelve a ser una sola descarga: el control de rango de la anomalia es de
-    # vista y no de datos, asi que las dos figuras contienen la misma ventana.
-    download(ventana, f"lluvia_nacional_{query.slug()}", "dl_lluvia")
 
 
 def _view_country_indicator(query: Query):

@@ -25,9 +25,20 @@ streamlit run streamlit_app.py
 ```
 
 Tres controles: nivel (país, departamento o municipio), indicador y ventana
-(un dekad o un rango). Cada figura trae la descarga en CSV de sus propios datos,
-y la pestaña de datos, el corte completo del nivel con la definición de cada
-columna.
+(un dekad o un rango). Cada figura trae la descarga en CSV de la tabla que
+dibuja —ancha, una fila por punto del eje y una columna por serie, con el
+encabezado ya escrito como se lee en la leyenda, de modo que se pega en una
+herramienta de gráficos sin pivotear ni renombrar—, y la pestaña de datos, el
+corte completo del nivel en formato largo con la definición de cada columna.
+
+Las mismas tablas de las figuras que son un gráfico y no una rejilla se publican
+además en `data/flourish/`, acotadas a los últimos dieciocho meses y
+regeneradas por la actualización diaria, para que una herramienta externa pueda
+leerlas por URL y refrescarse sola. Las arma `asis/wide.py`, el mismo módulo que
+alimenta los botones, así que la cifra publicada y la dibujada no pueden
+divergir. Sus nombres de archivo y sus encabezados son una interfaz: un gráfico
+publicado que apunta a uno de ellos se rompe en silencio si cambian, y
+`tests/test_flourish.py` los fija por eso.
 
 La app no toca la red ni necesita credenciales: lee el panel ya construido de
 `data/`. Por eso abre en segundos y por eso se puede desplegar en cualquier
