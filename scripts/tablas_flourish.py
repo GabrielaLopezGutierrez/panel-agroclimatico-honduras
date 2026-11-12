@@ -25,6 +25,8 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import csv
+import json
 import sys
 from pathlib import Path
 
@@ -50,8 +52,36 @@ RANKING_MUNI = "ranking_municipios.csv"
 RANKING_DEPT = "ranking_departamentos.csv"
 COBERTURAS = "coberturas.csv"
 MAPA_MUNI = "mapa_municipios.csv"
+GEOMETRIA_MUNI = "geometria_municipios.csv"
 
 TOP_MUNICIPIOS = 25
+
+
+def _geometria(salida: Path) -> str:
+    """La geometría municipal en la forma que espera la hoja de geometría.
+
+    Una fila por municipio, el polígono serializado en una celda y el código al
+    lado. Es el mismo polígono de `data/geo/municipios.geojson`, que es la
+    fuente; esto es solo otra serialización, como el resto de esta carpeta es
+    otra forma de las tablas del panel.
+
+    No cambia nunca, pero se escribe en cada corrida igual que las demás:
+    es determinista, así que git no ve diferencia, y dejarla fuera obligaría a
+    acordarse de regenerarla el día que la geometría se simplifique distinto.
+    """
+    origen = cfg.DATA / "geo" / "municipios.geojson"
+    if not origen.exists():
+        return f"   ! {GEOMETRIA_MUNI}: no hay geometría, no se escribe"
+    g = json.loads(origen.read_text(encoding="utf-8"))
+    destino = salida / GEOMETRIA_MUNI
+    with destino.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh, lineterminator=chr(10))
+        w.writerow(["geometria", "código"])
+        for f in g["features"]:
+            w.writerow([json.dumps(f["geometry"], separators=(",", ":")),
+                        f["properties"]["adm2_code"]])
+    kb = destino.stat().st_size // 1024
+    return f"   {destino.name}: {len(g['features'])} filas, {kb} KB"
 
 
 def _escribir(tabla, destino: Path) -> str:
@@ -113,11 +143,12 @@ def construir(salida: Path = SALIDA) -> list[str]:
                                name_col="adm1_name", group_col=None),
             salida / RANKING_DEPT))
         # El mapa es el mismo corte que los rankings, con el codigo que
-        # empata la geometria. La geometria no viaja por aca: vive en
-        # data/geo/municipios.geojson, no cambia nunca y se sube una sola vez
-        # a la hoja de geometria del grafico.
+        # empata la geometria, y al lado la geometria misma: el grafico de
+        # afuera la lee como una segunda hoja de datos, asi que tiene que
+        # estar publicada igual que las cifras.
         lineas.append(_escribir(wide.map_table(muni, unidad),
                                 salida / MAPA_MUNI))
+        lineas.append(_geometria(salida))
         dekad = muni["dekad_id"].iloc[0]
         pasto = panel.load("asi_gs1_pasto", dekad, dekad) \
             if "asi_gs1_pasto" in panel.stored_series() else None

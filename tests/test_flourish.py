@@ -139,6 +139,7 @@ ENCABEZADOS = {
     "ranking_municipios.csv": "municipio",
     "ranking_departamentos.csv": "departamento",
     "mapa_municipios.csv": "código",
+    "geometria_municipios.csv": "geometria",
     "coberturas.csv": "municipio",
 }
 
@@ -176,6 +177,13 @@ def test_los_archivos_publicados_caben_en_una_carga_de_flourish():
     if not carpeta.exists():
         pytest.skip("todavia no se generaron")
     for archivo in ENCABEZADOS:
+        if archivo == "geometria_municipios.csv":
+            # La geometria no es una vista: es el mapa base, 290 poligonos
+            # simplificados a 400 m. Pesa lo que pesa y no se mira, asi que el
+            # limite de arriba no le dice nada. Lo que si importa es que no se
+            # dispare: por encima de medio mega habria que simplificar mas.
+            assert (carpeta / archivo).stat().st_size <= 500_000
+            continue
         ruta = carpeta / archivo
         filas = len(ruta.read_text(encoding="utf-8").splitlines()) - 1
         assert filas <= 1000, f"{archivo}: {filas} filas"
@@ -216,6 +224,15 @@ def test_el_mapa_publica_los_codigos_que_tiene_la_geometria():
     codigos = {f["properties"]["adm2_code"] for f in geo["features"]}
     sobran = set(t["código"]) - codigos
     assert not sobran, f"codigos sin geometria: {sorted(sobran)[:5]}"
+    # Y la hoja de geometria publicada tiene que traer los mismos codigos que
+    # el geojson del que sale, en la forma que la lee el grafico: una columna
+    # con el poligono y otra con el codigo, ambas como texto.
+    hoja = pd.read_csv(carpeta / "geometria_municipios.csv",
+                       dtype={"código": str})
+    assert list(hoja.columns) == ["geometria", "código"]
+    assert set(hoja["código"]) == codigos
+    assert json.loads(hoja["geometria"].iloc[0])["type"] in (
+        "Polygon", "MultiPolygon")
 
 
 def test_el_ranking_departamental_no_repite_la_columna_de_grupo():
