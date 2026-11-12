@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from asis.aggregate import season_columns
+from asis.aggregate import classify, season_columns
 from asis.calendar import (dekad_label, dekad_labels, dekad_window,
                            season_labels)
 
@@ -143,6 +143,12 @@ def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
     if group_col and group_col in d:
         out["departamento"] = d[group_col].astype(str).values
     out[label] = d[value_col].round(decimals).values
+    # La clase va al lado de la cifra porque la escala de color de afuera no
+    # sabe hacer el degradado de la app: interpola entre dos colores y los
+    # cuatro de FAO no caben ahí. Coloreando por clase el mapa publicado dice
+    # exactamente lo que dice la leyenda de FAO, y la cifra exacta sigue
+    # estando, en la columna de al lado y en el globo.
+    out["clase"] = classify(d[value_col], family).astype(str).values
     return out
 
 
@@ -171,7 +177,7 @@ def cover_table(crop: pd.DataFrame, pasture: pd.DataFrame, value_col="mean",
     })
 
 
-def map_table(frame: pd.DataFrame, label: str, value_col="mean",
+def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",
               code_col="adm2_code", name_col="adm2_name",
               group_col: str | None = "adm1_name",
               decimals: int = DECIMALS) -> pd.DataFrame:
@@ -203,4 +209,10 @@ def map_table(frame: pd.DataFrame, label: str, value_col="mean",
     if group_col and group_col in d and group_col != name_col:
         out["departamento"] = d[group_col].astype(str).values
     out[label] = d[value_col].round(decimals).values
+    # La clase va al lado de la cifra porque la escala de color de afuera no
+    # sabe hacer el degradado de la app: interpola entre dos colores y los
+    # cuatro de FAO no caben ahí. Coloreando por clase el mapa publicado dice
+    # exactamente lo que dice la leyenda de FAO, y la cifra exacta sigue
+    # estando, en la columna de al lado y en el globo.
+    out["clase"] = classify(d[value_col], family).astype(str).values
     return out

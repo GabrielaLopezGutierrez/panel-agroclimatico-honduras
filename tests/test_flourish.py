@@ -219,6 +219,12 @@ def test_el_mapa_publica_los_codigos_que_tiene_la_geometria():
         pytest.skip("todavia no se genero")
     t = pd.read_csv(carpeta / "mapa_municipios.csv", dtype={"código": str})
     assert list(t.columns)[:3] == ["código", "municipio", "departamento"]
+    # La clase la pone `aggregate.classify` desde config.CLASSES, no se
+    # teclea en la herramienta de afuera: si alguien mueve un umbral, el mapa
+    # publicado se mueve con el y la leyenda sigue diciendo la verdad.
+    etiquetas = cfg.CLASSES["ASI"][1]
+    assert list(t.columns)[-1] == "clase"
+    assert set(t["clase"]) <= set(etiquetas), set(t["clase"]) - set(etiquetas)
     geo = json.loads((cfg.DATA / "geo" / "municipios.geojson")
                      .read_text(encoding="utf-8"))
     codigos = {f["properties"]["adm2_code"] for f in geo["features"]}
