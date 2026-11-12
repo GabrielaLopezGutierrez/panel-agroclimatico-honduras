@@ -128,7 +128,12 @@ def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
     if not len(d):
         return pd.DataFrame()
     peor_primero = family == "ASI"
-    d = d.sort_values(value_col, ascending=not peor_primero)
+    # El nombre desempata. Sin el, el orden entre municipios con la misma
+    # cifra -y en el ASI el tope son ocho municipios en 100- depende de como
+    # venga el panel, asi que el archivo publicado cambiaba de orden en
+    # corridas que no cambiaban ninguna cifra.
+    d = d.sort_values([value_col, name_col],
+                      ascending=[not peor_primero, True])
     if top:
         d = d.head(top)
     nombres = {"adm2_name": "municipio", "adm1_name": "departamento"}
