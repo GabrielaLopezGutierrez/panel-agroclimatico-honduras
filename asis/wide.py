@@ -143,12 +143,6 @@ def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
     if group_col and group_col in d:
         out["departamento"] = d[group_col].astype(str).values
     out[label] = d[value_col].round(decimals).values
-    # La clase va al lado de la cifra porque la escala de color de afuera no
-    # sabe hacer el degradado de la app: interpola entre dos colores y los
-    # cuatro de FAO no caben ahí. Coloreando por clase el mapa publicado dice
-    # exactamente lo que dice la leyenda de FAO, y la cifra exacta sigue
-    # estando, en la columna de al lado y en el globo.
-    out["clase"] = classify(d[value_col], family).astype(str).values
     return out
 
 
