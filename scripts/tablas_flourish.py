@@ -7,9 +7,10 @@ el periodo que la persona eligió en pantalla, y acá no hay pantalla. La ventan
 se fija en el archivo, dieciocho meses contados hacia atrás desde el último
 dekad publicado.
 
-Dos de los ocho archivos no llevan ventana sino el último dekad: los rankings
-son la foto de un instante, no una serie, y "los últimos dieciocho meses" no
-significa nada para ellos. Se actualizan igual, cada vez que llega un dekad.
+Tres de los nueve archivos no llevan ventana sino el último dekad: los rankings
+y el mapa son la foto de un instante, no una serie, y "los últimos dieciocho
+meses" no significa nada para ellos. Se actualizan igual, cada vez que llega un
+dekad.
 
 Lo corre el workflow diario después de construir y antes de commitear, de modo
 que los CSV viajan en el mismo commit que los datos de los que salen. Como la
@@ -48,6 +49,7 @@ ANOMALIA = "lluvia_anomalia.csv"
 RANKING_MUNI = "ranking_municipios.csv"
 RANKING_DEPT = "ranking_departamentos.csv"
 COBERTURAS = "coberturas.csv"
+MAPA_MUNI = "mapa_municipios.csv"
 
 TOP_MUNICIPIOS = 25
 
@@ -110,6 +112,12 @@ def construir(salida: Path = SALIDA) -> list[str]:
             wide.ranking_table(to_department(muni), unidad,
                                name_col="adm1_name", group_col=None),
             salida / RANKING_DEPT))
+        # El mapa es el mismo corte que los rankings, con el codigo que
+        # empata la geometria. La geometria no viaja por aca: vive en
+        # data/geo/municipios.geojson, no cambia nunca y se sube una sola vez
+        # a la hoja de geometria del grafico.
+        lineas.append(_escribir(wide.map_table(muni, unidad),
+                                salida / MAPA_MUNI))
         dekad = muni["dekad_id"].iloc[0]
         pasto = panel.load("asi_gs1_pasto", dekad, dekad) \
             if "asi_gs1_pasto" in panel.stored_series() else None

@@ -164,3 +164,38 @@ def cover_table(crop: pd.DataFrame, pasture: pd.DataFrame, value_col="mean",
         "cultivo": d[f"{value_col}_c"].round(decimals).values,
         "pastizal": d[f"{value_col}_p"].round(decimals).values,
     })
+
+
+def map_table(frame: pd.DataFrame, label: str, value_col="mean",
+              code_col="adm2_code", name_col="adm2_name",
+              group_col: str | None = "adm1_name",
+              decimals: int = DECIMALS) -> pd.DataFrame:
+    """Una fila por unidad del mapa, con el código que empata la geometría.
+
+    Es la misma tabla que pinta la coropleta de la app, que también colorea por
+    `value_col` y localiza por `code_col`. Lo que cambia es que acá el código
+    viaja como columna y no como índice: afuera la geometría es otra hoja de
+    datos y el empate se declara entre las dos, columna contra columna.
+
+    El código sale como texto a propósito. En la geometría de GAUL es una
+    cadena -«17209»- y si una de las dos partes lo lee como número el empate
+    falla en silencio y el mapa sale gris, que es el mismo modo de falla que
+    tuvimos con los tipos de columna.
+
+    El orden es por código y no por valor. Un mapa no se lee en orden, y
+    anclarlo al código hace que el archivo solo cambie cuando cambian las
+    cifras, no cuando cambia el ranking.
+    """
+    d = frame.dropna(subset=[value_col]) if len(frame) else frame
+    if not len(d):
+        return pd.DataFrame()
+    d = d.sort_values(code_col)
+    nombres = {"adm2_name": "municipio", "adm1_name": "departamento"}
+    out = pd.DataFrame({
+        "código": d[code_col].astype(str).values,
+        nombres.get(name_col, name_col): d[name_col].astype(str).values,
+    })
+    if group_col and group_col in d and group_col != name_col:
+        out["departamento"] = d[group_col].astype(str).values
+    out[label] = d[value_col].round(decimals).values
+    return out

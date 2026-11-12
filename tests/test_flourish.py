@@ -8,6 +8,8 @@ cambian, el grafico se rompe en silencio y nadie se entera hasta que alguien lo
 mira. Es la misma razon por la que test_nota ata las constantes de la nota al
 codigo.
 """
+import json
+
 import pandas as pd
 import pytest
 
@@ -114,6 +116,7 @@ def test_las_tablas_vacias_no_inventan_columnas():
     assert wide.anomaly_table(vacio, value_col="mean").empty
     assert wide.ranking_table(vacio, "ASI %").empty
     assert wide.cover_table(vacio, vacio).empty
+    assert wide.map_table(vacio, "ASI %").empty
 
 
 def test_los_decimales_son_los_mismos_en_todas():
@@ -135,6 +138,7 @@ ENCABEZADOS = {
     "lluvia_anomalia.csv": "fecha",
     "ranking_municipios.csv": "municipio",
     "ranking_departamentos.csv": "departamento",
+    "mapa_municipios.csv": "código",
     "coberturas.csv": "municipio",
 }
 
@@ -194,6 +198,24 @@ def test_el_script_y_la_app_arman_la_misma_tabla():
     publicado = pd.read_csv(carpeta / "serie_nacional_asi_primera.csv")
     assert list(publicado.columns) == list(esperado.columns)
     assert len(publicado) == len(esperado)
+
+
+def test_el_mapa_publica_los_codigos_que_tiene_la_geometria():
+    """El mapa de Flourish empata dos hojas por el codigo: la de valores, que
+    sale de aqui, y la de geometria, que sale de data/geo/municipios.geojson y
+    se sube una sola vez. Si los codigos dejan de coincidir el mapa no falla:
+    sale gris, que es peor. La geometria puede traer municipios de mas -un
+    dekad sin dato no publica fila- pero nunca de menos."""
+    carpeta = cfg.DATA / "flourish"
+    if not (carpeta / "mapa_municipios.csv").exists():
+        pytest.skip("todavia no se genero")
+    t = pd.read_csv(carpeta / "mapa_municipios.csv", dtype={"código": str})
+    assert list(t.columns)[:3] == ["código", "municipio", "departamento"]
+    geo = json.loads((cfg.DATA / "geo" / "municipios.geojson")
+                     .read_text(encoding="utf-8"))
+    codigos = {f["properties"]["adm2_code"] for f in geo["features"]}
+    sobran = set(t["código"]) - codigos
+    assert not sobran, f"codigos sin geometria: {sorted(sobran)[:5]}"
 
 
 def test_el_ranking_departamental_no_repite_la_columna_de_grupo():
