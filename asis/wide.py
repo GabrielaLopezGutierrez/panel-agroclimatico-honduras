@@ -40,6 +40,11 @@ DECIMALS = 2
 # Dieciocho meses son cincuenta y cuatro dekads.
 WINDOW_DEKADS = 54
 
+# El municipio sin dato del mapa. Es una clase más y no un hueco: una
+# herramienta de afuera pinta de blanco lo que no encuentra, y en un mapa de
+# sequía un hueco blanco se lee como calma. Nombrándolo, entra a la leyenda.
+NO_DATA_LABEL = "sin dato"
+
 
 def window(last: str, dekads: int = WINDOW_DEKADS) -> tuple[str, str]:
     """La ventana móvil que publican los archivos vivos.
@@ -191,10 +196,9 @@ def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",
     anclarlo al código hace que el archivo solo cambie cuando cambian las
     cifras, no cuando cambia el ranking.
     """
-    d = frame.dropna(subset=[value_col]) if len(frame) else frame
-    if not len(d):
+    if not len(frame):
         return pd.DataFrame()
-    d = d.sort_values(code_col)
+    d = frame.sort_values(code_col)
     nombres = {"adm2_name": "municipio", "adm1_name": "departamento"}
     out = pd.DataFrame({
         "código": d[code_col].astype(str).values,
@@ -208,5 +212,12 @@ def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",
     # cuatro de FAO no caben ahí. Coloreando por clase el mapa publicado dice
     # exactamente lo que dice la leyenda de FAO, y la cifra exacta sigue
     # estando, en la columna de al lado y en el globo.
-    out["clase"] = classify(d[value_col], family).astype(str).values
+    #
+    # Y a diferencia de las demás tablas, acá el municipio sin dato se queda,
+    # con la cifra vacía y la clase nombrada. Es lo contrario de rellenar con
+    # ceros: la fila existe para poder decir que no hay dato. Si se la quita,
+    # el mapa la pinta del color de fondo y un hueco blanco en un mapa de
+    # sequía se lee como que ahí no pasa nada.
+    clase = classify(d[value_col], family).astype(str)
+    out["clase"] = clase.where(d[value_col].notna(), NO_DATA_LABEL).values
     return out

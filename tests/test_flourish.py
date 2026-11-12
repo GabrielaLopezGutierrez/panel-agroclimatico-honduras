@@ -209,30 +209,39 @@ def test_el_script_y_la_app_arman_la_misma_tabla():
 
 
 def test_el_mapa_publica_los_codigos_que_tiene_la_geometria():
-    """El mapa de Flourish empata dos hojas por el codigo: la de valores, que
-    sale de aqui, y la de geometria, que sale de data/geo/municipios.geojson y
-    se sube una sola vez. Si los codigos dejan de coincidir el mapa no falla:
-    sale gris, que es peor. La geometria puede traer municipios de mas -un
-    dekad sin dato no publica fila- pero nunca de menos."""
+    """El mapa de Flourish empata dos hojas por el codigo: la de valores y la
+    de geometria. Si los codigos dejan de coincidir el mapa no falla: sale
+    gris, que es peor. Son una por poligono, ni mas ni menos."""
     carpeta = cfg.DATA / "flourish"
     if not (carpeta / "mapa_municipios.csv").exists():
         pytest.skip("todavia no se genero")
-    t = pd.read_csv(carpeta / "mapa_municipios.csv", dtype={"código": str})
-    assert list(t.columns)[:3] == ["código", "municipio", "departamento"]
-    # La clase la pone `aggregate.classify` desde config.CLASSES, no se
-    # teclea en la herramienta de afuera: si alguien mueve un umbral, el mapa
-    # publicado se mueve con el y la leyenda sigue diciendo la verdad.
-    etiquetas = cfg.CLASSES["ASI"][1]
-    assert list(t.columns)[-1] == "clase"
-    assert set(t["clase"]) <= set(etiquetas), set(t["clase"]) - set(etiquetas)
     geo = json.loads((cfg.DATA / "geo" / "municipios.geojson")
                      .read_text(encoding="utf-8"))
     codigos = {f["properties"]["adm2_code"] for f in geo["features"]}
-    sobran = set(t["código"]) - codigos
-    assert not sobran, f"codigos sin geometria: {sorted(sobran)[:5]}"
-    # Y la hoja de geometria publicada tiene que traer los mismos codigos que
-    # el geojson del que sale, en la forma que la lee el grafico: una columna
-    # con el poligono y otra con el codigo, ambas como texto.
+
+    t = pd.read_csv(carpeta / "mapa_municipios.csv", dtype={"código": str})
+    assert list(t.columns)[:3] == ["código", "municipio", "departamento"]
+    assert set(t["código"]) == codigos, "una fila por poligono, ni mas ni menos"
+
+    # La clase la pone `aggregate.classify` desde config.CLASSES, no se
+    # teclea en la herramienta de afuera: si alguien mueve un umbral, el mapa
+    # publicado se mueve con el y la leyenda sigue diciendo la verdad.
+    etiquetas = [*cfg.CLASSES["ASI"][1], wide.NO_DATA_LABEL]
+    assert list(t.columns)[-1] == "clase"
+    assert set(t["clase"]) <= set(etiquetas), set(t["clase"]) - set(etiquetas)
+
+    # El municipio sin dato se publica, con la cifra vacia y la clase
+    # nombrada. Es la regla de siempre vista desde el otro lado: sin dato no
+    # es cero, y para poder decirlo la fila tiene que existir. Si se la quita,
+    # el mapa pinta ese municipio del color de fondo, y un hueco blanco en un
+    # mapa de sequia se lee como que ahi no pasa nada.
+    sin = t[t["clase"] == wide.NO_DATA_LABEL]
+    assert len(sin), "la geometria trae municipios que el panel no cubre"
+    assert sin["ASI %"].isna().all()
+
+    # Y la hoja de geometria publicada tiene que traer los mismos codigos, en
+    # la forma que la lee el grafico: una columna con el poligono y otra con
+    # el codigo.
     hoja = pd.read_csv(carpeta / "geometria_municipios.csv",
                        dtype={"código": str})
     assert list(hoja.columns) == ["geometria", "código"]

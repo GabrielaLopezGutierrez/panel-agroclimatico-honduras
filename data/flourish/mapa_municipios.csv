@@ -65,6 +65,7 @@ código,municipio,departamento,ASI %,clase
 17272,La Jigua,Copan,10.0,10-25
 17273,La Union,Copan,25.0,25-40
 17274,Nueva Arcadia,Copan,11.49,10-25
+17275,San Agustin,Copan,,sin dato
 17276,San Antonio,Copan,0.0,<10
 17277,San Jeronimo,Copan,4.5,<10
 17278,San Jose,Copan,22.0,10-25
@@ -108,6 +109,7 @@ código,municipio,departamento,ASI %,clase
 17316,San Ignacio,Francisco Morazan,12.0,10-25
 17317,San Juan De Flores,Francisco Morazan,56.5,>=40
 17318,San Miguelito,Francisco Morazan,85.5,>=40
+17319,Santa  Ana,Francisco Morazan,,sin dato
 17320,Santa Ana,Francisco Morazan,0.0,<10
 17321,Santa Lucia,Francisco Morazan,0.0,<10
 17322,Talanga,Francisco Morazan,81.5,>=40
@@ -127,14 +129,20 @@ código,municipio,departamento,ASI %,clase
 17336,Magdalena,Intibuca,0.0,<10
 17337,Masaguara,Intibuca,0.0,<10
 17338,San Antonio,Intibuca,7.5,<10
+17339,San Isidro,Intibuca,,sin dato
 17340,San Juan,Intibuca,50.0,>=40
 17341,San Marcos De Sierra,Intibuca,0.0,<10
 17342,San Miguelito,Intibuca,0.0,<10
 17343,Santa Lucia,Intibuca,0.0,<10
 17344,Yamaranguila,Intibuca,0.0,<10
+17345,Guanaja,Islas De Bahia,,sin dato
+17346,Jose Santos Guardiola,Islas De Bahia,,sin dato
+17347,Roatan,Islas De Bahia,,sin dato
+17348,Utila,Islas De Bahia,,sin dato
 17349,Aguanqueterique,La Paz,2.5,<10
 17350,Cabanas,La Paz,0.0,<10
 17351,Cane,La Paz,0.0,<10
+17352,Chinacla,La Paz,,sin dato
 17353,Guajiquiro,La Paz,9.0,<10
 17354,La Paz,La Paz,20.0,10-25
 17355,Lauterique,La Paz,0.0,<10
@@ -142,12 +150,15 @@ código,municipio,departamento,ASI %,clase
 17357,Mercedes De Oriente,La Paz,0.0,<10
 17358,Opatoro,La Paz,0.0,<10
 17359,San  Antonio Del Norte,La Paz,0.0,<10
+17360,San Jose,La Paz,,sin dato
 17361,San Juan,La Paz,0.0,<10
+17362,San Pedro De Tutule,La Paz,,sin dato
 17363,Santa Ana,La Paz,0.0,<10
 17364,Santa Elena,La Paz,0.0,<10
 17365,Santa Maria,La Paz,0.0,<10
 17366,Santiago De Puringla,La Paz,0.0,<10
 17367,Yarula,La Paz,0.0,<10
+17368,Belen,Lempira,,sin dato
 17369,Candelaria,Lempira,0.0,<10
 17370,Cololaca,Lempira,0.0,<10
 17371,Erandique,Lempira,0.0,<10
@@ -235,10 +246,12 @@ código,municipio,departamento,ASI %,clase
 17454,Atima,Santa Barbara,0.0,<10
 17455,Azacualpa,Santa Barbara,0.0,<10
 17456,Ceguaca,Santa Barbara,0.0,<10
+17457,Chinda,Santa Barbara,,sin dato
 17458,Concepcion Del Norte,Santa Barbara,0.0,<10
 17459,Concepcion Del Sur,Santa Barbara,0.0,<10
 17460,El Nispero,Santa Barbara,0.0,<10
 17461,Gualala,Santa Barbara,0.0,<10
+17462,Ilama,Santa Barbara,,sin dato
 17463,Las Vegas,Santa Barbara,0.0,<10
 17464,Macuelizo,Santa Barbara,0.0,<10
 17465,Naranjito,Santa Barbara,0.0,<10
@@ -246,14 +259,18 @@ código,municipio,departamento,ASI %,clase
 17467,Petoa,Santa Barbara,0.0,<10
 17468,Proteccion,Santa Barbara,0.0,<10
 17469,Quimistan,Santa Barbara,4.5,<10
+17470,San Francisco De Ojuera,Santa Barbara,,sin dato
 17471,San Jose De Colimas,Santa Barbara,0.0,<10
 17472,San Luis,Santa Barbara,0.0,<10
 17473,San Marcos,Santa Barbara,0.0,<10
+17474,San Nicolas,Santa Barbara,,sin dato
+17475,San Pedro Zacapa,Santa Barbara,,sin dato
 17476,San Vicente Centenario,Santa Barbara,50.0,>=40
 17477,Santa Barbara,Santa Barbara,0.0,<10
 17478,Santa Rita,Santa Barbara,50.0,>=40
 17479,Trinidad,Santa Barbara,0.0,<10
 17480,Alianza,Valle,73.0,>=40
+17481,Amapala,Valle,,sin dato
 17482,Aramecina,Valle,73.5,>=40
 17483,Caridad,Valle,0.0,<10
 17484,Goascoran,Valle,100.0,>=40
