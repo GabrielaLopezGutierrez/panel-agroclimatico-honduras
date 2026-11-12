@@ -24,3 +24,22 @@ venv/
 # committean. En Streamlit Community Cloud van en la seccion Secrets de la app,
 # no en este archivo.
 .streamlit/secrets.toml
+
+# Exploracion suelta en la raiz: rasteres bajados a mano para mirar un dekad,
+# recortes de pixeles y mapas exportados. No los usa ni la app ni las tablas de
+# Flourish, y se regeneran cuando hagan falta. Van anclados con / para que solo
+# apliquen a la raiz: los CSV de data/ si se versionan.
+/*.tif
+/*.tiff
+/*.png
+/*.svg
+/*.csv
+
+# Maquetas y spikes para decidir algo. Lo que sobrevive se integra; el resto no
+# tiene por que viajar con el repositorio.
+experimentos/
+
+# La nota metodologica se escribe aqui y se publica compilada en
+# static/nota-metodologica.pdf. El .tex y el PDF de origen quedan fuera, como se
+# decidio al subirla por primera vez.
+docs/
