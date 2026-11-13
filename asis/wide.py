@@ -122,6 +122,7 @@ def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
 def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
                   value_col="mean", name_col="adm2_name",
                   group_col: str | None = "adm1_name", top: int | None = None,
+                  with_class: bool = False,
                   decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por unidad, en el orden en que la figura las apila.
 
@@ -148,6 +149,13 @@ def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
     if group_col and group_col in d:
         out["departamento"] = d[group_col].astype(str).values
     out[label] = d[value_col].round(decimals).values
+    if with_class:
+        # Solo para los archivos publicados. La figura de la app pinta cada
+        # barra con el degradado continuo del indicador; afuera eso no se
+        # puede, y la clase es la forma de que la barra siga diciendo lo mismo
+        # que dice en pantalla. El botón de la app no la lleva: ahí la barra ya
+        # viene coloreada y la columna sobraría.
+        out["clase"] = classify(d[value_col], family).astype(str).values
     return out
 
 
@@ -179,6 +187,7 @@ def cover_table(crop: pd.DataFrame, pasture: pd.DataFrame, value_col="mean",
 def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",
               code_col="adm2_code", name_col="adm2_name",
               group_col: str | None = "adm1_name",
+              roster: pd.DataFrame | None = None,
               decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por unidad del mapa, con el código que empata la geometría.
 
@@ -198,7 +207,26 @@ def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",
     """
     if not len(frame):
         return pd.DataFrame()
-    d = frame.sort_values(code_col)
+    if roster is not None and len(roster):
+        # El padrón es la lista de polígonos que el mapa va a dibujar. Sin él,
+        # una unidad que el panel no cubre -un departamento sin superficie de
+        # cultivo, por ejemplo- no sale en la tabla, y entonces el mapa la
+        # pinta del color de fondo. Reindexando contra el padrón, esa unidad
+        # existe como fila y se puede nombrar.
+        llaves = [c for c in (code_col, name_col, group_col)
+                  if c and c in roster.columns]
+        base = roster[llaves].copy()
+        for c in llaves:
+            base[c] = base[c].astype(str)
+        aparte = frame.copy()
+        for c in llaves:
+            aparte[c] = aparte[c].astype(str)
+        d = base.merge(aparte.drop(columns=[c for c in llaves if c in aparte
+                                            and c != code_col]),
+                       on=code_col, how="left")
+    else:
+        d = frame
+    d = d.sort_values(code_col)
     nombres = {"adm2_name": "municipio", "adm1_name": "departamento"}
     out = pd.DataFrame({
         "código": d[code_col].astype(str).values,

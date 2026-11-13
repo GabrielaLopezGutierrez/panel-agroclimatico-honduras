@@ -77,6 +77,10 @@ def test_el_ranking_sale_con_el_peor_primero():
     d = panel.load("asi_gs1", dk, dk)
     t = wide.ranking_table(d, "ASI %", family="ASI", top=10)
     assert list(t.columns) == ["municipio", "departamento", "ASI %"]
+    # La clase es opcional y solo la piden los archivos publicados: el boton
+    # de la app entrega la barra ya coloreada y la columna sobraria.
+    con = wide.ranking_table(d, "ASI %", family="ASI", top=10, with_class=True)
+    assert list(con.columns)[-1] == "clase"
     assert len(t) == 10
     assert t["ASI %"].is_monotonic_decreasing, "el ASI va de peor a mejor"
     # En el VCI peor es mas bajo, asi que el orden se invierte.
@@ -139,7 +143,9 @@ ENCABEZADOS = {
     "ranking_municipios.csv": "municipio",
     "ranking_departamentos.csv": "departamento",
     "mapa_municipios.csv": "código",
+    "mapa_departamentos.csv": "código",
     "geometria_municipios.csv": "geometria",
+    "geometria_departamentos.csv": "geometria",
     "coberturas.csv": "municipio",
 }
 
@@ -177,7 +183,7 @@ def test_los_archivos_publicados_caben_en_una_carga_de_flourish():
     if not carpeta.exists():
         pytest.skip("todavia no se generaron")
     for archivo in ENCABEZADOS:
-        if archivo == "geometria_municipios.csv":
+        if archivo.startswith("geometria_"):
             # La geometria no es una vista: es el mapa base, 290 poligonos
             # simplificados a 400 m. Pesa lo que pesa y no se mira, asi que el
             # limite de arriba no le dice nada. Lo que si importa es que no se
@@ -208,19 +214,24 @@ def test_el_script_y_la_app_arman_la_misma_tabla():
     assert len(publicado) == len(esperado)
 
 
-def test_el_mapa_publica_los_codigos_que_tiene_la_geometria():
+@pytest.mark.parametrize("nivel,unidad,geo", [
+    ("mapa_municipios.csv", "municipio", "municipios"),
+    ("mapa_departamentos.csv", "departamento", "departamentos"),
+])
+def test_el_mapa_publica_los_codigos_que_tiene_la_geometria(nivel, unidad, geo):
     """El mapa de Flourish empata dos hojas por el codigo: la de valores y la
     de geometria. Si los codigos dejan de coincidir el mapa no falla: sale
     gris, que es peor. Son una por poligono, ni mas ni menos."""
     carpeta = cfg.DATA / "flourish"
-    if not (carpeta / "mapa_municipios.csv").exists():
+    if not (carpeta / nivel).exists():
         pytest.skip("todavia no se genero")
-    geo = json.loads((cfg.DATA / "geo" / "municipios.geojson")
-                     .read_text(encoding="utf-8"))
-    codigos = {f["properties"]["adm2_code"] for f in geo["features"]}
+    clave = "adm2_code" if geo == "municipios" else "adm1_code"
+    feats = json.loads((cfg.DATA / "geo" / f"{geo}.geojson")
+                       .read_text(encoding="utf-8"))["features"]
+    codigos = {f["properties"][clave] for f in feats}
 
-    t = pd.read_csv(carpeta / "mapa_municipios.csv", dtype={"código": str})
-    assert list(t.columns)[:3] == ["código", "municipio", "departamento"]
+    t = pd.read_csv(carpeta / nivel, dtype={"código": str})
+    assert list(t.columns)[:2] == ["código", unidad]
     assert set(t["código"]) == codigos, "una fila por poligono, ni mas ni menos"
 
     # La clase la pone `aggregate.classify` desde config.CLASSES, no se
@@ -230,20 +241,19 @@ def test_el_mapa_publica_los_codigos_que_tiene_la_geometria():
     assert list(t.columns)[-1] == "clase"
     assert set(t["clase"]) <= set(etiquetas), set(t["clase"]) - set(etiquetas)
 
-    # El municipio sin dato se publica, con la cifra vacia y la clase
-    # nombrada. Es la regla de siempre vista desde el otro lado: sin dato no
-    # es cero, y para poder decirlo la fila tiene que existir. Si se la quita,
-    # el mapa pinta ese municipio del color de fondo, y un hueco blanco en un
-    # mapa de sequia se lee como que ahi no pasa nada.
+    # La unidad sin dato se publica, con la cifra vacia y la clase nombrada.
+    # Es la regla de siempre vista desde el otro lado: sin dato no es cero, y
+    # para poder decirlo la fila tiene que existir. Si se la quita, el mapa la
+    # pinta del color de fondo, y un hueco blanco en un mapa de sequia se lee
+    # como que ahi no pasa nada.
     sin = t[t["clase"] == wide.NO_DATA_LABEL]
-    assert len(sin), "la geometria trae municipios que el panel no cubre"
+    assert len(sin), "la geometria trae unidades que el panel no cubre"
     assert sin["ASI %"].isna().all()
 
     # Y la hoja de geometria publicada tiene que traer los mismos codigos, en
     # la forma que la lee el grafico: una columna con el poligono y otra con
     # el codigo.
-    hoja = pd.read_csv(carpeta / "geometria_municipios.csv",
-                       dtype={"código": str})
+    hoja = pd.read_csv(carpeta / f"geometria_{geo}.csv", dtype={"código": str})
     assert list(hoja.columns) == ["geometria", "código"]
     assert set(hoja["código"]) == codigos
     assert json.loads(hoja["geometria"].iloc[0])["type"] in (

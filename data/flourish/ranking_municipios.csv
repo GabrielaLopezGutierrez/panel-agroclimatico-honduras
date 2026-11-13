@@ -1,26 +1,26 @@
-municipio,departamento,ASI %
-El Rosario,Olancho,100.0
-Goascoran,Valle,100.0
-Jano,Olancho,100.0
-La Libertad,Francisco Morazan,100.0
-Langue,Valle,100.0
-San Antonio De Flores,Choluteca,100.0
-San Francisco De Coray,Valle,100.0
-San Isidro,Choluteca,100.0
-El Triunfo,Choluteca,91.0
-Pespire,Choluteca,91.0
-San Jose,Choluteca,89.0
-San Miguelito,Francisco Morazan,85.5
-Nacaome,Valle,81.5
-Talanga,Francisco Morazan,81.5
-Concepcion De Maria,Choluteca,81.0
-San Marcos De Colon,Choluteca,78.0
-Salama,Olancho,76.5
-Villa De San Antonio,Comayagua,76.0
-Morolica,Choluteca,74.5
-Aramecina,Valle,73.5
-Alianza,Valle,73.0
-San Lorenzo,Valle,72.5
-Guaimaca,Francisco Morazan,71.5
-Choluteca,Choluteca,71.0
-Yocon,Olancho,70.0
+municipio,departamento,ASI %,clase
+El Rosario,Olancho,100.0,>=40
+Goascoran,Valle,100.0,>=40
+Jano,Olancho,100.0,>=40
+La Libertad,Francisco Morazan,100.0,>=40
+Langue,Valle,100.0,>=40
+San Antonio De Flores,Choluteca,100.0,>=40
+San Francisco De Coray,Valle,100.0,>=40
+San Isidro,Choluteca,100.0,>=40
+El Triunfo,Choluteca,91.0,>=40
+Pespire,Choluteca,91.0,>=40
+San Jose,Choluteca,89.0,>=40
+San Miguelito,Francisco Morazan,85.5,>=40
+Nacaome,Valle,81.5,>=40
+Talanga,Francisco Morazan,81.5,>=40
+Concepcion De Maria,Choluteca,81.0,>=40
+San Marcos De Colon,Choluteca,78.0,>=40
+Salama,Olancho,76.5,>=40
+Villa De San Antonio,Comayagua,76.0,>=40
+Morolica,Choluteca,74.5,>=40
+Aramecina,Valle,73.5,>=40
+Alianza,Valle,73.0,>=40
+San Lorenzo,Valle,72.5,>=40
+Guaimaca,Francisco Morazan,71.5,>=40
+Choluteca,Choluteca,71.0,>=40
+Yocon,Olancho,70.0,>=40

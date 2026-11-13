@@ -32,6 +32,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import pandas as pd                                            # noqa: E402
+
 from asis import config as cfg, panel, wide                    # noqa: E402
 from asis.aggregate import (climatology_frame, season_columns,  # noqa: E402
                             to_country, to_department)
@@ -52,36 +54,48 @@ RANKING_MUNI = "ranking_municipios.csv"
 RANKING_DEPT = "ranking_departamentos.csv"
 COBERTURAS = "coberturas.csv"
 MAPA_MUNI = "mapa_municipios.csv"
+MAPA_DEPT = "mapa_departamentos.csv"
 GEOMETRIA_MUNI = "geometria_municipios.csv"
+GEOMETRIA_DEPT = "geometria_departamentos.csv"
 
 TOP_MUNICIPIOS = 25
 
 
-def _geometria(salida: Path) -> str:
-    """La geometría municipal en la forma que espera la hoja de geometría.
+def _geometria(salida: Path, nivel: str, archivo: str) -> str:
+    """La geometría de un nivel en la forma que espera la hoja de geometría.
 
-    Una fila por municipio, el polígono serializado en una celda y el código al
-    lado. Es el mismo polígono de `data/geo/municipios.geojson`, que es la
-    fuente; esto es solo otra serialización, como el resto de esta carpeta es
-    otra forma de las tablas del panel.
+    Una fila por unidad, el polígono serializado en una celda y el código al
+    lado. Es el mismo polígono de `data/geo/<nivel>.geojson`, que es la fuente;
+    esto es solo otra serialización, como el resto de esta carpeta es otra
+    forma de las tablas del panel.
 
     No cambia nunca, pero se escribe en cada corrida igual que las demás:
     es determinista, así que git no ve diferencia, y dejarla fuera obligaría a
     acordarse de regenerarla el día que la geometría se simplifique distinto.
     """
-    origen = cfg.DATA / "geo" / "municipios.geojson"
+    origen = cfg.DATA / "geo" / f"{nivel}.geojson"
+    clave = "adm2_code" if nivel == "municipios" else "adm1_code"
     if not origen.exists():
-        return f"   ! {GEOMETRIA_MUNI}: no hay geometría, no se escribe"
+        return f"   ! {archivo}: no hay geometría, no se escribe"
     g = json.loads(origen.read_text(encoding="utf-8"))
-    destino = salida / GEOMETRIA_MUNI
+    destino = salida / archivo
     with destino.open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh, lineterminator=chr(10))
         w.writerow(["geometria", "código"])
         for f in g["features"]:
             w.writerow([json.dumps(f["geometry"], separators=(",", ":")),
-                        f["properties"]["adm2_code"]])
+                        f["properties"][clave]])
     kb = destino.stat().st_size // 1024
     return f"   {destino.name}: {len(g['features'])} filas, {kb} KB"
+
+
+def _padron(nivel: str):
+    """La lista de unidades que el mapa va a dibujar, con su nombre."""
+    clave = "adm2_code" if nivel == "municipios" else "adm1_code"
+    ruta = cfg.DATA / "geo" / f"{nivel}.csv"
+    if not ruta.exists():
+        return None
+    return pd.read_csv(ruta, dtype={clave: str})
 
 
 def _escribir(tabla, destino: Path) -> str:
@@ -135,20 +149,32 @@ def construir(salida: Path = SALIDA) -> list[str]:
         muni = panel.load("asi_gs1", ultimo_asi, ultimo_asi)
     if len(muni):
         unidad = cfg.SERIES["asi_gs1"].unit_short
+        dep = to_department(muni)
+        # Los rankings publicados llevan la clase y los de la app no: afuera
+        # la barra se colorea por columna, no por valor, asi que la clase es
+        # lo que hace que la barra diga lo mismo que en pantalla.
         lineas.append(_escribir(
-            wide.ranking_table(muni, unidad, top=TOP_MUNICIPIOS),
+            wide.ranking_table(muni, unidad, top=TOP_MUNICIPIOS,
+                               with_class=True),
             salida / RANKING_MUNI))
         lineas.append(_escribir(
-            wide.ranking_table(to_department(muni), unidad,
-                               name_col="adm1_name", group_col=None),
+            wide.ranking_table(dep, unidad, name_col="adm1_name",
+                               group_col=None, with_class=True),
             salida / RANKING_DEPT))
         # El mapa es el mismo corte que los rankings, con el codigo que
         # empata la geometria, y al lado la geometria misma: el grafico de
         # afuera la lee como una segunda hoja de datos, asi que tiene que
         # estar publicada igual que las cifras.
-        lineas.append(_escribir(wide.map_table(muni, unidad),
-                                salida / MAPA_MUNI))
-        lineas.append(_geometria(salida))
+        lineas.append(_escribir(
+            wide.map_table(muni, unidad, roster=_padron("municipios")),
+            salida / MAPA_MUNI))
+        lineas.append(_geometria(salida, "municipios", GEOMETRIA_MUNI))
+        lineas.append(_escribir(
+            wide.map_table(dep, unidad, code_col="adm1_code",
+                           name_col="adm1_name", group_col=None,
+                           roster=_padron("departamentos")),
+            salida / MAPA_DEPT))
+        lineas.append(_geometria(salida, "departamentos", GEOMETRIA_DEPT))
         dekad = muni["dekad_id"].iloc[0]
         pasto = panel.load("asi_gs1_pasto", dekad, dekad) \
             if "asi_gs1_pasto" in panel.stored_series() else None
