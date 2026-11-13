@@ -139,7 +139,8 @@ def construir(salida: Path = SALIDA) -> list[str]:
             wide.season_table(v, None, value_col="value", reference=lta,
                               reference_label="promedio de largo plazo"),
             salida / LLUVIA))
-        lineas.append(_escribir(wide.anomaly_table(v), salida / ANOMALIA))
+        lineas.append(_escribir(wide.anomaly_table(v, split_sign=True),
+                                salida / ANOMALIA))
 
     # Los rankings y el contraste son del ultimo dekad del ASI de la primera,
     # que es el indicador principal de la app.
@@ -155,11 +156,11 @@ def construir(salida: Path = SALIDA) -> list[str]:
         # lo que hace que la barra diga lo mismo que en pantalla.
         lineas.append(_escribir(
             wide.ranking_table(muni, unidad, top=TOP_MUNICIPIOS,
-                               with_class=True),
+                               spread_class=True),
             salida / RANKING_MUNI))
         lineas.append(_escribir(
             wide.ranking_table(dep, unidad, name_col="adm1_name",
-                               group_col=None, with_class=True),
+                               group_col=None, spread_class=True),
             salida / RANKING_DEPT))
         # El mapa es el mismo corte que los rankings, con el codigo que
         # empata la geometria, y al lado la geometria misma: el grafico de

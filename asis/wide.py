@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from asis import config as cfg
 from asis.aggregate import classify, season_columns
 from asis.calendar import (dekad_label, dekad_labels, dekad_window,
                            season_labels)
@@ -97,8 +98,12 @@ def season_table(frame: pd.DataFrame, season: str | None, value_col="mean",
     return out
 
 
+ABOVE_LABEL = "por encima del promedio"
+BELOW_LABEL = "por debajo del promedio"
+
+
 def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
-                  label="anomalía (%)",
+                  label="anomalía (%)", split_sign: bool = False,
                   decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por dekad sobre el eje del tiempo corrido.
 
@@ -112,17 +117,27 @@ def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
         if len(frame) else frame
     if not len(d):
         return pd.DataFrame()
-    return pd.DataFrame({
+    out = pd.DataFrame({
         "fecha": pd.to_datetime(d["date"]).dt.date.values,
         "dekad": [dekad_label(c) for c in d["dekad_id"]],
-        label: d[value_col].round(decimals).values,
     })
+    v = d[value_col].round(decimals)
+    if not split_sign:
+        out[label] = v.values
+        return out
+    # Dos columnas por el mismo motivo que el ranking lleva cuatro: la figura
+    # de la app codifica el signo en el color y afuera el color es la columna.
+    # Partida en dos, la barra sale azul arriba del promedio y ocre abajo, que
+    # es lo que se ve en pantalla.
+    out[ABOVE_LABEL] = v.where(v >= 0).values
+    out[BELOW_LABEL] = v.where(v < 0).values
+    return out
 
 
 def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
                   value_col="mean", name_col="adm2_name",
                   group_col: str | None = "adm1_name", top: int | None = None,
-                  with_class: bool = False,
+                  spread_class: bool = False,
                   decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por unidad, en el orden en que la figura las apila.
 
@@ -148,14 +163,25 @@ def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
     })
     if group_col and group_col in d:
         out["departamento"] = d[group_col].astype(str).values
-    out[label] = d[value_col].round(decimals).values
-    if with_class:
-        # Solo para los archivos publicados. La figura de la app pinta cada
-        # barra con el degradado continuo del indicador; afuera eso no se
-        # puede, y la clase es la forma de que la barra siga diciendo lo mismo
-        # que dice en pantalla. El botón de la app no la lleva: ahí la barra ya
-        # viene coloreada y la columna sobraría.
-        out["clase"] = classify(d[value_col], family).astype(str).values
+    valores = d[value_col].round(decimals)
+    if not spread_class:
+        out[label] = valores.values
+        return out
+    # Una columna por clase, con la cifra en la suya y vacío en las demás.
+    #
+    # Parece un rodeo y no lo es. La figura de la app pinta cada barra con el
+    # degradado continuo del indicador, y la herramienta de afuera no sabe
+    # colorear una barra por su valor: colorea por serie, o sea por columna.
+    # Repartir el valor entre las cuatro clases convierte el color en columna,
+    # que es lo único que esa herramienta sabe pintar, y de paso la leyenda
+    # pasa a ser la de FAO. Las clases son fijas, así que las columnas no
+    # cambian de un dekad a otro y el gráfico publicado no se rompe.
+    #
+    # Solo lo piden los archivos publicados. El botón de la app entrega la
+    # barra ya coloreada y una tabla con tres columnas vacías sería peor.
+    clase = classify(valores, family).astype(str)
+    for etiqueta in cfg.CLASSES[family][1]:
+        out[etiqueta] = valores.where(clase.values == etiqueta).values
     return out
 
 

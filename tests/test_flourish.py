@@ -77,10 +77,16 @@ def test_el_ranking_sale_con_el_peor_primero():
     d = panel.load("asi_gs1", dk, dk)
     t = wide.ranking_table(d, "ASI %", family="ASI", top=10)
     assert list(t.columns) == ["municipio", "departamento", "ASI %"]
-    # La clase es opcional y solo la piden los archivos publicados: el boton
-    # de la app entrega la barra ya coloreada y la columna sobraria.
-    con = wide.ranking_table(d, "ASI %", family="ASI", top=10, with_class=True)
-    assert list(con.columns)[-1] == "clase"
+    # Repartido por clase, el valor va en la columna de su clase y las otras
+    # quedan vacias. Es como el grafico de afuera colorea una barra, que es
+    # por columna y no por valor; solo lo piden los archivos publicados.
+    con = wide.ranking_table(d, "ASI %", family="ASI", top=10,
+                             spread_class=True)
+    assert list(con.columns) == ["municipio", "departamento",
+                                 *cfg.CLASSES["ASI"][1]]
+    clases = con[cfg.CLASSES["ASI"][1]]
+    assert (clases.notna().sum(axis=1) == 1).all(), "una clase por fila"
+    assert (clases.max(axis=1).values == t["ASI %"].values).all()
     assert len(t) == 10
     assert t["ASI %"].is_monotonic_decreasing, "el ASI va de peor a mejor"
     # En el VCI peor es mas bajo, asi que el orden se invierte.
@@ -109,6 +115,15 @@ def test_la_anomalia_es_la_unica_con_fecha_de_verdad():
     t = wide.anomaly_table(lluvia.tail(20))
     assert list(t.columns) == ["fecha", "dekad", "anomalía (%)"]
     assert t["fecha"].is_monotonic_increasing
+    # Partida por signo para el archivo publicado: el color de esa figura es
+    # el signo, y afuera el color es la columna.
+    s = wide.anomaly_table(lluvia.tail(20), split_sign=True)
+    assert list(s.columns) == ["fecha", "dekad", wide.ABOVE_LABEL,
+                               wide.BELOW_LABEL]
+    par = s[[wide.ABOVE_LABEL, wide.BELOW_LABEL]]
+    assert (par.notna().sum(axis=1) == 1).all(), "un signo por dekad"
+    assert (s[wide.ABOVE_LABEL].dropna() >= 0).all()
+    assert (s[wide.BELOW_LABEL].dropna() < 0).all()
 
 
 def test_las_tablas_vacias_no_inventan_columnas():
