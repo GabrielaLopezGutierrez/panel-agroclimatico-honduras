@@ -151,16 +151,12 @@ def construir(salida: Path = SALIDA) -> list[str]:
     if len(muni):
         unidad = cfg.SERIES["asi_gs1"].unit_short
         dep = to_department(muni)
-        # Los rankings publicados llevan la clase y los de la app no: afuera
-        # la barra se colorea por columna, no por valor, asi que la clase es
-        # lo que hace que la barra diga lo mismo que en pantalla.
         lineas.append(_escribir(
-            wide.ranking_table(muni, unidad, top=TOP_MUNICIPIOS,
-                               spread_class=True),
+            wide.ranking_table(muni, unidad, top=TOP_MUNICIPIOS),
             salida / RANKING_MUNI))
         lineas.append(_escribir(
             wide.ranking_table(dep, unidad, name_col="adm1_name",
-                               group_col=None, spread_class=True),
+                               group_col=None),
             salida / RANKING_DEPT))
         # El mapa es el mismo corte que los rankings, con el codigo que
         # empata la geometria, y al lado la geometria misma: el grafico de

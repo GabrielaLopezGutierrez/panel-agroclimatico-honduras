@@ -77,16 +77,6 @@ def test_el_ranking_sale_con_el_peor_primero():
     d = panel.load("asi_gs1", dk, dk)
     t = wide.ranking_table(d, "ASI %", family="ASI", top=10)
     assert list(t.columns) == ["municipio", "departamento", "ASI %"]
-    # Repartido por clase, el valor va en la columna de su clase y las otras
-    # quedan vacias. Es como el grafico de afuera colorea una barra, que es
-    # por columna y no por valor; solo lo piden los archivos publicados.
-    con = wide.ranking_table(d, "ASI %", family="ASI", top=10,
-                             spread_class=True)
-    assert list(con.columns) == ["municipio", "departamento",
-                                 *cfg.CLASSES["ASI"][1]]
-    clases = con[cfg.CLASSES["ASI"][1]]
-    assert (clases.notna().sum(axis=1) == 1).all(), "una clase por fila"
-    assert (clases.max(axis=1).values == t["ASI %"].values).all()
     assert len(t) == 10
     assert t["ASI %"].is_monotonic_decreasing, "el ASI va de peor a mejor"
     # En el VCI peor es mas bajo, asi que el orden se invierte.
@@ -122,6 +112,12 @@ def test_la_anomalia_es_la_unica_con_fecha_de_verdad():
                                wide.BELOW_LABEL]
     par = s[[wide.ABOVE_LABEL, wide.BELOW_LABEL]]
     assert (par.notna().sum(axis=1) == 1).all(), "un signo por dekad"
+    # Las dos columnas tienen que traer algo. Una columna entera vacia la
+    # herramienta de afuera la tipa como texto, y entonces esa serie deja de
+    # dibujarse: es el motivo por el que el ranking no se reparte por clase.
+    # Con dieciocho meses de dekads no deberia pasar nunca; si pasa, el
+    # grafico publicado se rompe y esto tiene que avisar antes.
+    assert par.notna().any().all(), "un signo sin ningun dekad en la ventana"
     assert (s[wide.ABOVE_LABEL].dropna() >= 0).all()
     assert (s[wide.BELOW_LABEL].dropna() < 0).all()
 
