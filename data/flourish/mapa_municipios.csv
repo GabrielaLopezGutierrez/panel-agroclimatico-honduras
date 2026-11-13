@@ -6,15 +6,15 @@ código,municipio,departamento,ASI %,clase
 17213,La Masica,Atlantida,0.0,<10
 17214,San Francisco,Atlantida,0.0,<10
 17215,Tela,Atlantida,0.0,<10
-17216,Apacilagua,Choluteca,33.5,25-40
+17216,Apacilagua,Choluteca,33.5,25–40
 17217,Choluteca,Choluteca,71.0,>=40
 17218,Concepcion De Maria,Choluteca,81.0,>=40
-17219,Duyure,Choluteca,14.5,10-25
-17220,El Corpus,Choluteca,32.5,25-40
+17219,Duyure,Choluteca,14.5,10–25
+17220,El Corpus,Choluteca,32.5,25–40
 17221,El Triunfo,Choluteca,91.0,>=40
-17222,Marcovia,Choluteca,36.5,25-40
+17222,Marcovia,Choluteca,36.5,25–40
 17223,Morolica,Choluteca,74.5,>=40
-17224,Namasigue,Choluteca,34.5,25-40
+17224,Namasigue,Choluteca,34.5,25–40
 17225,Orocuina,Choluteca,65.44,>=40
 17226,Pespire,Choluteca,91.0,>=40
 17227,San Antonio De Flores,Choluteca,100.0,>=40
@@ -29,84 +29,84 @@ código,municipio,departamento,ASI %,clase
 17236,Saba,Colon,0.0,<10
 17237,Santa Fe,Colon,0.0,<10
 17238,Santa Rosa De Aguan,Colon,2.5,<10
-17239,Sonaguera,Colon,13.0,10-25
+17239,Sonaguera,Colon,13.0,10–25
 17240,Tocoa,Colon,2.5,<10
 17241,Trujillo,Colon,1.0,<10
-17242,Ajuterique,Comayagua,12.5,10-25
-17243,Comayagua,Comayagua,11.5,10-25
+17242,Ajuterique,Comayagua,12.5,10–25
+17243,Comayagua,Comayagua,11.5,10–25
 17244,El Rosario,Comayagua,8.5,<10
 17245,Esquias,Comayagua,4.0,<10
 17246,Humuya,Comayagua,0.0,<10
 17247,La Libertad,Comayagua,2.5,<10
 17248,La Trinidad,Comayagua,0.0,<10
-17249,Lamani,Comayagua,24.0,10-25
+17249,Lamani,Comayagua,24.0,10–25
 17250,Las Lajas,Comayagua,0.0,<10
 17251,Lejamani,Comayagua,0.0,<10
-17252,Meambar,Comayagua,10.0,10-25
+17252,Meambar,Comayagua,10.0,10–25
 17253,Minas De Oro,Comayagua,0.0,<10
 17254,Ojo De Agua,Comayagua,0.0,<10
 17255,San Jeronimo,Comayagua,0.0,<10
 17256,San Jose De Comayagua,Comayagua,0.0,<10
 17257,San Jose Del Potrero,Comayagua,4.5,<10
 17258,San Luis,Comayagua,0.0,<10
-17259,San Sebastian,Comayagua,33.5,25-40
-17260,Siguatepeque,Comayagua,19.0,10-25
+17259,San Sebastian,Comayagua,33.5,25–40
+17260,Siguatepeque,Comayagua,19.0,10–25
 17261,Taulabe,Comayagua,0.0,<10
 17262,Villa De San Antonio,Comayagua,76.0,>=40
 17263,Cabanas,Copan,0.0,<10
-17264,Concepcion,Copan,16.5,10-25
-17265,Copan Ruinas,Copan,12.0,10-25
+17264,Concepcion,Copan,16.5,10–25
+17265,Copan Ruinas,Copan,12.0,10–25
 17266,Corquin,Copan,0.17,<10
-17267,Cucuyagua,Copan,16.0,10-25
+17267,Cucuyagua,Copan,16.0,10–25
 17268,Dolores,Copan,4.0,<10
 17269,Dulce Nombre,Copan,0.0,<10
 17270,El Paraiso,Copan,0.0,<10
-17271,Florida,Copan,11.5,10-25
-17272,La Jigua,Copan,10.0,10-25
-17273,La Union,Copan,25.0,25-40
-17274,Nueva Arcadia,Copan,11.49,10-25
+17271,Florida,Copan,11.5,10–25
+17272,La Jigua,Copan,10.0,10–25
+17273,La Union,Copan,25.0,25–40
+17274,Nueva Arcadia,Copan,11.49,10–25
 17275,San Agustin,Copan,,sin dato
 17276,San Antonio,Copan,0.0,<10
 17277,San Jeronimo,Copan,4.5,<10
-17278,San Jose,Copan,22.0,10-25
+17278,San Jose,Copan,22.0,10–25
 17279,San Juan De Opoa,Copan,9.0,<10
 17280,San Nicolas,Copan,7.0,<10
 17281,San Pedro,Copan,7.0,<10
 17282,Santa Rita,Copan,0.0,<10
-17283,Santa Rosa De Copan,Copan,25.0,25-40
-17284,Trinidad,Copan,16.5,10-25
-17285,Veracruz,Copan,11.0,10-25
+17283,Santa Rosa De Copan,Copan,25.0,25–40
+17284,Trinidad,Copan,16.5,10–25
+17285,Veracruz,Copan,11.0,10–25
 17286,Choloma,Cortes,3.0,<10
-17287,La Lima,Cortes,21.0,10-25
+17287,La Lima,Cortes,21.0,10–25
 17288,Omoa,Cortes,0.0,<10
-17289,Pimienta,Cortes,11.0,10-25
+17289,Pimienta,Cortes,11.0,10–25
 17290,Potrerillos,Cortes,0.0,<10
 17291,Puerto Cortes,Cortes,0.0,<10
 17292,San Antonio De Cortes,Cortes,0.0,<10
 17293,San Francisco  De Yojoa,Cortes,0.0,<10
-17294,San Manuel,Cortes,23.0,10-25
-17295,San Pedro Sula,Cortes,29.5,25-40
+17294,San Manuel,Cortes,23.0,10–25
+17295,San Pedro Sula,Cortes,29.5,25–40
 17296,Santa Cruz De Yojoa,Cortes,0.0,<10
 17297,Villanueva,Cortes,60.5,>=40
 17298,Alubaren,Francisco Morazan,0.0,<10
 17299,Cedros,Francisco Morazan,42.5,>=40
-17300,Curaren,Francisco Morazan,20.5,10-25
+17300,Curaren,Francisco Morazan,20.5,10–25
 17301,Distrito Central,Francisco Morazan,48.5,>=40
 17302,El Porvenir,Francisco Morazan,8.0,<10
 17303,Guaimaca,Francisco Morazan,71.5,>=40
 17304,La Libertad,Francisco Morazan,100.0,>=40
 17305,La Venta,Francisco Morazan,66.5,>=40
 17306,Lepaterique,Francisco Morazan,0.0,<10
-17307,Maraita,Francisco Morazan,25.0,25-40
+17307,Maraita,Francisco Morazan,25.0,25–40
 17308,Marale,Francisco Morazan,3.0,<10
-17309,Nueva Armenia,Francisco Morazan,23.0,10-25
-17310,Ojojona,Francisco Morazan,12.5,10-25
-17311,Orica,Francisco Morazan,31.5,25-40
+17309,Nueva Armenia,Francisco Morazan,23.0,10–25
+17310,Ojojona,Francisco Morazan,12.5,10–25
+17311,Orica,Francisco Morazan,31.5,25–40
 17312,Reitoca,Francisco Morazan,0.0,<10
-17313,Sabanagrande,Francisco Morazan,31.0,25-40
+17313,Sabanagrande,Francisco Morazan,31.0,25–40
 17314,San Antonio De Oriente,Francisco Morazan,8.5,<10
 17315,San Buenaventura,Francisco Morazan,0.0,<10
-17316,San Ignacio,Francisco Morazan,12.0,10-25
+17316,San Ignacio,Francisco Morazan,12.0,10–25
 17317,San Juan De Flores,Francisco Morazan,56.5,>=40
 17318,San Miguelito,Francisco Morazan,85.5,>=40
 17319,Santa  Ana,Francisco Morazan,,sin dato
@@ -117,14 +117,14 @@ código,municipio,departamento,ASI %,clase
 17324,Valle De Angeles,Francisco Morazan,0.0,<10
 17325,Vallecillo,Francisco Morazan,43.0,>=40
 17326,Villa De San Francisco,Francisco Morazan,3.5,<10
-17327,Brus Laguna,Gracias A Dios,24.96,10-25
+17327,Brus Laguna,Gracias A Dios,24.96,10–25
 17328,Puerto Lempira,Gracias A Dios,8.0,<10
 17329,Camasca,Intibuca,5.0,<10
 17330,Colomoncagua,Intibuca,0.0,<10
-17331,Concepcion,Intibuca,15.0,10-25
+17331,Concepcion,Intibuca,15.0,10–25
 17332,Dolores,Intibuca,0.0,<10
 17333,Intibuca,Intibuca,0.0,<10
-17334,Jesus De Otoro,Intibuca,24.0,10-25
+17334,Jesus De Otoro,Intibuca,24.0,10–25
 17335,La Esperanza,Intibuca,0.0,<10
 17336,Magdalena,Intibuca,0.0,<10
 17337,Masaguara,Intibuca,0.0,<10
@@ -144,7 +144,7 @@ código,municipio,departamento,ASI %,clase
 17351,Cane,La Paz,0.0,<10
 17352,Chinacla,La Paz,,sin dato
 17353,Guajiquiro,La Paz,9.0,<10
-17354,La Paz,La Paz,20.0,10-25
+17354,La Paz,La Paz,20.0,10–25
 17355,Lauterique,La Paz,0.0,<10
 17356,Marcala,La Paz,0.0,<10
 17357,Mercedes De Oriente,La Paz,0.0,<10
@@ -162,7 +162,7 @@ código,municipio,departamento,ASI %,clase
 17369,Candelaria,Lempira,0.0,<10
 17370,Cololaca,Lempira,0.0,<10
 17371,Erandique,Lempira,0.0,<10
-17372,Gracias,Lempira,21.0,10-25
+17372,Gracias,Lempira,21.0,10–25
 17373,Gualcince,Lempira,0.0,<10
 17374,Guarita,Lempira,0.0,<10
 17375,La Campa,Lempira,0.0,<10
@@ -172,11 +172,11 @@ código,municipio,departamento,ASI %,clase
 17379,Las Flores,Lempira,61.0,>=40
 17380,Lepaera,Lempira,8.0,<10
 17381,Mapulaca,Lempira,0.0,<10
-17382,Piraera,Lempira,13.0,10-25
+17382,Piraera,Lempira,13.0,10–25
 17383,San Andres,Lempira,0.0,<10
-17384,San Francisco,Lempira,13.5,10-25
+17384,San Francisco,Lempira,13.5,10–25
 17385,San Juan Guarita,Lempira,0.0,<10
-17386,San Manuel Del Colohete,Lempira,14.5,10-25
+17386,San Manuel Del Colohete,Lempira,14.5,10–25
 17387,San Rafael,Lempira,0.0,<10
 17388,San Sebastian,Lempira,0.0,<10
 17389,Santa Cruz,Lempira,0.0,<10
@@ -199,49 +199,49 @@ código,municipio,departamento,ASI %,clase
 17407,San Jorge,Ocotepeque,0.0,<10
 17408,San Marcos,Ocotepeque,0.0,<10
 17409,Santa Fe,Ocotepeque,0.0,<10
-17410,Sensenti,Ocotepeque,11.0,10-25
+17410,Sensenti,Ocotepeque,11.0,10–25
 17411,Sinuapa,Ocotepeque,0.0,<10
-17412,Campamento,Olancho,20.0,10-25
-17413,Catacamas,Olancho,21.5,10-25
-17414,Concordia,Olancho,35.0,25-40
+17412,Campamento,Olancho,20.0,10–25
+17413,Catacamas,Olancho,21.5,10–25
+17414,Concordia,Olancho,35.0,25–40
 17415,Dulce Nombre De Culmi,Olancho,1.5,<10
 17416,El Rosario,Olancho,100.0,>=40
-17417,Esquipulas Del Norte,Olancho,20.0,10-25
-17418,Gualaco,Olancho,13.0,10-25
-17419,Guarizama,Olancho,13.5,10-25
-17420,Guata,Olancho,31.5,25-40
+17417,Esquipulas Del Norte,Olancho,20.0,10–25
+17418,Gualaco,Olancho,13.0,10–25
+17419,Guarizama,Olancho,13.5,10–25
+17420,Guata,Olancho,31.5,25–40
 17421,Guayape,Olancho,64.0,>=40
 17422,Jano,Olancho,100.0,>=40
-17423,Juticalpa,Olancho,39.5,25-40
+17423,Juticalpa,Olancho,39.5,25–40
 17424,La Union,Olancho,62.5,>=40
-17425,Mangulile,Olancho,25.0,25-40
-17426,Manto,Olancho,16.0,10-25
-17427,Patuca,Olancho,10.0,10-25
+17425,Mangulile,Olancho,25.0,25–40
+17426,Manto,Olancho,16.0,10–25
+17427,Patuca,Olancho,10.0,10–25
 17428,Salama,Olancho,76.5,>=40
-17429,San Esteban,Olancho,11.5,10-25
-17430,San Francisco De Becerra,Olancho,28.5,25-40
-17431,San Francisco De La Paz,Olancho,32.5,25-40
+17429,San Esteban,Olancho,11.5,10–25
+17430,San Francisco De Becerra,Olancho,28.5,25–40
+17431,San Francisco De La Paz,Olancho,32.5,25–40
 17432,Santa Maria Del Real,Olancho,68.5,>=40
-17433,Silca,Olancho,22.0,10-25
+17433,Silca,Olancho,22.0,10–25
 17434,Yocon,Olancho,70.0,>=40
-17435,Alauca,Paraiso,17.0,10-25
-17436,Danli,Paraiso,19.0,10-25
-17437,El Paraiso,Paraiso,10.5,10-25
+17435,Alauca,Paraiso,17.0,10–25
+17436,Danli,Paraiso,19.0,10–25
+17437,El Paraiso,Paraiso,10.5,10–25
 17438,Guinope,Paraiso,0.13,<10
 17439,Jacaleapa,Paraiso,0.0,<10
 17440,Liure,Paraiso,46.5,>=40
 17441,Moroceli,Paraiso,0.0,<10
-17442,Oropoli,Paraiso,16.5,10-25
+17442,Oropoli,Paraiso,16.5,10–25
 17443,Potrerillos,Paraiso,3.5,<10
-17444,San Antonio De Flores,Paraiso,29.5,25-40
+17444,San Antonio De Flores,Paraiso,29.5,25–40
 17445,San Lucas,Paraiso,2.5,<10
-17446,San Matias,Paraiso,39.0,25-40
-17447,Soledad,Paraiso,38.5,25-40
-17448,Teupasenti,Paraiso,19.6,10-25
-17449,Texiguat,Paraiso,21.5,10-25
+17446,San Matias,Paraiso,39.0,25–40
+17447,Soledad,Paraiso,38.5,25–40
+17448,Teupasenti,Paraiso,19.6,10–25
+17449,Texiguat,Paraiso,21.5,10–25
 17450,Vado Ancho,Paraiso,66.5,>=40
 17451,Yauyupe,Paraiso,0.0,<10
-17452,Yuscaran,Paraiso,13.5,10-25
+17452,Yuscaran,Paraiso,13.5,10–25
 17453,Arada,Santa Barbara,0.0,<10
 17454,Atima,Santa Barbara,0.0,<10
 17455,Azacualpa,Santa Barbara,0.0,<10
@@ -281,11 +281,11 @@ código,municipio,departamento,ASI %,clase
 17489,Arenal,Yoro,40.0,>=40
 17490,El Negrito,Yoro,0.0,<10
 17491,El Progreso,Yoro,4.5,<10
-17492,Jocon,Yoro,26.58,25-40
+17492,Jocon,Yoro,26.58,25–40
 17493,Morazan,Yoro,7.5,<10
-17494,Olanchito,Yoro,22.0,10-25
+17494,Olanchito,Yoro,22.0,10–25
 17495,Santa Rita,Yoro,0.0,<10
 17496,Sulaco,Yoro,0.0,<10
 17497,Victoria,Yoro,3.0,<10
 17498,Yorito,Yoro,3.5,<10
-17499,Yoro,Yoro,16.5,10-25
+17499,Yoro,Yoro,16.5,10–25

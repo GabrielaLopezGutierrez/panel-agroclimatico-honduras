@@ -28,7 +28,8 @@ from asis import config as cfg, panel
 # aquí para que un cambio en la clasificación de alerta no deje a este módulo
 # usando un número viejo.
 _, ORANGE_MIN, RED_MIN = cfg.ASI_ALERT_THRESHOLDS
-_LEVEL_TO_CLASS = {"naranja": "25-40", "rojo": ">=40"}
+_LEVEL_TO_CLASS = {"naranja": cfg.CLASSES["ASI"][1][2],
+                   "rojo": cfg.CLASSES["ASI"][1][3]}
 
 # Destinatarios: solo por variable de entorno o por los secretos de Streamlit.
 # Nunca un correo escrito en el código, y nunca en un archivo que se commitee

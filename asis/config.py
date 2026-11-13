@@ -82,13 +82,20 @@ ASI_ALERT_DESCRIPTIONS = {
 # Clases y paleta que se usan en todas las figuras. El ASI usa la clasificación
 # de alerta de arriba (4 clases); el VCI conserva las 9 clases oficiales de FAO,
 # que no cambian con esto.
+# Los rangos van con raya y no con guion: «10–25», no «10-25». Es la
+# tipografia correcta de un rango en espaniol, y ademas evita un problema
+# concreto afuera. Estas etiquetas viajan como encabezado de columna en los
+# archivos de `data/flourish/`, y una herramienta de graficos lee «10-25» como
+# una fecha -mes-dia- y tipa la columna entera como datetime, con lo que la
+# serie deja de dibujarse. Con raya no hay ambiguedad posible.
 CLASSES = {
     "ASI": ([0, 10, 25, 40, 100.01],
-            ["<10", "10-25", "25-40", ">=40"],
+            ["<10", "10–25", "25–40", ">=40"],
             ["#2fcd00", "#ffd400", "#ff8c00", "#d7263d"]),
     "VCI": ([0, .15, .25, .35, .45, .55, .65, .75, .85, 1.0001],
-            ["<0.15", "0.15-0.25", "0.25-0.35", "0.35-0.45", "0.45-0.55",
-             "0.55-0.65", "0.65-0.75", "0.75-0.85", ">=0.85"],
+            ["<0.15", "0.15–0.25", "0.25–0.35", "0.35–0.45",
+             "0.45–0.55", "0.55–0.65", "0.65–0.75",
+             "0.75–0.85", ">=0.85"],
             ["#9a0000", "#ff0000", "#ff8900", "#ffcd66", "#ffff00",
              "#66ff00", "#2fcd00", "#009a00", "#217400"]),
 }
