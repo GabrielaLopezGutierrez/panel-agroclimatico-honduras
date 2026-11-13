@@ -28,6 +28,19 @@ def classify(values, family="ASI"):
     return pd.cut(values, cuts, labels=labels, right=False)
 
 
+def narrowest_band(family: str) -> float:
+    """El ancho de la clase de alerta más angosta del indicador.
+
+    Es la unidad natural para decir si dos cifras del mismo índice dicen lo
+    mismo: una diferencia menor que la banda más angosta no alcanza para
+    separarlas ni en la clase más estrecha de la leyenda. Da 10 puntos en el ASI
+    y 0,10 en el VCI, y sale de `config.CLASSES` en vez de escribirse a mano
+    para que siga a la leyenda si la clasificación cambia.
+    """
+    edges, _labels, _colors = cfg.CLASSES[family]
+    return min(float(b) - float(a) for a, b in zip(edges, edges[1:]))
+
+
 def _aggregate(df, by, value_col="mean", weight_col="n_px"):
     """Media ponderada por píxeles válidos, más superficie por umbral.
 

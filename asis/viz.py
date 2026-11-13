@@ -16,8 +16,8 @@ import plotly.io as pio
 from plotly.subplots import make_subplots
 
 from asis import config as cfg
-from asis.aggregate import (campaign_year, classify, season_columns,
-                            severity_area)
+from asis.aggregate import (campaign_year, classify, narrowest_band,
+                            season_columns, severity_area)
 from asis.calendar import (MONTH_ES, dekad_label, dekad_labels,
                            dekad_of_year, season_labels,
                            season_wraps)
@@ -889,19 +889,6 @@ def _family_of(d, value_col):
     """La familia se deduce del rango del dato: el VCI vive en 0-1."""
     v = d[value_col].dropna()
     return "VCI" if len(v) and v.max() <= 1.0001 else "ASI"
-
-
-def narrowest_band(family: str) -> float:
-    """El ancho de la clase de alerta más angosta del indicador.
-
-    Es la unidad natural para decir si dos cifras del mismo índice dicen lo
-    mismo: una diferencia menor que la banda más angosta no alcanza para
-    separarlas ni en la clase más estrecha de la leyenda. Da 10 puntos en el ASI
-    y 0,10 en el VCI, y sale de `config.CLASSES` en vez de escribirse a mano
-    para que siga a la leyenda si la clasificación cambia.
-    """
-    edges, _labels, _colors = cfg.CLASSES[family]
-    return min(float(b) - float(a) for a, b in zip(edges, edges[1:]))
 
 
 def _pile_hover(nombres, tope=6):

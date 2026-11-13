@@ -26,7 +26,7 @@ from __future__ import annotations
 import pandas as pd
 
 from asis import config as cfg
-from asis.aggregate import classify, season_columns
+from asis.aggregate import classify, narrowest_band, season_columns
 from asis.calendar import (dekad_label, dekad_labels, dekad_window,
                            season_labels)
 
@@ -97,6 +97,13 @@ def season_table(frame: pd.DataFrame, season: str | None, value_col="mean",
     out.columns = ["dekad", *list(out.columns)[1:]]
     return out
 
+
+# Los tres grupos de la dispersión de coberturas, que son los que colorea la
+# figura de la app. Van acá y no en la herramienta de afuera por lo mismo que
+# la clase del mapa: el rótulo y el criterio son del cálculo, no del gráfico.
+SAME_LABEL = "coinciden"
+PASTURE_WORSE_LABEL = "el pastizal está peor"
+CROP_WORSE_LABEL = "el cultivo está peor"
 
 ABOVE_LABEL = "por encima del promedio"
 BELOW_LABEL = "por debajo del promedio"
@@ -179,6 +186,7 @@ def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
 
 
 def cover_table(crop: pd.DataFrame, pasture: pd.DataFrame, value_col="mean",
+                family="ASI", group: bool = False,
                 decimals: int = DECIMALS) -> pd.DataFrame:
     """Las dos coberturas de un dekad, una columna cada una.
 
@@ -195,12 +203,24 @@ def cover_table(crop: pd.DataFrame, pasture: pd.DataFrame, value_col="mean",
     if not len(d):
         return pd.DataFrame()
     d = d.sort_values(f"{value_col}_c", ascending=False)
-    return pd.DataFrame({
+    out = pd.DataFrame({
         "municipio": d["adm2_name"].astype(str).values,
         "departamento": d["adm1_name"].astype(str).values,
         "cultivo": d[f"{value_col}_c"].round(decimals).values,
         "pastizal": d[f"{value_col}_p"].round(decimals).values,
     })
+    if group:
+        # Cuál de las dos está peor, con el mismo criterio que usa la figura:
+        # una diferencia menor que la banda de clase más angosta no alcanza
+        # para separarlas ni en la clase más estrecha de la leyenda, así que
+        # cuenta como que coinciden. Es la columna por la que el gráfico de
+        # afuera colorea, igual que la clase en el mapa.
+        banda = narrowest_band(family)
+        brecha = out["pastizal"] - out["cultivo"]
+        out["grupo"] = SAME_LABEL
+        out.loc[brecha > banda, "grupo"] = PASTURE_WORSE_LABEL
+        out.loc[brecha < -banda, "grupo"] = CROP_WORSE_LABEL
+    return out
 
 
 def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",

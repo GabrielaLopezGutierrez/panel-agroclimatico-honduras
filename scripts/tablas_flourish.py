@@ -176,7 +176,7 @@ def construir(salida: Path = SALIDA) -> list[str]:
         pasto = panel.load("asi_gs1_pasto", dekad, dekad) \
             if "asi_gs1_pasto" in panel.stored_series() else None
         if pasto is not None:
-            lineas.append(_escribir(wide.cover_table(muni, pasto),
+            lineas.append(_escribir(wide.cover_table(muni, pasto, group=True),
                                     salida / COBERTURAS))
     return lineas
 

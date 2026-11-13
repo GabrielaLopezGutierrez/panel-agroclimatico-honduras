@@ -1,235 +1,235 @@
-municipio,departamento,cultivo,pastizal
-San Isidro,Choluteca,100.0,58.5
-San Antonio De Flores,Choluteca,100.0,100.0
-La Libertad,Francisco Morazan,100.0,100.0
-Goascoran,Valle,100.0,100.0
-San Francisco De Coray,Valle,100.0,100.0
-Langue,Valle,100.0,100.0
-Jano,Olancho,100.0,14.5
-El Rosario,Olancho,100.0,100.0
-Pespire,Choluteca,91.0,100.0
-El Triunfo,Choluteca,91.0,100.0
-San Jose,Choluteca,89.0,100.0
-San Miguelito,Francisco Morazan,85.5,100.0
-Nacaome,Valle,81.5,94.0
-Talanga,Francisco Morazan,81.5,66.0
-San Marcos De Colon,Choluteca,78.0,80.0
-Salama,Olancho,76.5,80.0
-Villa De San Antonio,Comayagua,76.0,24.0
-Morolica,Choluteca,74.5,79.0
-Aramecina,Valle,73.5,66.5
-Alianza,Valle,73.0,88.0
-San Lorenzo,Valle,72.5,50.0
-Guaimaca,Francisco Morazan,71.5,71.5
-Choluteca,Choluteca,71.0,71.0
-Yocon,Olancho,70.0,47.0
-Santa Maria Del Real,Olancho,68.5,0.0
-La Venta,Francisco Morazan,66.5,100.0
-Vado Ancho,Paraiso,66.5,33.5
-Orocuina,Choluteca,65.44,80.34
-Guayape,Olancho,64.0,0.0
-San Francisco Del Valle,Ocotepeque,63.5,0.0
-La Union,Olancho,62.5,86.5
-Las Flores,Lempira,61.0,18.0
-Villanueva,Cortes,60.5,55.0
-San Juan De Flores,Francisco Morazan,56.5,50.0
-Santa Ana De Yusguare,Choluteca,54.5,100.0
-Santa Rita,Santa Barbara,50.0,0.0
-San Juan,Intibuca,50.0,0.0
-Distrito Central,Francisco Morazan,48.5,42.5
-Liure,Paraiso,46.5,52.0
-La Labor,Ocotepeque,45.5,0.0
-Vallecillo,Francisco Morazan,43.0,16.0
-Cedros,Francisco Morazan,42.5,30.5
-Arenal,Yoro,40.0,54.0
-Juticalpa,Olancho,39.5,21.5
-San Matias,Paraiso,39.0,61.5
-Soledad,Paraiso,38.5,23.5
-Marcovia,Choluteca,36.5,8.5
-Namasigue,Choluteca,34.5,100.0
-Apacilagua,Choluteca,33.5,51.5
-San Sebastian,Comayagua,33.5,21.5
-San Francisco De La Paz,Olancho,32.5,26.0
-El Corpus,Choluteca,32.5,100.0
-Orica,Francisco Morazan,31.5,33.5
-Guata,Olancho,31.5,32.5
-Sabanagrande,Francisco Morazan,31.0,60.5
-San Antonio De Flores,Paraiso,29.5,52.0
-San Pedro Sula,Cortes,29.5,48.5
-Jocon,Yoro,26.58,56.98
-Maraita,Francisco Morazan,25.0,28.5
-La Union,Copan,25.0,13.5
-Mangulile,Olancho,25.0,0.0
-Santa Rosa De Copan,Copan,25.0,25.0
-Brus Laguna,Gracias A Dios,24.96,18.5
-Lamani,Comayagua,24.0,35.5
-Jesus De Otoro,Intibuca,24.0,9.5
-Nueva Armenia,Francisco Morazan,23.0,20.0
-San Manuel,Cortes,23.0,5.5
-Olanchito,Yoro,22.0,36.0
-Silca,Olancho,22.0,30.0
-San Jose,Copan,22.0,33.5
-Catacamas,Olancho,21.5,22.5
-Texiguat,Paraiso,21.5,5.0
-La Lima,Cortes,21.0,9.0
-Gracias,Lempira,21.0,0.0
-Curaren,Francisco Morazan,20.5,0.0
-La Paz,La Paz,20.0,14.5
-Esquipulas Del Norte,Olancho,20.0,0.0
-Teupasenti,Paraiso,19.6,50.0
-Siguatepeque,Comayagua,19.0,23.5
-Danli,Paraiso,19.0,20.0
-Alauca,Paraiso,17.0,23.0
-Oropoli,Paraiso,16.5,16.5
-Yoro,Yoro,16.5,18.5
-Concepcion,Copan,16.5,0.0
-Cucuyagua,Copan,16.0,0.0
-Manto,Olancho,16.0,45.0
-San Manuel Del Colohete,Lempira,14.5,10.5
-Duyure,Choluteca,14.5,34.0
-Yuscaran,Paraiso,13.5,3.0
-Guarizama,Olancho,13.5,2.5
-San Francisco,Lempira,13.5,0.0
-Gualaco,Olancho,13.0,38.5
-Sonaguera,Colon,13.0,0.0
-Piraera,Lempira,13.0,0.0
-Ojojona,Francisco Morazan,12.5,0.0
-Ajuterique,Comayagua,12.5,0.0
-Copan Ruinas,Copan,12.0,0.0
-San Ignacio,Francisco Morazan,12.0,12.5
-Florida,Copan,11.5,0.0
-Comayagua,Comayagua,11.5,6.0
-San Esteban,Olancho,11.5,4.0
-Nueva Arcadia,Copan,11.49,25.1
-Pimienta,Cortes,11.0,0.0
-Sensenti,Ocotepeque,11.0,37.5
-El Paraiso,Paraiso,10.5,35.0
-La Jigua,Copan,10.0,33.5
-Patuca,Olancho,10.0,0.0
-Meambar,Comayagua,10.0,0.0
-San Juan De Opoa,Copan,9.0,0.0
-Guajiquiro,La Paz,9.0,10.0
-El Rosario,Comayagua,8.5,21.0
-San Antonio De Oriente,Francisco Morazan,8.5,0.0
-La Virtud,Lempira,8.5,0.0
-Lepaera,Lempira,8.0,0.0
-El Porvenir,Francisco Morazan,8.0,5.5
-Puerto Lempira,Gracias A Dios,8.0,5.5
-Morazan,Yoro,7.5,0.0
-San Antonio,Intibuca,7.5,0.0
-Virginia,Lempira,7.0,0.0
-San Pedro,Copan,7.0,0.0
-Camasca,Intibuca,5.0,0.0
-San Jose Del Potrero,Comayagua,4.5,2.5
-El Progreso,Yoro,4.5,18.0
-Quimistan,Santa Barbara,4.5,0.0
-Esquias,Comayagua,4.0,2.5
-Villa De San Francisco,Francisco Morazan,3.5,0.0
-Potrerillos,Paraiso,3.5,9.5
-Yorito,Yoro,3.5,0.0
-Choloma,Cortes,3.0,38.5
-Marale,Francisco Morazan,3.0,1.5
-Victoria,Yoro,3.0,5.5
-Aguanqueterique,La Paz,2.5,1.0
-Tocoa,Colon,2.5,5.5
-San Lucas,Paraiso,2.5,0.0
-La Libertad,Comayagua,2.5,0.0
-Santa Rosa De Aguan,Colon,2.5,0.0
-Dulce Nombre De Culmi,Olancho,1.5,0.0
-Trujillo,Colon,1.0,0.0
-Corquin,Copan,0.17,0.0
-Guinope,Paraiso,0.13,10.54
-La Ceiba,Atlantida,0.0,0.0
-Tela,Atlantida,0.0,0.0
-Colomoncagua,Intibuca,0.0,0.0
-Santa Ana,Francisco Morazan,0.0,0.0
-Santa Lucia,Francisco Morazan,0.0,0.0
-San Buenaventura,Francisco Morazan,0.0,0.0
-Reitoca,Francisco Morazan,0.0,0.0
-Lepaterique,Francisco Morazan,0.0,0.0
-El Paraiso,Copan,0.0,0.0
-Potrerillos,Cortes,0.0,20.0
-Puerto Cortes,Cortes,0.0,0.0
-San Francisco  De Yojoa,Cortes,0.0,0.0
-Santa Cruz De Yojoa,Cortes,0.0,12.5
-Alubaren,Francisco Morazan,0.0,0.0
-San Antonio,Copan,0.0,0.0
-Dulce Nombre,Copan,0.0,0.0
-Taulabe,Comayagua,0.0,0.0
-San Francisco,Atlantida,0.0,0.0
-Bonito Oriental,Colon,0.0,0.0
-Iriona,Colon,0.0,0.0
-Limon,Colon,0.0,0.0
-Saba,Colon,0.0,0.0
-La Trinidad,Comayagua,0.0,0.0
-Humuya,Comayagua,0.0,19.5
-Lejamani,Comayagua,0.0,0.0
-Las Lajas,Comayagua,0.0,0.0
-Minas De Oro,Comayagua,0.0,1.5
-Ojo De Agua,Comayagua,0.0,0.0
-San Jeronimo,Comayagua,0.0,0.0
-San Luis,Comayagua,0.0,0.0
-Magdalena,Intibuca,0.0,0.0
-La Esperanza,Intibuca,0.0,0.0
-Intibuca,Intibuca,0.0,0.0
-Dolores,Intibuca,0.0,0.0
-Santa Fe,Ocotepeque,0.0,0.0
-Sinuapa,Ocotepeque,0.0,11.0
-Lucerna,Ocotepeque,0.0,9.5
-San Marcos,Ocotepeque,0.0,0.0
-San Juan Guarita,Lempira,0.0,0.0
-San Rafael,Lempira,0.0,0.0
-Santa Cruz,Lempira,0.0,0.0
-Concepcion,Ocotepeque,0.0,0.0
-Mercedes,Ocotepeque,0.0,0.0
-Nueva Ocotepeque,Ocotepeque,0.0,6.5
-San Fernando,Ocotepeque,0.0,0.0
-Belen Gualcho,Ocotepeque,0.0,0.0
-Mapulaca,Lempira,0.0,0.0
-San Andres,Lempira,0.0,0.0
-San  Antonio Del Norte,La Paz,0.0,0.0
-San Juan,La Paz,0.0,0.0
-Santa Maria,La Paz,0.0,0.0
-Santiago De Puringla,La Paz,0.0,0.0
-Santa Ana,La Paz,0.0,0.0
-Santa Elena,La Paz,0.0,0.0
-Cololaca,Lempira,0.0,0.0
-Yarula,La Paz,0.0,0.0
-Gualcince,Lempira,0.0,0.0
-Erandique,Lempira,0.0,0.0
-Guarita,Lempira,0.0,0.0
-La Campa,Lempira,0.0,3.5
-La Iguala,Lempira,0.0,0.0
-La Union,Lempira,0.0,0.0
-Masaguara,Intibuca,0.0,0.0
-San Marcos De Sierra,Intibuca,0.0,0.0
-Marcala,La Paz,0.0,0.0
-Lauterique,La Paz,0.0,0.0
-Cabanas,La Paz,0.0,0.0
-Cane,La Paz,0.0,7.5
-Santa Lucia,Intibuca,0.0,0.0
-Yamaranguila,Intibuca,0.0,0.0
-San Miguelito,Intibuca,0.0,0.0
-Opatoro,La Paz,0.0,0.0
-Mercedes De Oriente,La Paz,0.0,0.0
-San Sebastian,Lempira,0.0,0.0
-Talgua,Lempira,0.0,0.0
-Tambla,Lempira,0.0,0.0
-Tomala,Lempira,0.0,0.0
-Jacaleapa,Paraiso,0.0,20.0
-Yauyupe,Paraiso,0.0,12.0
-Moroceli,Paraiso,0.0,1.5
-San Luis,Santa Barbara,0.0,0.0
-San Jose De Colimas,Santa Barbara,0.0,0.0
-Caridad,Valle,0.0,0.0
-Macuelizo,Santa Barbara,0.0,0.0
-Naranjito,Santa Barbara,0.0,0.0
-Nuevo Celilac,Santa Barbara,0.0,0.0
-El Nispero,Santa Barbara,0.0,0.0
-Atima,Santa Barbara,0.0,0.0
-Arada,Santa Barbara,0.0,25.0
-Santa Barbara,Santa Barbara,0.0,0.0
-Gualala,Santa Barbara,0.0,0.0
-El Negrito,Yoro,0.0,0.0
-Santa Rita,Yoro,0.0,0.0
-Sulaco,Yoro,0.0,4.0
+municipio,departamento,cultivo,pastizal,grupo
+San Isidro,Choluteca,100.0,58.5,el cultivo está peor
+San Antonio De Flores,Choluteca,100.0,100.0,coinciden
+La Libertad,Francisco Morazan,100.0,100.0,coinciden
+Goascoran,Valle,100.0,100.0,coinciden
+San Francisco De Coray,Valle,100.0,100.0,coinciden
+Langue,Valle,100.0,100.0,coinciden
+Jano,Olancho,100.0,14.5,el cultivo está peor
+El Rosario,Olancho,100.0,100.0,coinciden
+Pespire,Choluteca,91.0,100.0,coinciden
+El Triunfo,Choluteca,91.0,100.0,coinciden
+San Jose,Choluteca,89.0,100.0,el pastizal está peor
+San Miguelito,Francisco Morazan,85.5,100.0,el pastizal está peor
+Nacaome,Valle,81.5,94.0,el pastizal está peor
+Talanga,Francisco Morazan,81.5,66.0,el cultivo está peor
+San Marcos De Colon,Choluteca,78.0,80.0,coinciden
+Salama,Olancho,76.5,80.0,coinciden
+Villa De San Antonio,Comayagua,76.0,24.0,el cultivo está peor
+Morolica,Choluteca,74.5,79.0,coinciden
+Aramecina,Valle,73.5,66.5,coinciden
+Alianza,Valle,73.0,88.0,el pastizal está peor
+San Lorenzo,Valle,72.5,50.0,el cultivo está peor
+Guaimaca,Francisco Morazan,71.5,71.5,coinciden
+Choluteca,Choluteca,71.0,71.0,coinciden
+Yocon,Olancho,70.0,47.0,el cultivo está peor
+Santa Maria Del Real,Olancho,68.5,0.0,el cultivo está peor
+La Venta,Francisco Morazan,66.5,100.0,el pastizal está peor
+Vado Ancho,Paraiso,66.5,33.5,el cultivo está peor
+Orocuina,Choluteca,65.44,80.34,el pastizal está peor
+Guayape,Olancho,64.0,0.0,el cultivo está peor
+San Francisco Del Valle,Ocotepeque,63.5,0.0,el cultivo está peor
+La Union,Olancho,62.5,86.5,el pastizal está peor
+Las Flores,Lempira,61.0,18.0,el cultivo está peor
+Villanueva,Cortes,60.5,55.0,coinciden
+San Juan De Flores,Francisco Morazan,56.5,50.0,coinciden
+Santa Ana De Yusguare,Choluteca,54.5,100.0,el pastizal está peor
+Santa Rita,Santa Barbara,50.0,0.0,el cultivo está peor
+San Juan,Intibuca,50.0,0.0,el cultivo está peor
+Distrito Central,Francisco Morazan,48.5,42.5,coinciden
+Liure,Paraiso,46.5,52.0,coinciden
+La Labor,Ocotepeque,45.5,0.0,el cultivo está peor
+Vallecillo,Francisco Morazan,43.0,16.0,el cultivo está peor
+Cedros,Francisco Morazan,42.5,30.5,el cultivo está peor
+Arenal,Yoro,40.0,54.0,el pastizal está peor
+Juticalpa,Olancho,39.5,21.5,el cultivo está peor
+San Matias,Paraiso,39.0,61.5,el pastizal está peor
+Soledad,Paraiso,38.5,23.5,el cultivo está peor
+Marcovia,Choluteca,36.5,8.5,el cultivo está peor
+Namasigue,Choluteca,34.5,100.0,el pastizal está peor
+Apacilagua,Choluteca,33.5,51.5,el pastizal está peor
+San Sebastian,Comayagua,33.5,21.5,el cultivo está peor
+San Francisco De La Paz,Olancho,32.5,26.0,coinciden
+El Corpus,Choluteca,32.5,100.0,el pastizal está peor
+Orica,Francisco Morazan,31.5,33.5,coinciden
+Guata,Olancho,31.5,32.5,coinciden
+Sabanagrande,Francisco Morazan,31.0,60.5,el pastizal está peor
+San Antonio De Flores,Paraiso,29.5,52.0,el pastizal está peor
+San Pedro Sula,Cortes,29.5,48.5,el pastizal está peor
+Jocon,Yoro,26.58,56.98,el pastizal está peor
+Maraita,Francisco Morazan,25.0,28.5,coinciden
+La Union,Copan,25.0,13.5,el cultivo está peor
+Mangulile,Olancho,25.0,0.0,el cultivo está peor
+Santa Rosa De Copan,Copan,25.0,25.0,coinciden
+Brus Laguna,Gracias A Dios,24.96,18.5,coinciden
+Lamani,Comayagua,24.0,35.5,el pastizal está peor
+Jesus De Otoro,Intibuca,24.0,9.5,el cultivo está peor
+Nueva Armenia,Francisco Morazan,23.0,20.0,coinciden
+San Manuel,Cortes,23.0,5.5,el cultivo está peor
+Olanchito,Yoro,22.0,36.0,el pastizal está peor
+Silca,Olancho,22.0,30.0,coinciden
+San Jose,Copan,22.0,33.5,el pastizal está peor
+Catacamas,Olancho,21.5,22.5,coinciden
+Texiguat,Paraiso,21.5,5.0,el cultivo está peor
+La Lima,Cortes,21.0,9.0,el cultivo está peor
+Gracias,Lempira,21.0,0.0,el cultivo está peor
+Curaren,Francisco Morazan,20.5,0.0,el cultivo está peor
+La Paz,La Paz,20.0,14.5,coinciden
+Esquipulas Del Norte,Olancho,20.0,0.0,el cultivo está peor
+Teupasenti,Paraiso,19.6,50.0,el pastizal está peor
+Siguatepeque,Comayagua,19.0,23.5,coinciden
+Danli,Paraiso,19.0,20.0,coinciden
+Alauca,Paraiso,17.0,23.0,coinciden
+Oropoli,Paraiso,16.5,16.5,coinciden
+Yoro,Yoro,16.5,18.5,coinciden
+Concepcion,Copan,16.5,0.0,el cultivo está peor
+Cucuyagua,Copan,16.0,0.0,el cultivo está peor
+Manto,Olancho,16.0,45.0,el pastizal está peor
+San Manuel Del Colohete,Lempira,14.5,10.5,coinciden
+Duyure,Choluteca,14.5,34.0,el pastizal está peor
+Yuscaran,Paraiso,13.5,3.0,el cultivo está peor
+Guarizama,Olancho,13.5,2.5,el cultivo está peor
+San Francisco,Lempira,13.5,0.0,el cultivo está peor
+Gualaco,Olancho,13.0,38.5,el pastizal está peor
+Sonaguera,Colon,13.0,0.0,el cultivo está peor
+Piraera,Lempira,13.0,0.0,el cultivo está peor
+Ojojona,Francisco Morazan,12.5,0.0,el cultivo está peor
+Ajuterique,Comayagua,12.5,0.0,el cultivo está peor
+Copan Ruinas,Copan,12.0,0.0,el cultivo está peor
+San Ignacio,Francisco Morazan,12.0,12.5,coinciden
+Florida,Copan,11.5,0.0,el cultivo está peor
+Comayagua,Comayagua,11.5,6.0,coinciden
+San Esteban,Olancho,11.5,4.0,coinciden
+Nueva Arcadia,Copan,11.49,25.1,el pastizal está peor
+Pimienta,Cortes,11.0,0.0,el cultivo está peor
+Sensenti,Ocotepeque,11.0,37.5,el pastizal está peor
+El Paraiso,Paraiso,10.5,35.0,el pastizal está peor
+La Jigua,Copan,10.0,33.5,el pastizal está peor
+Patuca,Olancho,10.0,0.0,coinciden
+Meambar,Comayagua,10.0,0.0,coinciden
+San Juan De Opoa,Copan,9.0,0.0,coinciden
+Guajiquiro,La Paz,9.0,10.0,coinciden
+El Rosario,Comayagua,8.5,21.0,el pastizal está peor
+San Antonio De Oriente,Francisco Morazan,8.5,0.0,coinciden
+La Virtud,Lempira,8.5,0.0,coinciden
+Lepaera,Lempira,8.0,0.0,coinciden
+El Porvenir,Francisco Morazan,8.0,5.5,coinciden
+Puerto Lempira,Gracias A Dios,8.0,5.5,coinciden
+Morazan,Yoro,7.5,0.0,coinciden
+San Antonio,Intibuca,7.5,0.0,coinciden
+Virginia,Lempira,7.0,0.0,coinciden
+San Pedro,Copan,7.0,0.0,coinciden
+Camasca,Intibuca,5.0,0.0,coinciden
+San Jose Del Potrero,Comayagua,4.5,2.5,coinciden
+El Progreso,Yoro,4.5,18.0,el pastizal está peor
+Quimistan,Santa Barbara,4.5,0.0,coinciden
+Esquias,Comayagua,4.0,2.5,coinciden
+Villa De San Francisco,Francisco Morazan,3.5,0.0,coinciden
+Potrerillos,Paraiso,3.5,9.5,coinciden
+Yorito,Yoro,3.5,0.0,coinciden
+Choloma,Cortes,3.0,38.5,el pastizal está peor
+Marale,Francisco Morazan,3.0,1.5,coinciden
+Victoria,Yoro,3.0,5.5,coinciden
+Aguanqueterique,La Paz,2.5,1.0,coinciden
+Tocoa,Colon,2.5,5.5,coinciden
+San Lucas,Paraiso,2.5,0.0,coinciden
+La Libertad,Comayagua,2.5,0.0,coinciden
+Santa Rosa De Aguan,Colon,2.5,0.0,coinciden
+Dulce Nombre De Culmi,Olancho,1.5,0.0,coinciden
+Trujillo,Colon,1.0,0.0,coinciden
+Corquin,Copan,0.17,0.0,coinciden
+Guinope,Paraiso,0.13,10.54,el pastizal está peor
+La Ceiba,Atlantida,0.0,0.0,coinciden
+Tela,Atlantida,0.0,0.0,coinciden
+Colomoncagua,Intibuca,0.0,0.0,coinciden
+Santa Ana,Francisco Morazan,0.0,0.0,coinciden
+Santa Lucia,Francisco Morazan,0.0,0.0,coinciden
+San Buenaventura,Francisco Morazan,0.0,0.0,coinciden
+Reitoca,Francisco Morazan,0.0,0.0,coinciden
+Lepaterique,Francisco Morazan,0.0,0.0,coinciden
+El Paraiso,Copan,0.0,0.0,coinciden
+Potrerillos,Cortes,0.0,20.0,el pastizal está peor
+Puerto Cortes,Cortes,0.0,0.0,coinciden
+San Francisco  De Yojoa,Cortes,0.0,0.0,coinciden
+Santa Cruz De Yojoa,Cortes,0.0,12.5,el pastizal está peor
+Alubaren,Francisco Morazan,0.0,0.0,coinciden
+San Antonio,Copan,0.0,0.0,coinciden
+Dulce Nombre,Copan,0.0,0.0,coinciden
+Taulabe,Comayagua,0.0,0.0,coinciden
+San Francisco,Atlantida,0.0,0.0,coinciden
+Bonito Oriental,Colon,0.0,0.0,coinciden
+Iriona,Colon,0.0,0.0,coinciden
+Limon,Colon,0.0,0.0,coinciden
+Saba,Colon,0.0,0.0,coinciden
+La Trinidad,Comayagua,0.0,0.0,coinciden
+Humuya,Comayagua,0.0,19.5,el pastizal está peor
+Lejamani,Comayagua,0.0,0.0,coinciden
+Las Lajas,Comayagua,0.0,0.0,coinciden
+Minas De Oro,Comayagua,0.0,1.5,coinciden
+Ojo De Agua,Comayagua,0.0,0.0,coinciden
+San Jeronimo,Comayagua,0.0,0.0,coinciden
+San Luis,Comayagua,0.0,0.0,coinciden
+Magdalena,Intibuca,0.0,0.0,coinciden
+La Esperanza,Intibuca,0.0,0.0,coinciden
+Intibuca,Intibuca,0.0,0.0,coinciden
+Dolores,Intibuca,0.0,0.0,coinciden
+Santa Fe,Ocotepeque,0.0,0.0,coinciden
+Sinuapa,Ocotepeque,0.0,11.0,el pastizal está peor
+Lucerna,Ocotepeque,0.0,9.5,coinciden
+San Marcos,Ocotepeque,0.0,0.0,coinciden
+San Juan Guarita,Lempira,0.0,0.0,coinciden
+San Rafael,Lempira,0.0,0.0,coinciden
+Santa Cruz,Lempira,0.0,0.0,coinciden
+Concepcion,Ocotepeque,0.0,0.0,coinciden
+Mercedes,Ocotepeque,0.0,0.0,coinciden
+Nueva Ocotepeque,Ocotepeque,0.0,6.5,coinciden
+San Fernando,Ocotepeque,0.0,0.0,coinciden
+Belen Gualcho,Ocotepeque,0.0,0.0,coinciden
+Mapulaca,Lempira,0.0,0.0,coinciden
+San Andres,Lempira,0.0,0.0,coinciden
+San  Antonio Del Norte,La Paz,0.0,0.0,coinciden
+San Juan,La Paz,0.0,0.0,coinciden
+Santa Maria,La Paz,0.0,0.0,coinciden
+Santiago De Puringla,La Paz,0.0,0.0,coinciden
+Santa Ana,La Paz,0.0,0.0,coinciden
+Santa Elena,La Paz,0.0,0.0,coinciden
+Cololaca,Lempira,0.0,0.0,coinciden
+Yarula,La Paz,0.0,0.0,coinciden
+Gualcince,Lempira,0.0,0.0,coinciden
+Erandique,Lempira,0.0,0.0,coinciden
+Guarita,Lempira,0.0,0.0,coinciden
+La Campa,Lempira,0.0,3.5,coinciden
+La Iguala,Lempira,0.0,0.0,coinciden
+La Union,Lempira,0.0,0.0,coinciden
+Masaguara,Intibuca,0.0,0.0,coinciden
+San Marcos De Sierra,Intibuca,0.0,0.0,coinciden
+Marcala,La Paz,0.0,0.0,coinciden
+Lauterique,La Paz,0.0,0.0,coinciden
+Cabanas,La Paz,0.0,0.0,coinciden
+Cane,La Paz,0.0,7.5,coinciden
+Santa Lucia,Intibuca,0.0,0.0,coinciden
+Yamaranguila,Intibuca,0.0,0.0,coinciden
+San Miguelito,Intibuca,0.0,0.0,coinciden
+Opatoro,La Paz,0.0,0.0,coinciden
+Mercedes De Oriente,La Paz,0.0,0.0,coinciden
+San Sebastian,Lempira,0.0,0.0,coinciden
+Talgua,Lempira,0.0,0.0,coinciden
+Tambla,Lempira,0.0,0.0,coinciden
+Tomala,Lempira,0.0,0.0,coinciden
+Jacaleapa,Paraiso,0.0,20.0,el pastizal está peor
+Yauyupe,Paraiso,0.0,12.0,el pastizal está peor
+Moroceli,Paraiso,0.0,1.5,coinciden
+San Luis,Santa Barbara,0.0,0.0,coinciden
+San Jose De Colimas,Santa Barbara,0.0,0.0,coinciden
+Caridad,Valle,0.0,0.0,coinciden
+Macuelizo,Santa Barbara,0.0,0.0,coinciden
+Naranjito,Santa Barbara,0.0,0.0,coinciden
+Nuevo Celilac,Santa Barbara,0.0,0.0,coinciden
+El Nispero,Santa Barbara,0.0,0.0,coinciden
+Atima,Santa Barbara,0.0,0.0,coinciden
+Arada,Santa Barbara,0.0,25.0,el pastizal está peor
+Santa Barbara,Santa Barbara,0.0,0.0,coinciden
+Gualala,Santa Barbara,0.0,0.0,coinciden
+El Negrito,Yoro,0.0,0.0,coinciden
+Santa Rita,Yoro,0.0,0.0,coinciden
+Sulaco,Yoro,0.0,4.0,coinciden

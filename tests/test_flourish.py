@@ -14,8 +14,8 @@ import pandas as pd
 import pytest
 
 from asis import config as cfg, panel, wide
-from asis.aggregate import (climatology_frame, season_columns, to_country,
-                            to_department)
+from asis.aggregate import (climatology_frame, narrowest_band,
+                            season_columns, to_country, to_department)
 
 
 def _marco(series_id="asi_gs1", dekads=18):
@@ -94,6 +94,17 @@ def test_el_contraste_de_coberturas_las_deja_en_columnas_separadas():
                          panel.load("asi_gs1_pasto", dk, dk))
     assert list(t.columns) == ["municipio", "departamento", "cultivo",
                                "pastizal"]
+    # Con grupo, la columna por la que colorea el grafico publicado: el mismo
+    # criterio que la figura de la app, que pinta de gris cuando las dos
+    # coberturas no se separan mas que la banda de clase mas angosta.
+    g = wide.cover_table(panel.load("asi_gs1", dk, dk),
+                         panel.load("asi_gs1_pasto", dk, dk), group=True)
+    assert list(g.columns)[-1] == "grupo"
+    assert set(g["grupo"]) <= {wide.SAME_LABEL, wide.PASTURE_WORSE_LABEL,
+                               wide.CROP_WORSE_LABEL}
+    banda = narrowest_band("ASI")
+    iguales = g[g["grupo"] == wide.SAME_LABEL]
+    assert ((iguales["pastizal"] - iguales["cultivo"]).abs() <= banda).all()
 
 
 def test_la_anomalia_es_la_unica_con_fecha_de_verdad():
