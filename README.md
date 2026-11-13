@@ -34,11 +34,15 @@ corte completo del nivel en formato largo con la definición de cada columna.
 Las mismas tablas de las figuras que son un gráfico y no una rejilla se publican
 además en `data/flourish/`, regeneradas por la actualización diaria, para que
 una herramienta externa pueda leerlas por URL y refrescarse sola. Las series
-van acotadas a los últimos dieciocho meses; los rankings y el mapa son la foto
-del último dekad, que es lo que dibuja la figura de la que salen. Las arma `asis/wide.py`, el mismo módulo que
-alimenta los botones, así que la cifra publicada y la dibujada no pueden
-divergir. Sus nombres de archivo y sus encabezados son una interfaz: un gráfico
-publicado que apunta a uno de ellos se rompe en silencio si cambian, y
+van acotadas a los últimos dieciocho meses; los rankings y los mapas son la
+foto del último dekad, que es lo que dibuja la figura de la que salen. Los
+mapas llevan al lado su geometría, que afuera es otra hoja de datos y no un
+archivo aparte, y publican una fila por polígono: la unidad sin dato va con la
+cifra vacía y la clase nombrada, para que el mapa la pueda rotular en vez de
+dejar un hueco. Las arma `asis/wide.py`, el mismo módulo que alimenta los
+botones, así que la cifra publicada y la dibujada no pueden divergir. Sus
+nombres de archivo y sus encabezados son una interfaz: un gráfico publicado
+que apunta a uno de ellos se rompe en silencio si cambian, y
 `tests/test_flourish.py` los fija por eso.
 
 La app no toca la red ni necesita credenciales: lee el panel ya construido de
