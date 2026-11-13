@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-11-12T17:38:40+00:00",
+  "actualizado": "2026-11-13T17:15:56+00:00",
   "start_year": 2005,
   "pais": "Honduras",
   "municipios": 290,
@@ -12,8 +12,8 @@
       "estacional": false,
       "unidad": "índice 0-1",
       "primero": "2005-01-D1",
-      "ultimo": "2026-10-D3",
-      "n_dekads": 786,
+      "ultimo": "2026-11-D1",
+      "n_dekads": 787,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -800,12 +800,13 @@
         "2026-09-D3",
         "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ],
       "preliminares": [
-        "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ]
     },
     "asi_gs1": {
@@ -815,8 +816,8 @@
       "estacional": true,
       "unidad": "% del área de cultivo bajo estrés hídrico",
       "primero": "2005-01-D1",
-      "ultimo": "2026-10-D3",
-      "n_dekads": 786,
+      "ultimo": "2026-11-D1",
+      "n_dekads": 787,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -1603,12 +1604,13 @@
         "2026-09-D3",
         "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ],
       "preliminares": [
-        "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ]
     },
     "asi_gs2": {
@@ -1618,8 +1620,8 @@
       "estacional": true,
       "unidad": "% del área de cultivo bajo estrés hídrico",
       "primero": "2005-01-D1",
-      "ultimo": "2026-10-D3",
-      "n_dekads": 786,
+      "ultimo": "2026-11-D1",
+      "n_dekads": 787,
       "dekads": [
         "2005-01-D1",
         "2005-01-D2",
@@ -2406,12 +2408,13 @@
         "2026-09-D3",
         "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ],
       "preliminares": [
-        "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ]
     },
     "asi_gs1_pasto": {
@@ -2421,8 +2424,8 @@
       "estacional": true,
       "unidad": "% del área de pastizal bajo estrés hídrico",
       "primero": "2010-01-D1",
-      "ultimo": "2026-10-D3",
-      "n_dekads": 606,
+      "ultimo": "2026-11-D1",
+      "n_dekads": 607,
       "dekads": [
         "2010-01-D1",
         "2010-01-D2",
@@ -3029,12 +3032,13 @@
         "2026-09-D3",
         "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ],
       "preliminares": [
-        "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ]
     },
     "asi_gs2_pasto": {
@@ -3044,8 +3048,8 @@
       "estacional": true,
       "unidad": "% del área de pastizal bajo estrés hídrico",
       "primero": "2010-01-D1",
-      "ultimo": "2026-10-D3",
-      "n_dekads": 606,
+      "ultimo": "2026-11-D1",
+      "n_dekads": 607,
       "dekads": [
         "2010-01-D1",
         "2010-01-D2",
@@ -3652,12 +3656,13 @@
         "2026-09-D3",
         "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ],
       "preliminares": [
-        "2026-10-D1",
         "2026-10-D2",
-        "2026-10-D3"
+        "2026-10-D3",
+        "2026-11-D1"
       ]
     }
   },
@@ -3665,24 +3670,24 @@
     "asi_dekad_s1": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-11-12"
+      "descargado": "2026-11-13"
     },
     "rain_dekad": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-11-12"
+      "descargado": "2026-11-13"
     },
     "vci_dekad": {
       "estado": "ok",
       "origen": "vivo",
-      "descargado": "2026-11-12"
+      "descargado": "2026-11-13"
     }
   },
   "validacion": {
-    "pares": 12399,
-    "r": 0.9649,
-    "r2": 0.931,
-    "mae_pp": 0.567,
-    "sesgo_pp": -0.025
+    "pares": 12416,
+    "r": 0.9653,
+    "r2": 0.9318,
+    "mae_pp": 0.568,
+    "sesgo_pp": -0.026
   }
 }
