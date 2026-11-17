@@ -155,11 +155,41 @@ def test_los_decimales_son_los_mismos_en_todas():
         assert (v.round(wide.DECIMALS) == v).all(), c
 
 
+def test_el_mapa_de_calor_es_la_misma_matriz_pero_larga():
+    """Sale de season_table y se derrite, asi que no puede decir otra cosa que
+    la figura. Larga y no ancha porque un mapa de calor no tiene series: tiene
+    celdas, y pide las dos coordenadas y el valor en columnas aparte."""
+    frame, season = _marco(dekads=120)
+    ancha = wide.season_table(frame, season)
+    larga = wide.heatmap_table(frame, season, "ASI %")
+    assert list(larga.columns) == ["campaña", "dekad", "ASI %"]
+    # Mismas coordenadas y mismas celdas con dato que la version ancha.
+    assert set(larga["campaña"]) == set(list(ancha.columns)[1:])
+    assert set(larga["dekad"]) <= set(ancha["dekad"])
+    assert len(larga) == int(ancha.drop(columns="dekad").notna().sum().sum())
+    # Y ninguna celda sin dato: la ausencia no se publica como fila.
+    assert larga["ASI %"].notna().all()
+
+
+def test_el_mapa_de_calor_publicado_cubre_mas_que_la_ventana():
+    """Es la unica excepcion de la carpeta. La matriz existe para situar la
+    campania en curso entre las anteriores, y con dieciocho meses son dos
+    filas, que no es una matriz."""
+    carpeta = cfg.DATA / "flourish"
+    if not (carpeta / "mapa_calor_asi_primera.csv").exists():
+        pytest.skip("todavia no se genero")
+    t = pd.read_csv(carpeta / "mapa_calor_asi_primera.csv")
+    assert t["campaña"].nunique() > 2, "una matriz de dos filas no es una matriz"
+    assert t["campaña"].nunique() >= 10
+
+
 # --- Los archivos publicados ------------------------------------------------
 ENCABEZADOS = {
     "serie_nacional_asi_primera.csv": "dekad",
     "serie_nacional_asi_postrera.csv": "dekad",
     "serie_nacional_vci.csv": "dekad",
+    "mapa_calor_asi_primera.csv": "campaña",
+    "mapa_calor_asi_postrera.csv": "campaña",
     "lluvia_nacional.csv": "dekad",
     "lluvia_anomalia.csv": "fecha",
     "ranking_municipios.csv": "municipio",

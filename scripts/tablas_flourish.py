@@ -48,6 +48,10 @@ SERIES_NACIONALES = {
     "asi_gs2": "serie_nacional_asi_postrera.csv",
     "vci": "serie_nacional_vci.csv",
 }
+MAPAS_CALOR = {
+    "asi_gs1": "mapa_calor_asi_primera.csv",
+    "asi_gs2": "mapa_calor_asi_postrera.csv",
+}
 LLUVIA = "lluvia_nacional.csv"
 ANOMALIA = "lluvia_anomalia.csv"
 RANKING_MUNI = "ranking_municipios.csv"
@@ -130,6 +134,26 @@ def construir(salida: Path = SALIDA) -> list[str]:
             frame = frame[frame["dekad_of_year"].isin(season_columns(season))]
         lineas.append(_escribir(wide.season_table(frame, season),
                                 salida / archivo))
+
+    # Los mapas de calor van sobre el panel entero y no sobre la ventana.
+    # Es la unica excepcion de esta carpeta y tiene un motivo: la matriz
+    # existe para situar la campania en curso entre todas las anteriores, y
+    # con dieciocho meses son dos filas, que no es una matriz. La app hace lo
+    # mismo cuando se le amplia la ventana; aca la ventana no se elige, asi
+    # que se publica la historia completa.
+    for sid, archivo in MAPAS_CALOR.items():
+        if sid not in panel.stored_series():
+            continue
+        todos = panel.dekads(sid)
+        df = panel.load(sid, todos[0], todos[-1])
+        if df.empty:
+            continue
+        season = cfg.SERIES[sid].season
+        frame = climatology_frame(to_country(df), season)
+        frame = frame[frame["dekad_of_year"].isin(season_columns(season))]
+        lineas.append(_escribir(
+            wide.heatmap_table(frame, season, cfg.SERIES[sid].unit_short),
+            salida / archivo))
 
     lluvia = panel.national("serie_nacional_lluvia")
     if len(lluvia):

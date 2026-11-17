@@ -109,6 +109,35 @@ ABOVE_LABEL = "por encima del promedio"
 BELOW_LABEL = "por debajo del promedio"
 
 
+def heatmap_table(frame: pd.DataFrame, season: str | None, label: str,
+                  value_col="mean",
+                  decimals: int = DECIMALS) -> pd.DataFrame:
+    """La misma matriz de `season_table`, pero larga: una fila por celda.
+
+    Es la única tabla de este módulo que sale larga, y no por capricho. Las
+    demás salen anchas porque una herramienta de gráficos lee la primera
+    columna como eje y el resto como series; un mapa de calor no tiene series,
+    tiene celdas, y pide las dos coordenadas y el valor en columnas aparte.
+
+    Sale de `season_table` y se derrite: así la matriz publicada y la que
+    dibuja la figura son la misma por construcción, igual que la línea y la
+    matriz de la app comparten una sola descarga porque son la misma tabla
+    vista de dos maneras.
+
+    Las celdas sin dato no se publican. Una campaña en curso termina donde
+    llegó el panel, y una fila con la coordenada puesta y el valor vacío no es
+    una observación: es la ausencia de una.
+    """
+    ancha = season_table(frame, season, value_col=value_col, decimals=decimals)
+    if not len(ancha):
+        return pd.DataFrame()
+    larga = ancha.melt(id_vars="dekad", var_name="campaña", value_name=label)
+    larga = larga.dropna(subset=[label])
+    if not len(larga):
+        return pd.DataFrame()
+    return larga[["campaña", "dekad", label]].reset_index(drop=True)
+
+
 def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
                   label="anomalía (%)", split_sign: bool = False,
                   decimals: int = DECIMALS) -> pd.DataFrame:
