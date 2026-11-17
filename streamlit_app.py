@@ -257,7 +257,8 @@ def summary(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
             (referencia, float(nacional["mean"].iloc[0])) if len(nacional)
             else None,
             query.family,
-            f"{query.unit}. Ponderado por píxeles válidos.")
+            f"{query.unit}. Ponderado por píxeles válidos.",
+            cierre=season_closed(query.series_id, referencia))
     with c2:
         if query.level == "pais":
             aportan = int(at_last["n_muni"].iloc[0]) if len(at_last) else 0
@@ -748,6 +749,22 @@ def season_kpi(query: Query, series_id: str) -> tuple[str, float] | None:
     return str(ultimo["dekad_id"]), float(ultimo["mean"])
 
 
+def season_closed(series_id: str, dekad: str | None) -> bool:
+    """Si la cifra quedó fechada antes del último dekad publicado.
+
+    Solo pasa por un motivo: la temporada cerró y el índice no tiene lectura
+    nueva. El encabezado de la página cita el último dekad del panel, así que
+    sin decirlo la tarjeta parece atrasada —es el reporte que llegó con el
+    primer dekad de noviembre, con la primera cerrada desde octubre—. La cifra
+    no cambia; cambia que se explique.
+    """
+    serie = cfg.SERIES.get(series_id)
+    if not dekad or not serie or not serie.season:
+        return False
+    disponibles = dekads(series_id)
+    return bool(disponibles) and dekad != disponibles[-1]
+
+
 # --- Vista: panorama nacional ------------------------------------------------
 def view_country(query: Query, cut: pd.DataFrame):
     """Resumen nacional o el detalle de un indicador."""
@@ -1009,7 +1026,8 @@ def summary_overview(query: Query):
             kpi(panel.label_of(series_id), ultimo,
                 panel.family_of(series_id),
                 f"{panel.unit_of(series_id)}. Ponderado por píxeles válidos.",
-                separador=i > 0)
+                separador=i > 0,
+                cierre=season_closed(series_id, ultimo[0] if ultimo else None))
     st.caption(texts.OVERVIEW_KPI_NOTE)
 
 
@@ -1066,7 +1084,8 @@ def kpi_plain(label: str, valor: str, separador=False):
                 unsafe_allow_html=True)
 
 
-def kpi(label: str, ultimo, family: str, ayuda: str, separador=False):
+def kpi(label: str, ultimo, family: str, ayuda: str, separador=False,
+        cierre: bool = False):
     """Cifra de encabezado, como tarjeta.
 
     No usa `st.metric` porque solo admite color en el delta, y lo que hay que
@@ -1086,6 +1105,9 @@ def kpi(label: str, ultimo, family: str, ayuda: str, separador=False):
     dekad, valor = ultimo
     clase, color = class_color(valor, family)
     tinta = readable_ink(color)
+    pie = texts.KPI_DEKAD_CIERRE if cierre else texts.KPI_DEKAD
+    if cierre:
+        ayuda = f"{ayuda} {texts.KPI_CIERRE_AYUDA}"
     st.markdown(
         f"<div class='{clases}' title='{ayuda} Clase FAO: {clase}.'>"
         f"<div class='asis-kpi-label'>{label}</div>"
@@ -1095,7 +1117,7 @@ def kpi(label: str, ultimo, family: str, ayuda: str, separador=False):
         f"<span class='asis-kpi-dot' style='background:{color}'></span>"
         f"{clase}</span></div>"
         f"<div class='asis-kpi-foot'>"
-        f"{texts.KPI_DEKAD.format(dekad=dekad_label(dekad))}</div></div>",
+        f"{pie.format(dekad=dekad_label(dekad))}</div></div>",
         unsafe_allow_html=True)
 
 

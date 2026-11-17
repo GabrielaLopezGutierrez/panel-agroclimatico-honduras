@@ -80,6 +80,17 @@ PRELIMINARY_HEADER = (
 # número sigue visible, así que el color informa pero no es el único canal.
 KPI_DEKAD = "{dekad}"
 
+# Cuando la temporada ya cerró, la cifra queda fechada antes del último dekad
+# del panel, y el encabezado de la página dice otra fecha. Visto desde afuera
+# eso se lee como que la app no actualizó, que es exactamente lo contrario de
+# lo que pasa: el índice no tiene lectura nueva porque la temporada terminó.
+# Fuera de la ventana el ráster trae valores, pero no miden esta temporada, así
+# que la cifra no avanza y hay que decir por qué en vez de dejar la fecha sola.
+KPI_DEKAD_CIERRE = "{dekad} · cierre de la temporada"
+KPI_CIERRE_AYUDA = (
+    "La temporada ya cerró: no hay lectura nueva del índice aunque el panel "
+    "tenga dekads más recientes.")
+
 # --- Definiciones de indicador, junto a las cifras de encabezado -------------
 # Se muestran cerca de las métricas principales, no en la pestaña "Cómo leer":
 # es lo primero que alguien necesita para interpretar el número que acaba de

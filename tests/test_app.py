@@ -599,6 +599,38 @@ def test_el_kpi_no_estacional_se_fecha_en_su_ultimo_dato(last):
     assert dekad == max(serie["dekad_id"])
 
 
+def test_la_tarjeta_dice_cuando_la_cifra_quedo_en_el_cierre_de_temporada():
+    """El reporte que llego con el primer dekad de noviembre: el encabezado
+    citaba esa fecha, la tarjeta del ASI primera citaba el tercer dekad de
+    octubre, y leido desde afuera eso es "la app no actualizo". No lo era: la
+    primera cierra en octubre y el indice no tiene lectura nueva. La cifra no
+    cambia; lo que faltaba era decir por que.
+
+    Se comprueba el predicado y no el HTML: lo que puede romperse es la
+    condicion, no la cadena.
+    """
+    from asis.aggregate import season_columns
+    from asis.calendar import dekad_of_year
+
+    if not panel.stored_series():
+        pytest.skip("no hay panel construido")
+    ultimo = panel.dekads("asi_gs1")[-1]
+    propios = season_columns("GS1")
+    dentro = [d for d in panel.dekads("asi_gs1")
+              if dekad_of_year(d) in propios]
+    assert dentro, "el panel deberia cubrir algun dekad de la primera"
+
+    # Fechada en el ultimo dekad publicado: no hay nada que explicar.
+    assert not app.season_closed("asi_gs1", ultimo)
+    # Fechada antes, con el panel mas adelante: la temporada cerro.
+    anterior = [d for d in dentro if d < ultimo]
+    if anterior:
+        assert app.season_closed("asi_gs1", anterior[-1])
+    # El VCI no tiene temporada, asi que nunca lleva la nota.
+    assert not app.season_closed("vci", panel.dekads("vci")[0])
+    assert not app.season_closed("asi_gs1", None)
+
+
 def test_un_dekad_fuera_de_temporada_no_fecha_el_kpi_en_ese_dekad():
     """El caso que quedaba roto: con la ventana en un solo dekad fuera de la
     postrera, la temporada no tiene ningun dato real dentro de esa ventana, y el
