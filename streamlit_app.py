@@ -591,7 +591,10 @@ def _cover_scatter_block(query: Query, pastura: str, base: pd.DataFrame):
         return
     st.plotly_chart(fig, width="stretch")
     st.caption(texts.COVER_SCATTER_NOTE)
-    download(wide.cover_table(base, pasto),
+    # Con grupo, que es por lo que la dispersion colorea cada punto: la
+    # descarga de una figura tiene que traer lo que la figura codifica, y el
+    # color aqui no es decoracion, es cual de las dos coberturas esta peor.
+    download(wide.cover_table(base, pasto, group=True),
              f"coberturas_{query.slug()}", "dl_coberturas")
 
 

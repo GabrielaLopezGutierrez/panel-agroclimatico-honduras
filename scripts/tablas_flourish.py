@@ -1,9 +1,17 @@
 """Escribe en `data/flourish/` las tablas que Flourish lee por URL.
 
-Son los mismos objetos que entrega el botón de cada figura en la app: las arma
-`asis.wide`, así que la cifra publicada y la dibujada no pueden divergir. Lo
-único que cambia es el periodo, y cambia por un motivo concreto: el botón sigue
-el que la persona eligió en pantalla, y acá no hay pantalla.
+Las arma `asis.wide`, el mismo módulo que alimenta el botón de cada figura en
+la app, así que la cifra publicada y la dibujada no pueden divergir.
+
+No son el mismo archivo, y conviene decir en qué se separan. El periodo: el
+botón sigue el que la persona eligió en pantalla y acá no hay pantalla, así que
+las series van completas. Y la forma, en tres casos, siempre por lo mismo: la
+herramienta de afuera colorea por columna y no por valor, de modo que lo que
+la figura codifica en el color aquí tiene que viajar como columna. La anomalía
+va partida en dos por signo y con el año para el filtro; el contraste de
+coberturas lleva el grupo; y los dos mapas de calor van largos y con la clase.
+Los valores son los mismos en todos los casos: lo que cambia es cómo están
+dispuestos.
 
 Las series nacionales y los mapas de calor van completos, con todo lo que hay
 en el panel. Afuera el lector elige qué campañas mirar con el control de
