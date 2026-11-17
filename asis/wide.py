@@ -131,6 +131,15 @@ def heatmap_table(frame: pd.DataFrame, season: str | None, label: str,
     ancha = season_table(frame, season, value_col=value_col, decimals=decimals)
     if not len(ancha):
         return pd.DataFrame()
+    campanias = list(ancha.columns)[1:]
+    # La primera campaña se descarta si no empieza donde empieza la temporada.
+    # En la postrera pasa siempre: la campaña que abrió en septiembre de 2004
+    # entra al panel solo por su cola de enero de 2005, porque START_YEAR es
+    # 2005. Esa fila no es una campaña, es su último tercio, y publicarla como
+    # campaña desordena el eje: enero aparece antes que septiembre porque es
+    # el primer dekad con dato de todo el archivo.
+    if campanias and pd.isna(ancha.iloc[0][campanias[0]]):
+        ancha = ancha.drop(columns=campanias[0])
     larga = ancha.melt(id_vars="dekad", var_name="campaña", value_name=label)
     larga = larga.dropna(subset=[label])
     if not len(larga):

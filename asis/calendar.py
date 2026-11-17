@@ -105,15 +105,22 @@ def season_wraps(columns) -> bool:
 
 
 def season_labels(years, columns) -> list[str]:
-    """Rótulo de cada temporada: "2025" si cabe en un año, "2025-26" si no.
+    """Rótulo de cada temporada: "2025" si cabe en un año, "2025–26" si no.
 
     Una temporada que cruza el año se guarda bajo el año en que **empieza**,
     porque es una sola campaña agrícola. Rotularla solo con ese año la hacía
     leer como atrasada: la fila decía 2025 cuando llegaba hasta enero de 2026.
+
+    El rango va con raya y no con guion, por lo mismo que las clases de
+    `config.CLASSES`: es la tipografía correcta de un rango, y además "2025-26"
+    escrito con guion es un año y un mes para cualquier herramienta que
+    adivine tipos. Pasó: el eje de campañas del mapa de calor publicado salía
+    como una serie de fechas inventadas —2015-03, 2028-03— en vez de las
+    campañas.
     """
     if not season_wraps(columns):
         return [str(int(y)) for y in years]
-    return [f"{int(y)}-{str(int(y) + 1)[-2:]}" for y in years]
+    return [f"{int(y)}–{str(int(y) + 1)[-2:]}" for y in years]
 
 
 def dekad_labels(codes) -> list[str]:

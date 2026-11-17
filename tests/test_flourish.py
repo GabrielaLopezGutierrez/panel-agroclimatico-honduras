@@ -54,7 +54,11 @@ def test_la_postrera_rotula_su_campania_con_los_dos_anios():
     se lee como atrasada: la columna diria 2025 y llega hasta enero de 2026."""
     frame, season = _marco("asi_gs2", dekads=40)
     t = wide.season_table(frame, season)
-    assert any("-" in c for c in list(t.columns)[1:]), list(t.columns)
+    assert any("–" in c for c in list(t.columns)[1:]), list(t.columns)
+    # Con raya y no con guion: "2025-26" escrito con guion lo lee como fecha
+    # cualquier herramienta que adivine tipos, y el eje de campanias sale como
+    # una serie de meses inventados.
+    assert not any("-" in c for c in list(t.columns)[1:]), list(t.columns)
 
 
 def test_la_referencia_entra_como_una_columna_mas():
@@ -163,10 +167,14 @@ def test_el_mapa_de_calor_es_la_misma_matriz_pero_larga():
     ancha = wide.season_table(frame, season)
     larga = wide.heatmap_table(frame, season, "ASI %")
     assert list(larga.columns) == ["campaña", "dekad", "ASI %"]
-    # Mismas coordenadas y mismas celdas con dato que la version ancha.
-    assert set(larga["campaña"]) == set(list(ancha.columns)[1:])
+    # Mismas coordenadas y mismas celdas que la version ancha, salvo la
+    # campania del arranque si entro incompleta: esa no se publica.
+    campanias = list(ancha.columns)[1:]
+    assert set(larga["campaña"]) <= set(campanias)
+    assert len(set(campanias) - set(larga["campaña"])) <= 1
     assert set(larga["dekad"]) <= set(ancha["dekad"])
-    assert len(larga) == int(ancha.drop(columns="dekad").notna().sum().sum())
+    publicadas = ancha[[c for c in campanias if c in set(larga["campaña"])]]
+    assert len(larga) == int(publicadas.notna().sum().sum())
     # Y ninguna celda sin dato: la ausencia no se publica como fila.
     assert larga["ASI %"].notna().all()
 
@@ -181,6 +189,14 @@ def test_el_mapa_de_calor_publicado_cubre_mas_que_la_ventana():
     t = pd.read_csv(carpeta / "mapa_calor_asi_primera.csv")
     assert t["campaña"].nunique() > 2, "una matriz de dos filas no es una matriz"
     assert t["campaña"].nunique() >= 10
+
+    # Y el orden de las filas es el del eje: la herramienta de afuera toma el
+    # orden de aparicion, asi que la primera campania tiene que traer los
+    # dekads de la temporada en su orden, desde el primero.
+    pos = pd.read_csv(carpeta / "mapa_calor_asi_postrera.csv")
+    primera = pos[pos["campaña"] == pos["campaña"].iloc[0]]
+    assert primera["dekad"].iloc[0].startswith("sep"), primera["dekad"].iloc[0]
+    assert primera["dekad"].iloc[-1].startswith("ene"), primera["dekad"].iloc[-1]
 
 
 # --- Los archivos publicados ------------------------------------------------

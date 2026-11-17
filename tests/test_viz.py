@@ -247,7 +247,7 @@ def test_la_temporada_que_cruza_el_anio_se_rotula_con_los_dos():
     primera = season_columns("GS1")
     assert viz.season_wraps(postrera)
     assert not viz.season_wraps(primera)
-    assert viz.season_labels([2025], postrera) == ["2025-26"]
+    assert viz.season_labels([2025], postrera) == ["2025–26"]
     assert viz.season_labels([2025, 2026], primera) == ["2025", "2026"]
     # El anio completo del VCI tampoco cruza.
     assert not viz.season_wraps(season_columns(None))
@@ -280,8 +280,9 @@ def test_la_postrera_rotula_sus_campanias_con_los_dos_anios():
     atrasada: el panel dice 2025 y llega hasta enero de 2026."""
     d = panel({"Verde": [5, 5]}, dekads=["2025-10-D1", "2026-01-D1"])
     fig = viz.severity_area_fig(d, "ASI", "t", season="GS2")
-    rotulos = [a.text for a in fig.layout.annotations if a.text == "2025-26"]
-    assert rotulos, "la postrera de 2025 se rotula 2025-26"
+    rotulos = [a.text for a in fig.layout.annotations
+               if a.text == "2025–26"]
+    assert rotulos, "la postrera de 2025 se rotula 2025–26"
     assert len({t.xaxis or "x" for t in fig.data}) == 1, "es una sola campania"
 
 
