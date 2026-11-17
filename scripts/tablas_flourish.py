@@ -2,20 +2,21 @@
 
 Son los mismos objetos que entrega el botón de cada figura en la app: las arma
 `asis.wide`, así que la cifra publicada y la dibujada no pueden divergir. Lo
-único que cambia es la ventana, y cambia por un motivo concreto: el botón sigue
-el periodo que la persona eligió en pantalla, y acá no hay pantalla. La ventana
-se fija en el archivo, dieciocho meses contados hacia atrás desde el último
-dekad publicado.
+único que cambia es el periodo, y cambia por un motivo concreto: el botón sigue
+el que la persona eligió en pantalla, y acá no hay pantalla.
 
-Tres de los nueve archivos no llevan ventana sino el último dekad: los rankings
-y el mapa son la foto de un instante, no una serie, y "los últimos dieciocho
-meses" no significa nada para ellos. Se actualizan igual, cada vez que llega un
-dekad.
+Las series nacionales y los mapas de calor van completos, con todo lo que hay
+en el panel. Afuera el lector elige qué campañas mirar con el control de
+series, y acotarlas en el archivo le quitaría esa posibilidad sin darle nada a
+cambio: son veintitantas columnas de dieciocho filas.
+
+Los rankings, los mapas y el contraste de coberturas son otra cosa: la foto de
+un instante, no una serie, y van con el último dekad publicado.
 
 Lo corre el workflow diario después de construir y antes de commitear, de modo
-que los CSV viajan en el mismo commit que los datos de los que salen. Como la
-ventana se ancla al último dekad publicado, los archivos solo cambian cuando
-llega un dekad nuevo: no generan commits de ruido.
+que los CSV viajan en el mismo commit que los datos de los que salen. Como todo
+se ancla al panel, los archivos solo cambian cuando llega un dekad nuevo: no
+generan commits de ruido.
 
 Uso:
 
@@ -118,14 +119,18 @@ def construir(salida: Path = SALIDA) -> list[str]:
     salida.mkdir(parents=True, exist_ok=True)
     lineas = []
 
-    ultimo = max(panel.dekads(s)[-1] for s in panel.stored_series())
-    inicio, fin = wide.window(ultimo)
-    lineas.append(f"ventana: {inicio} a {fin} ({wide.WINDOW_DEKADS} dekads)")
+    fin = max(panel.dekads(s)[-1] for s in panel.stored_series())
+    lineas.append(f"ultimo dekad: {fin}")
 
+    # Las series nacionales van completas, no acotadas a una ventana. Afuera
+    # el lector elige qué campañas mirar con el control de series, y una
+    # ventana fija en el archivo le quita esa posibilidad sin darle nada a
+    # cambio: son veintitrés columnas de dieciocho filas, no pesa nada.
     for sid, archivo in SERIES_NACIONALES.items():
         if sid not in panel.stored_series():
             continue
-        df = panel.load(sid, inicio, fin)
+        propios = panel.dekads(sid)
+        df = panel.load(sid, propios[0], propios[-1])
         if df.empty:
             continue
         season = cfg.SERIES[sid].season
@@ -157,13 +162,14 @@ def construir(salida: Path = SALIDA) -> list[str]:
 
     lluvia = panel.national("serie_nacional_lluvia")
     if len(lluvia):
-        v = lluvia[(lluvia["dekad_id"] >= inicio) & (lluvia["dekad_id"] <= fin)]
+        v = lluvia
         lta = v.groupby("dekad_of_year")["lta"].mean()
         lineas.append(_escribir(
             wide.season_table(v, None, value_col="value", reference=lta,
                               reference_label="promedio de largo plazo"),
             salida / LLUVIA))
-        lineas.append(_escribir(wide.anomaly_table(v, split_sign=True),
+        lineas.append(_escribir(wide.anomaly_table(v, split_sign=True,
+                                               year_column=True),
                                 salida / ANOMALIA))
 
     # Los rankings y el contraste son del ultimo dekad del ASI de la primera,

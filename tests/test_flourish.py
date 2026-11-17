@@ -125,6 +125,11 @@ def test_la_anomalia_es_la_unica_con_fecha_de_verdad():
     s = wide.anomaly_table(lluvia.tail(20), split_sign=True)
     assert list(s.columns) == ["fecha", "dekad", wide.ABOVE_LABEL,
                                wide.BELOW_LABEL]
+    # Con el anio, que es la columna por la que filtra el grafico publicado:
+    # la fecha ya lo trae, pero como filtro no sirve, son casi ochocientas.
+    y = wide.anomaly_table(lluvia.tail(20), split_sign=True, year_column=True)
+    assert list(y.columns)[2] == "año"
+    assert (y["año"].str.len() == 4).all()
     par = s[[wide.ABOVE_LABEL, wide.BELOW_LABEL]]
     assert (par.notna().sum(axis=1) == 1).all(), "un signo por dekad"
     # Las dos columnas tienen que traer algo. Una columna entera vacia la
@@ -166,7 +171,10 @@ def test_el_mapa_de_calor_es_la_misma_matriz_pero_larga():
     frame, season = _marco(dekads=120)
     ancha = wide.season_table(frame, season)
     larga = wide.heatmap_table(frame, season, "ASI %")
-    assert list(larga.columns) == ["campaña", "dekad", "ASI %"]
+    assert list(larga.columns) == ["campaña", "dekad", "ASI %", "clase"]
+    # La clase sale de config.CLASSES, no se teclea afuera: los cuatro
+    # intervalos salen planos y con el color de la leyenda de FAO.
+    assert set(larga["clase"]) <= set(cfg.CLASSES["ASI"][1])
     # Mismas coordenadas y mismas celdas que la version ancha, salvo la
     # campania del arranque si entro incompleta: esa no se publica.
     campanias = list(ancha.columns)[1:]
@@ -218,14 +226,20 @@ ENCABEZADOS = {
 }
 
 
-def test_la_ventana_publicada_son_dieciocho_meses():
-    """Cincuenta y cuatro dekads contados hacia atras desde el ultimo
-    publicado, no desde una fecha del calendario: el archivo lo escribe un
-    proceso sin interfaz y la ventana tiene que avanzar sola."""
-    inicio, fin = wide.window("2026-10-D3")
-    assert fin == "2026-10-D3"
-    assert inicio == "2025-05-D1"
-    assert wide.WINDOW_DEKADS == 54
+def test_las_series_nacionales_se_publican_completas():
+    """Sin ventana. Afuera el lector elige que campanias mirar con el control
+    de series, y acotarlas en el archivo le quita esa posibilidad. Son
+    veintitantas columnas de dieciocho filas: no hay nada que ahorrar."""
+    carpeta = cfg.DATA / "flourish"
+    if not (carpeta / "serie_nacional_asi_primera.csv").exists():
+        pytest.skip("todavia no se generaron")
+    if "asi_gs1" not in panel.stored_series():
+        pytest.skip("no hay panel construido")
+    t = pd.read_csv(carpeta / "serie_nacional_asi_primera.csv")
+    campanias = list(t.columns)[1:]
+    anios = {int(d[:4]) for d in panel.dekads("asi_gs1")}
+    assert len(campanias) >= len(anios) - 1, (len(campanias), len(anios))
+    assert campanias[0].startswith(str(cfg.START_YEAR))
 
 
 def test_los_archivos_publicados_conservan_su_nombre_y_su_primera_columna():
@@ -260,7 +274,11 @@ def test_los_archivos_publicados_caben_en_una_carga_de_flourish():
             continue
         ruta = carpeta / archivo
         filas = len(ruta.read_text(encoding="utf-8").splitlines()) - 1
-        assert filas <= 1000, f"{archivo}: {filas} filas"
+        # El limite de una carga en linea son mil filas, pero estos van por
+        # URL. La anomalia completa son casi ochocientas y crece un dekad cada
+        # diez dias, asi que el tope aqui es mas alto a proposito; lo que
+        # vigila es que ninguna tabla se vuelva una descarga de datos.
+        assert filas <= 2000, f"{archivo}: {filas} filas"
         assert ruta.stat().st_size <= 100_000, f"{archivo}: {ruta.stat().st_size} bytes"
 
 
@@ -271,9 +289,8 @@ def test_el_script_y_la_app_arman_la_misma_tabla():
     carpeta = cfg.DATA / "flourish"
     if not carpeta.exists() or "asi_gs1" not in panel.stored_series():
         pytest.skip("todavia no se generaron")
-    ultimo = max(panel.dekads(s)[-1] for s in panel.stored_series())
-    inicio, fin = wide.window(ultimo)
-    df = panel.load("asi_gs1", inicio, fin)
+    propios = panel.dekads("asi_gs1")
+    df = panel.load("asi_gs1", propios[0], propios[-1])
     frame = climatology_frame(to_country(df), "GS1")
     frame = frame[frame["dekad_of_year"].isin(season_columns("GS1"))]
     esperado = wide.season_table(frame, "GS1")

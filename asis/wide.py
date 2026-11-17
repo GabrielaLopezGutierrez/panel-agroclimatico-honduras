@@ -27,8 +27,7 @@ import pandas as pd
 
 from asis import config as cfg
 from asis.aggregate import classify, narrowest_band, season_columns
-from asis.calendar import (dekad_label, dekad_labels, dekad_window,
-                           season_labels)
+from asis.calendar import dekad_label, dekad_labels, season_labels
 
 # Dos decimales en todo. Flourish formatea la presentación por su cuenta -el
 # separador decimal y el de miles se fijan en su pestaña Datos-, así que lo
@@ -38,24 +37,10 @@ from asis.calendar import (dekad_label, dekad_labels, dekad_window,
 # 4420.590000000001, que es ruido de punto flotante en pantalla.
 DECIMALS = 2
 
-# Dieciocho meses son cincuenta y cuatro dekads.
-WINDOW_DEKADS = 54
-
 # El municipio sin dato del mapa. Es una clase más y no un hueco: una
 # herramienta de afuera pinta de blanco lo que no encuentra, y en un mapa de
 # sequía un hueco blanco se lee como calma. Nombrándolo, entra a la leyenda.
 NO_DATA_LABEL = "sin dato"
-
-
-def window(last: str, dekads: int = WINDOW_DEKADS) -> tuple[str, str]:
-    """La ventana móvil que publican los archivos vivos.
-
-    Se cuenta hacia atrás desde el último dekad publicado y no desde una fecha
-    del calendario: el archivo lo escribe un proceso sin interfaz, y anclarlo al
-    dato hace que la ventana avance sola y solo cuando hay dato nuevo.
-    """
-    tramo = dekad_window(last, dekads)
-    return tramo[0], tramo[-1]
 
 
 def season_table(frame: pd.DataFrame, season: str | None, value_col="mean",
@@ -110,7 +95,7 @@ BELOW_LABEL = "por debajo del promedio"
 
 
 def heatmap_table(frame: pd.DataFrame, season: str | None, label: str,
-                  value_col="mean",
+                  family="ASI", value_col="mean",
                   decimals: int = DECIMALS) -> pd.DataFrame:
     """La misma matriz de `season_table`, pero larga: una fila por celda.
 
@@ -144,11 +129,19 @@ def heatmap_table(frame: pd.DataFrame, season: str | None, label: str,
     larga = larga.dropna(subset=[label])
     if not len(larga):
         return pd.DataFrame()
-    return larga[["campaña", "dekad", label]].reset_index(drop=True)
+    larga = larga[["campaña", "dekad", label]].reset_index(drop=True)
+    # La clase, que es por lo que colorea el gráfico publicado. Una escala
+    # numérica afuera interpola entre dos colores, y los cuatro de FAO no
+    # caben ahí: el degradado salía verde, oliva, marrón y rojo, que no son
+    # los colores de la leyenda. Con la clase, los cuatro intervalos salen
+    # planos y con el color que les toca, como en el visor de FAO.
+    larga["clase"] = classify(larga[label], family).astype(str).values
+    return larga
 
 
 def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
                   label="anomalía (%)", split_sign: bool = False,
+                  year_column: bool = False,
                   decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por dekad sobre el eje del tiempo corrido.
 
@@ -166,6 +159,11 @@ def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
         "fecha": pd.to_datetime(d["date"]).dt.date.values,
         "dekad": [dekad_label(c) for c in d["dekad_id"]],
     })
+    if year_column:
+        # Para el control de filtro de la herramienta de afuera, que filtra
+        # filas por el valor de una columna. La fecha ya trae el año, pero no
+        # sirve de filtro: son setecientas ochenta y siete fechas distintas.
+        out["año"] = [str(c)[:4] for c in d["dekad_id"]]
     v = d[value_col].round(decimals)
     if not split_sign:
         out[label] = v.values
