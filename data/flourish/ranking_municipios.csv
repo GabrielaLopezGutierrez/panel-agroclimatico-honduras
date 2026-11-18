@@ -1,26 +1,26 @@
-municipio,departamento,ASI %
-El Rosario,Olancho,100.0
-La Libertad,Francisco Morazan,100.0
-Langue,Valle,100.0
-San Antonio De Flores,Choluteca,100.0
-San Francisco De Coray,Valle,100.0
-San Isidro,Choluteca,100.0
-Santa Rita,Santa Barbara,100.0
-Goascoran,Valle,99.5
-El Triunfo,Choluteca,91.0
-Pespire,Choluteca,88.0
-San Jose,Choluteca,86.0
-San Miguelito,Francisco Morazan,85.5
-Concepcion De Maria,Choluteca,81.0
-Nacaome,Valle,79.5
-San Marcos De Colon,Choluteca,76.0
-Talanga,Francisco Morazan,75.5
-Alianza,Valle,73.0
-San Lorenzo,Valle,72.5
-Aramecina,Valle,72.0
-Guaimaca,Francisco Morazan,71.5
-Choluteca,Choluteca,69.0
-Villa De San Antonio,Comayagua,67.5
-Yocon,Olancho,65.0
-Morolica,Choluteca,64.5
-Salama,Olancho,64.5
+municipio,departamento,<10,10–25,25–40,>=40
+El Rosario,Olancho,0.0,0.0,0.0,100.0
+La Libertad,Francisco Morazan,0.0,0.0,0.0,100.0
+Langue,Valle,0.0,0.0,0.0,100.0
+San Antonio De Flores,Choluteca,0.0,0.0,0.0,100.0
+San Francisco De Coray,Valle,0.0,0.0,0.0,100.0
+San Isidro,Choluteca,0.0,0.0,0.0,100.0
+Santa Rita,Santa Barbara,0.0,0.0,0.0,100.0
+Goascoran,Valle,0.0,0.0,0.0,99.5
+El Triunfo,Choluteca,0.0,0.0,0.0,91.0
+Pespire,Choluteca,0.0,0.0,0.0,88.0
+San Jose,Choluteca,0.0,0.0,0.0,86.0
+San Miguelito,Francisco Morazan,0.0,0.0,0.0,85.5
+Concepcion De Maria,Choluteca,0.0,0.0,0.0,81.0
+Nacaome,Valle,0.0,0.0,0.0,79.5
+San Marcos De Colon,Choluteca,0.0,0.0,0.0,76.0
+Talanga,Francisco Morazan,0.0,0.0,0.0,75.5
+Alianza,Valle,0.0,0.0,0.0,73.0
+San Lorenzo,Valle,0.0,0.0,0.0,72.5
+Aramecina,Valle,0.0,0.0,0.0,72.0
+Guaimaca,Francisco Morazan,0.0,0.0,0.0,71.5
+Choluteca,Choluteca,0.0,0.0,0.0,69.0
+Villa De San Antonio,Comayagua,0.0,0.0,0.0,67.5
+Yocon,Olancho,0.0,0.0,0.0,65.0
+Morolica,Choluteca,0.0,0.0,0.0,64.5
+Salama,Olancho,0.0,0.0,0.0,64.5

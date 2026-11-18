@@ -307,6 +307,7 @@ def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
 def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
                   value_col="mean", name_col="adm2_name",
                   group_col: str | None = "adm1_name", top: int | None = None,
+                  spread_class: bool = False,
                   decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por unidad, en el orden en que la figura las apila.
 
@@ -332,19 +333,27 @@ def ranking_table(frame: pd.DataFrame, label: str, family="ASI",
     })
     if group_col and group_col in d:
         out["departamento"] = d[group_col].astype(str).values
-    out[label] = d[value_col].round(decimals).values
-    # Aquí no se reparte la cifra entre las clases, aunque eso haría que la
-    # barra publicada llevara el color de FAO como lo lleva la de la app.
-    # Se probó: una columna por clase, la cifra en la suya y vacío en las
-    # demás. Se descartó porque una clase sin ningún municipio en el dekad
-    # deja su columna entera vacía, la herramienta de afuera la tipa como
-    # texto y el gráfico deja de dibujarse. Y pasa de entrada: los
-    # veinticinco municipios con más estrés están todos sobre 40, así que
-    # tres de las cuatro columnas salen vacías el primer día.
+    valores = d[value_col].round(decimals)
+    if not spread_class:
+        out[label] = valores.values
+        return out
+    # Una columna por clase, con la cifra en la suya y **cero** en las demás.
     #
-    # La barra publicada va entonces de un solo color, el del indicador. Es
-    # menos de lo que muestra la app, que la pinta con el degradado, y es lo
-    # que esta plantilla sabe sostener sin romperse.
+    # La herramienta de afuera no sabe colorear una barra por su valor:
+    # colorea por serie, o sea por columna. Repartir la cifra entre las cuatro
+    # clases convierte el color en columna, y apiladas suman exactamente el
+    # valor, porque solo una es distinta de cero.
+    #
+    # El cero es lo que hace que esto se sostenga, y es la segunda versión.
+    # La primera dejaba vacías las demás, y una clase sin ninguna unidad en el
+    # dekad -los veinticinco municipios con más estrés están todos sobre 40-
+    # dejaba su columna entera vacía: afuera la tipan como texto y la serie
+    # deja de dibujarse. Con cero la columna sigue siendo numérica aunque no
+    # tenga a nadie, y no miente: en una barra apilada, el aporte de esa
+    # unidad a esa clase es cero.
+    clase = classify(valores, family).astype(str)
+    for etiqueta in cfg.CLASSES[family][1]:
+        out[etiqueta] = valores.where(clase.values == etiqueta, 0.0).values
     return out
 
 

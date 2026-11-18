@@ -247,11 +247,12 @@ def construir(salida: Path = SALIDA) -> list[str]:
         unidad = cfg.SERIES["asi_gs1"].unit_short
         dep = to_department(muni)
         lineas.append(_escribir(
-            wide.ranking_table(muni, unidad, top=TOP_MUNICIPIOS),
+            wide.ranking_table(muni, unidad, top=TOP_MUNICIPIOS,
+                               spread_class=True),
             salida / RANKING_MUNI))
         lineas.append(_escribir(
             wide.ranking_table(dep, unidad, name_col="adm1_name",
-                               group_col=None),
+                               group_col=None, spread_class=True),
             salida / RANKING_DEPT))
         # El mapa es el mismo corte que los rankings, con el codigo que
         # empata la geometria, y al lado la geometria misma: el grafico de

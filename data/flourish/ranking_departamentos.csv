@@ -1,18 +1,18 @@
-departamento,ASI %
-Valle,81.49
-Choluteca,64.64
-Francisco Morazan,30.51
-Olancho,21.08
-Intibuca,14.82
-Paraiso,13.99
-Cortes,13.51
-Comayagua,11.27
-Yoro,9.73
-Copan,8.99
-Lempira,6.83
-Ocotepeque,6.09
-Gracias A Dios,5.82
-La Paz,5.03
-Santa Barbara,3.93
-Colon,1.86
-Atlantida,0.0
+departamento,<10,10–25,25–40,>=40
+Valle,0.0,0.0,0.0,81.49
+Choluteca,0.0,0.0,0.0,64.64
+Francisco Morazan,0.0,0.0,30.51,0.0
+Olancho,0.0,21.08,0.0,0.0
+Intibuca,0.0,14.82,0.0,0.0
+Paraiso,0.0,13.99,0.0,0.0
+Cortes,0.0,13.51,0.0,0.0
+Comayagua,0.0,11.27,0.0,0.0
+Yoro,9.73,0.0,0.0,0.0
+Copan,8.99,0.0,0.0,0.0
+Lempira,6.83,0.0,0.0,0.0
+Ocotepeque,6.09,0.0,0.0,0.0
+Gracias A Dios,5.82,0.0,0.0,0.0
+La Paz,5.03,0.0,0.0,0.0
+Santa Barbara,3.93,0.0,0.0,0.0
+Colon,1.86,0.0,0.0,0.0
+Atlantida,0.0,0.0,0.0,0.0

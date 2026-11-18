@@ -115,6 +115,20 @@ def test_el_ranking_sale_con_el_peor_primero():
     d = panel.load("asi_gs1", dk, dk)
     t = wide.ranking_table(d, "ASI %", family="ASI", top=10)
     assert list(t.columns) == ["municipio", "departamento", "ASI %"]
+    # Repartida por clase, la cifra va en la columna de su clase y las otras
+    # llevan cero. Es como el grafico de afuera colorea una barra, que es por
+    # columna y no por valor; apiladas suman el valor.
+    con = wide.ranking_table(d, "ASI %", family="ASI", top=10,
+                             spread_class=True)
+    assert list(con.columns) == ["municipio", "departamento",
+                                 *cfg.CLASSES["ASI"][1]]
+    clases = con[cfg.CLASSES["ASI"][1]]
+    assert (clases != 0).sum(axis=1).max() <= 1, "una clase por fila"
+    assert (clases.sum(axis=1).values == t["ASI %"].values).all()
+    # Cero y no vacio: una clase sin nadie en el dekad seguiria siendo una
+    # columna numerica. Vacia la tipan como texto y la serie deja de
+    # dibujarse, que es como se rompio la primera version.
+    assert clases.notna().all().all()
     assert len(t) == 10
     assert t["ASI %"].is_monotonic_decreasing, "el ASI va de peor a mejor"
     # En el VCI peor es mas bajo, asi que el orden se invierte.
