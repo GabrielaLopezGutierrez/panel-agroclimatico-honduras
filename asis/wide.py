@@ -232,6 +232,7 @@ def severity_table(frame: pd.DataFrame, family: str, season: str | None,
     hay dato y una sola serie corrida afirmaría una caída que nadie midió.
     """
     from asis.aggregate import campaign_year, severity_area
+    from asis.calendar import dekad_of_year
 
     if not len(frame):
         return pd.DataFrame()
@@ -239,9 +240,12 @@ def severity_table(frame: pd.DataFrame, family: str, season: str | None,
     if not len(g):
         return pd.DataFrame()
     clases = [c for c in g.columns if c != "dekad_id"]
+    # Etiqueta corta, la de la posición dentro de la temporada: la campaña ya
+    # va en su propia columna y repetir el año en cada dekad llena el eje de
+    # cada panel con «1er dek may 2005» dieciocho veces.
     out = pd.DataFrame({
         "campaña": campaign_year(g["dekad_id"], season).astype(str).values,
-        "dekad": [dekad_label(c) for c in g["dekad_id"]],
+        "dekad": dekad_labels([dekad_of_year(c) for c in g["dekad_id"]]),
     })
     for c in clases:
         out[c] = g[c].round(decimals).values
