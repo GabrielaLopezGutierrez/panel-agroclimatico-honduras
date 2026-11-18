@@ -13,7 +13,7 @@ permite verlo, filtrarlo y descargarlo en CSV.
 | **Periodo** | Desde 2005, gobernado por `START_YEAR` |
 | **Series** | ASI primera, ASI postrera, VCI, y el peor caso de las dos temporadas |
 
-**App en línea:** https://panel-agroclimatico-honduras-s8vsevqbdphjosdmjeysye.streamlit.app/
+**App en línea:** https://panel-agroclimatico-honduras.streamlit.app/
 
 ## Cómo se usa
 
