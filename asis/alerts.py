@@ -31,8 +31,8 @@ _, ORANGE_MIN, RED_MIN = cfg.ASI_ALERT_THRESHOLDS
 _LEVEL_TO_CLASS = {"naranja": cfg.CLASSES["ASI"][1][2],
                    "rojo": cfg.CLASSES["ASI"][1][3]}
 
-# Destinatarios: solo por variable de entorno o por los secretos de Streamlit.
-# Nunca un correo escrito en el código, y nunca en un archivo que se commitee
+# Destinatarios: solo por variable de entorno, o pasados por quien llame. Nunca
+# un correo escrito en el código, y nunca en un archivo que se commitee
 # (.streamlit/secrets.toml está en .gitignore).
 RECIPIENTS_ENV = "ASIS_ALERT_RECIPIENTS"
 
@@ -43,17 +43,26 @@ LOG_PATH_ENV = "ASIS_ALERT_LOG"
 DEFAULT_LOG_PATH = cfg.CACHE / "alertas_estado.json"
 
 
-def recipients() -> list[str]:
-    """Lista de destinatarios configurada por quien despliega la app, nunca
-    escrita en el código."""
-    raw = os.environ.get(RECIPIENTS_ENV, "")
-    if not raw:
-        try:
-            import streamlit as st
-            raw = ",".join(st.secrets.get("alerts", {}).get("recipients", []))
-        except Exception:
-            raw = ""
-    return [r.strip() for r in raw.split(",") if r.strip()]
+def recipients(extra=None) -> list[str]:
+    """Lista de destinatarios configurada por quien despliega, nunca escrita en
+    el código.
+
+    Sale de `ASIS_ALERT_RECIPIENTS`. Antes había aquí un respaldo que importaba
+    Streamlit para leer `st.secrets`, y era la única línea de todo `asis/` que
+    conocía el framework de la app: dejaba al paquete de cálculo dependiendo de
+    quién lo estuviera ejecutando. Ahora la dirección es la contraria, que es la
+    que permite que el paquete viaje: quien tenga los secretos los pasa en
+    `extra`. Desde la app sería `recipients(st.secrets.get("alerts", {}).get("recipients"))`.
+    """
+    fuentes = [os.environ.get(RECIPIENTS_ENV, "")]
+    if extra:
+        fuentes.append(extra if isinstance(extra, str) else ",".join(extra))
+    vistos, salida = set(), []
+    for r in (p.strip() for f in fuentes for p in f.split(",")):
+        if r and r not in vistos:
+            vistos.add(r)
+            salida.append(r)
+    return salida
 
 
 @dataclass(frozen=True)

@@ -21,7 +21,6 @@ from __future__ import annotations
 import sys
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 # --- Modulos locales obsoletos en memoria, antes de importarlos --------------
@@ -635,39 +634,21 @@ def view_department_series(query: Query, cut: pd.DataFrame):
         st.caption(texts.DEPT_GRID_NOTE.format(ventana=query.window_label))
 
 
-GRID_COLUMNS = 3          # 18 departamentos entran en seis filas de tres
 SIDE_BY_SIDE_HEIGHT = 420   # alto minimo de las dos figuras pareadas de pais
 
 
 def _department_grid_fig(query: Query, d: pd.DataFrame):
-    """Una cuadrícula con la serie de cada departamento en su propio recuadro.
+    """La cuadricula departamental con los textos de esta vista.
 
-    Antes eran dieciocho líneas superpuestas en un solo eje con una leyenda de
-    dieciocho colores: para seguir un departamento había que encontrar su color
-    entre diecisiete parecidos, y las líneas se tapaban entre sí. Separadas,
-    cada una se lee sola y siguen comparables porque comparten el eje vertical.
+    La figura la arma `viz.department_grid_fig`; aqui solo se le pasan el
+    titulo, la ventana y la unidad, que es lo que depende de la seleccion.
 
-    Es una sola figura, así que lleva una sola descarga, con los datos de todos
+    Es una sola figura, asi que lleva una sola descarga, con los datos de todos
     los departamentos.
     """
-    if d.empty:
-        return None
-    filas = -(-d["adm1_name"].nunique() // GRID_COLUMNS)
-    fig = px.line(d, x="date", y="mean", facet_col="adm1_name",
-                  facet_col_wrap=GRID_COLUMNS,
-                  labels={"mean": query.unit_short, "date": ""},
-                  height=max(320, 200 * filas))
-    # El nombre del departamento viene como "adm1_name=Atlántida".
-    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-    fig.update_traces(hovertemplate="%{x|%d %b %Y}<br>%{y:.2f}<extra></extra>")
-    # Con seis filas, repetir la fecha bajo cada recuadro es ruido: basta la de
-    # la fila de abajo, que es la que ancla la lectura.
-    fig.update_xaxes(showticklabels=False, title_text="")
-    for eje in fig.select_xaxes(row=1):
-        eje.update(showticklabels=True)
-    viz.style_fig(fig, f"{query.label} por departamento", query.window_label,
-                  y_source=-0.06, legend="off")
-    return fig
+    return viz.department_grid_fig(
+        d, f"{query.label} por departamento", query.window_label,
+        label=query.unit_short)
 
 
 def _season_frame(query: Query, series_id: str) -> pd.DataFrame:

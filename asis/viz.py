@@ -442,6 +442,41 @@ def series_fig(df, value_col, title, subtitle="", label="", family="ASI",
     return style_fig(fig, title, subtitle, y_source=-0.20, legend="off")
 
 
+GRID_COLUMNS = 3          # 18 departamentos entran en seis filas de tres
+
+
+def department_grid_fig(df, title, subtitle="", value_col="mean", label="",
+                        ncols=GRID_COLUMNS, height_per_row=200):
+    """Una cuadrícula con la serie de cada departamento en su propio recuadro.
+
+    Antes eran dieciocho líneas superpuestas en un solo eje con una leyenda de
+    dieciocho colores: para seguir un departamento había que encontrar su color
+    entre diecisiete parecidos, y las líneas se tapaban entre sí. Separadas,
+    cada una se lee sola y siguen comparables porque comparten el eje vertical.
+
+    Vivía armada con `px.line` dentro de la app, que era la única figura del
+    proyecto dibujada fuera de este módulo. Está aquí para que la regla no tenga
+    excepciones: el dibujo vive en `asis/viz.py` y la app compone vistas.
+    """
+    d = df.dropna(subset=[value_col]) if value_col in df else df
+    if d.empty:
+        return None
+    filas = -(-d["adm1_name"].nunique() // ncols)
+    fig = px.line(d, x="date", y=value_col, facet_col="adm1_name",
+                  facet_col_wrap=ncols,
+                  labels={value_col: label or value_col, "date": ""},
+                  height=max(320, height_per_row * filas))
+    # El nombre del departamento viene como "adm1_name=Atlántida".
+    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    fig.update_traces(hovertemplate="%{x|%d %b %Y}<br>%{y:.2f}<extra></extra>")
+    # Con seis filas, repetir la fecha bajo cada recuadro es ruido: basta la de
+    # la fila de abajo, que es la que ancla la lectura.
+    fig.update_xaxes(showticklabels=False, title_text="")
+    for eje in fig.select_xaxes(row=1):
+        eje.update(showticklabels=True)
+    return style_fig(fig, title, subtitle, y_source=-0.06, legend="off")
+
+
 def climatology_fig(national, pctl, n_baseline, years, title, subtitle="",
                     value_col="value", y_title="ASI nacional (%)", height=460):
     """Un año contra su propia climatología: franja p10-p90 y mediana."""
