@@ -599,6 +599,31 @@ def test_el_kpi_no_estacional_se_fecha_en_su_ultimo_dato(last):
     assert dekad == max(serie["dekad_id"])
 
 
+@pytest.mark.parametrize("err,obsoleto", [
+    (AttributeError("module 'asis.wide' has no attribute 'map_table'"), True),
+    (AttributeError("module 'app.texts' has no attribute 'SOURCE_MD'"), True),
+    (TypeError("map_table() got an unexpected keyword argument 'with_dekad'"),
+     True),
+    (TypeError("f() missing 1 required positional argument: 'x'"), True),
+    (TypeError("f() takes 2 positional arguments but 3 were given"), True),
+    (TypeError("unsupported operand type(s) for +: 'int' and 'str'"), False),
+    (AttributeError("'DataFrame' object has no attribute 'foo'"), False),
+])
+def test_una_firma_que_cambio_tambien_cuenta_como_modulo_obsoleto(err,
+                                                                  obsoleto):
+    """Streamlit Cloud reejecuta el script nuevo en un proceso que ya tiene
+    importados los modulos viejos. Si el commit agrego un nombre el error es
+    AttributeError, y eso ya se reconocia. Si el commit le agrego un parametro
+    a una funcion que ya existia el error es TypeError, y no se reconocia: la
+    app cayo entera en la pestana del mapa, con map_table y with_dekad,
+    mientras en local funcionaba.
+
+    Los TypeError que no son de firma no cuentan, para no recargar por un
+    error de verdad. Aun si se colara, el reintento recarga y vuelve a llamar
+    a main() una sola vez: el error volveria a salir."""
+    assert app._stale_module_error(err) is obsoleto
+
+
 def test_la_tarjeta_dice_cuando_la_cifra_quedo_en_el_cierre_de_temporada():
     """El reporte que llego con el primer dekad de noviembre: el encabezado
     citaba esa fecha, la tarjeta del ASI primera citaba el tercer dekad de

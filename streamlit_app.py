@@ -1279,9 +1279,33 @@ def main():
 # La recarga se hace solo cuando el error ya ocurrio, no en cada corrida: recargar
 # `app.controls` en cada rerun recrearia las funciones de `st.cache_data` y el
 # panel se releeria del disco en cada clic.
+# Firmas que cambiaron: el error no es AttributeError sino TypeError.
+_FIRMA_VIEJA = ("unexpected keyword argument", "required positional argument",
+                "positional arguments but")
+
+
 def _stale_module_error(err: BaseException) -> bool:
+    """Si el error huele a modulo propio viejo en memoria.
+
+    Hay dos formas y cada una vino de un despliegue real.
+
+    La primera: el commit agrego un nombre y el modulo viejo no lo tiene,
+    «module 'asis.wide' has no attribute ...». Esa es AttributeError y era la
+    unica que esto reconocia.
+
+    La segunda: el commit le agrego un parametro a una funcion que ya existia,
+    «map_table() got an unexpected keyword argument 'with_dekad'». Eso es
+    TypeError, asi que el reintento no la atrapaba y la app caia entera en la
+    pestana del mapa mientras en local funcionaba. Es el mismo problema de
+    siempre -script nuevo, modulo viejo en el mismo proceso- con otra cara.
+
+    Reconocerlas de mas no es grave: el reintento recarga y vuelve a llamar a
+    `main()` una sola vez, y si el error era de verdad vuelve a salir.
+    """
     msg = str(err)
-    return "has no attribute" in msg and ("'app" in msg or "'asis" in msg)
+    if "has no attribute" in msg and ("'app" in msg or "'asis" in msg):
+        return True
+    return isinstance(err, TypeError) and any(s in msg for s in _FIRMA_VIEJA)
 
 
 def _reload_local_modules() -> bool:
@@ -1312,7 +1336,7 @@ def _reload_local_modules() -> bool:
 if __name__ == "__main__":
     try:
         main()
-    except AttributeError as err:
+    except (AttributeError, TypeError) as err:
         if not _stale_module_error(err) or not _reload_local_modules():
             raise
         print(f"modulos locales obsoletos en memoria ({err}); recargados y "
