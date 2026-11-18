@@ -241,6 +241,53 @@ def test_el_mapa_de_calor_publicado_cubre_mas_que_la_ventana():
     assert primera["dekad"].iloc[-1].startswith("ene"), primera["dekad"].iloc[-1]
 
 
+def test_la_superficie_por_clase_trae_las_cuatro_clases_en_columnas():
+    """Ya vienen asi de `aggregate.severity_area`, que es la misma funcion que
+    alimenta la figura. Afuera se apilan tal cual, y la campania al lado
+    separa los paneles: entre el cierre de una y la apertura de la siguiente
+    no hay dato, y una sola serie corrida afirmaria una caida que nadie
+    midio."""
+    if "asi_gs1" not in panel.stored_series():
+        pytest.skip("no hay panel construido")
+    dks = panel.dekads("asi_gs1")[-20:]
+    d = panel.load("asi_gs1", dks[0], dks[-1])
+    t = wide.severity_table(d, "ASI", "GS1")
+    assert list(t.columns) == ["campaña", "dekad", *cfg.CLASSES["ASI"][1]]
+    # Son km2, asi que ninguna es negativa y la suma es el area con dato.
+    assert (t[cfg.CLASSES["ASI"][1]] >= 0).all().all()
+
+
+def test_las_figuras_por_unidad_llevan_fecha_para_poder_ordenarse():
+    """La etiqueta del dekad se lee, la fecha ordena: sin ella "1er dek abr"
+    se ordena antes que "1er dek ene"."""
+    if "asi_gs1" not in panel.stored_series():
+        pytest.skip("no hay panel construido")
+    dks = panel.dekads("asi_gs1")[-6:]
+    d = panel.load("asi_gs1", dks[0], dks[-1])
+    t = wide.unit_series_table(d, "ASI %", with_class=True)
+    assert list(t.columns) == ["municipio", "fecha", "dekad", "ASI %", "clase"]
+    assert set(t["clase"]) <= set(cfg.CLASSES["ASI"][1])
+    # Una fila por unidad y dekad, agrupadas por unidad.
+    assert not t.duplicated(["municipio", "fecha"]).any()
+    dep = wide.unit_series_table(to_department(d), "ASI %",
+                                 name_col="adm1_name")
+    assert list(dep.columns) == ["departamento", "fecha", "dekad", "ASI %"]
+
+
+def test_la_rejilla_de_coberturas_mantiene_las_dos_separadas():
+    """Misma regla que el contraste de un dekad: conviven en columnas, nunca
+    se promedian ni se restan. Lo que cambia es que aqui hay una fila por
+    dekad, que es lo que dibuja cada panel de la rejilla."""
+    if "asi_gs1_pasto" not in panel.stored_series():
+        pytest.skip("no hay panel de pastizal")
+    dks = panel.dekads("asi_gs1_pasto")[-6:]
+    t = wide.cover_grid_table(panel.load("asi_gs1", dks[0], dks[-1]),
+                              panel.load("asi_gs1_pasto", dks[0], dks[-1]))
+    assert list(t.columns) == ["municipio", "fecha", "dekad", "cultivo",
+                               "pastizal"]
+    assert not t.duplicated(["municipio", "fecha"]).any()
+
+
 # --- Los archivos publicados ------------------------------------------------
 ENCABEZADOS = {
     "serie_nacional_asi_primera.csv": "dekad",
@@ -248,6 +295,11 @@ ENCABEZADOS = {
     "serie_nacional_vci.csv": "dekad",
     "mapa_calor_asi_primera.csv": "campaña",
     "mapa_calor_asi_postrera.csv": "campaña",
+    "superficie_clase_asi_primera.csv": "campaña",
+    "superficie_clase_asi_postrera.csv": "campaña",
+    "mapa_calor_municipios.csv": "municipio",
+    "rejilla_departamentos.csv": "departamento",
+    "rejilla_coberturas.csv": "municipio",
     "lluvia_nacional.csv": "dekad",
     "lluvia_anomalia.csv": "fecha",
     "ranking_municipios.csv": "municipio",

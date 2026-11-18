@@ -142,6 +142,112 @@ def heatmap_table(frame: pd.DataFrame, season: str | None, label: str,
     return larga
 
 
+def _qualified(d: pd.DataFrame, name_col: str,
+               group_col: str | None) -> pd.Series:
+    """El nombre de la unidad, con el de su departamento si hace falta.
+
+    Veintiséis nombres de municipio se repiten en Honduras, alguno en tres
+    departamentos a la vez. Afuera, una rejilla separa paneles por el valor
+    de una columna, así que dos municipios homónimos caerían en el mismo
+    panel y sus series se mezclarían sin que nada lo diga. Es la misma
+    etiqueta que arma `viz.heatmap_panel` para su eje, por el mismo motivo.
+    """
+    nombre = d[name_col].astype(str)
+    if group_col and group_col in d and group_col != name_col:
+        return nombre + " · " + d[group_col].astype(str)
+    return nombre
+
+
+def unit_series_table(frame: pd.DataFrame, label: str, family="ASI",
+                      value_col="mean", name_col="adm2_name",
+                      group_col: str | None = "adm1_name",
+                      with_class: bool = False,
+                      decimals: int = DECIMALS) -> pd.DataFrame:
+    """Una fila por unidad y dekad: la forma de una rejilla o de un mapa de
+    calor de unidades.
+
+    Es larga por el mismo motivo que `heatmap_table`: afuera, una rejilla se
+    arma declarando qué columna separa los paneles, y un mapa de calor pide
+    las dos coordenadas aparte. En los dos casos la unidad es una columna y
+    no un encabezado.
+
+    Lleva la fecha además de la etiqueta del dekad. La etiqueta se lee, la
+    fecha ordena: sin ella "1er dek abr" se ordena antes que "1er dek ene".
+    """
+    d = frame.dropna(subset=[value_col]) if len(frame) else frame
+    if not len(d):
+        return pd.DataFrame()
+    d = d.sort_values([name_col, "dekad_id"])
+    nombres = {"adm2_name": "municipio", "adm1_name": "departamento"}
+    out = pd.DataFrame({
+        nombres.get(name_col, name_col): _qualified(d, name_col,
+                                                    group_col).values,
+        "fecha": pd.to_datetime(d["date"]).dt.date.values,
+        "dekad": [dekad_label(c) for c in d["dekad_id"]],
+    })
+    valores = d[value_col].round(decimals)
+    out[label] = valores.values
+    if with_class:
+        out["clase"] = classify(valores, family).astype(str).values
+    return out
+
+
+def cover_grid_table(crop: pd.DataFrame, pasture: pd.DataFrame,
+                     value_col="mean",
+                     decimals: int = DECIMALS) -> pd.DataFrame:
+    """Las dos coberturas de cada municipio dekad a dekad.
+
+    Es la rejilla: un panel por municipio y dos líneas dentro. Como en
+    `cover_table`, las dos cifras conviven en columnas y nunca se promedian
+    ni se restan; lo que cambia es que aquí hay una fila por dekad.
+    """
+    if crop is None or pasture is None or not len(crop) or not len(pasture):
+        return pd.DataFrame()
+    llaves = ["adm2_code", "adm2_name", "adm1_name", "dekad_id", "date"]
+    a = crop.dropna(subset=[value_col])[llaves + [value_col]]
+    b = pasture.dropna(subset=[value_col])[["adm2_code", "dekad_id",
+                                            value_col]]
+    d = a.merge(b, on=["adm2_code", "dekad_id"], suffixes=("_c", "_p"))
+    if not len(d):
+        return pd.DataFrame()
+    d = d.sort_values(["adm2_code", "dekad_id"])
+    return pd.DataFrame({
+        "municipio": _qualified(d, "adm2_name", "adm1_name").values,
+        "fecha": pd.to_datetime(d["date"]).dt.date.values,
+        "dekad": [dekad_label(c) for c in d["dekad_id"]],
+        "cultivo": d[f"{value_col}_c"].round(decimals).values,
+        "pastizal": d[f"{value_col}_p"].round(decimals).values,
+    })
+
+
+def severity_table(frame: pd.DataFrame, family: str, season: str | None,
+                   decimals: int = DECIMALS) -> pd.DataFrame:
+    """Kilómetros cuadrados en cada clase, dekad a dekad y por campaña.
+
+    Sale de `aggregate.severity_area`, que es la misma función que alimenta
+    la figura. Las cuatro clases ya vienen como columnas, que es justo lo que
+    una herramienta de afuera necesita para apilarlas, y la campaña va al
+    lado para poder separar los paneles: la figura de la app dibuja uno por
+    campaña, porque entre el cierre de una y la apertura de la siguiente no
+    hay dato y una sola serie corrida afirmaría una caída que nadie midió.
+    """
+    from asis.aggregate import campaign_year, severity_area
+
+    if not len(frame):
+        return pd.DataFrame()
+    g = severity_area(frame, family).reset_index()
+    if not len(g):
+        return pd.DataFrame()
+    clases = [c for c in g.columns if c != "dekad_id"]
+    out = pd.DataFrame({
+        "campaña": campaign_year(g["dekad_id"], season).astype(str).values,
+        "dekad": [dekad_label(c) for c in g["dekad_id"]],
+    })
+    for c in clases:
+        out[c] = g[c].round(decimals).values
+    return out
+
+
 def anomaly_table(frame: pd.DataFrame, value_col="anom_pct",
                   label="anomalía (%)", split_sign: bool = False,
                   year_column: bool = False,

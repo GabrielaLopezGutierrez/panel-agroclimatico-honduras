@@ -46,6 +46,7 @@ import pandas as pd                                            # noqa: E402
 from asis import config as cfg, panel, wide                    # noqa: E402
 from asis.aggregate import (climatology_frame, season_columns,  # noqa: E402
                             to_country, to_department)
+from asis.calendar import dekad_of_year                         # noqa: E402
 
 SALIDA = cfg.DATA / "flourish"
 
@@ -72,6 +73,20 @@ GEOMETRIA_MUNI = "geometria_municipios.csv"
 GEOMETRIA_DEPT = "geometria_departamentos.csv"
 
 TOP_MUNICIPIOS = 25
+
+# Las figuras por unidad -la rejilla, el mapa de calor municipal- no caben
+# enteras: treinta municipios por ochocientos dekads son veinticuatro mil
+# filas. Llevan ventana, y son dieciocho meses, los mismos que la app abre
+# por defecto a nivel pais.
+VENTANA_UNIDADES = 54
+TOP_REJILLA = 30
+SUPERFICIE = {
+    "asi_gs1": "superficie_clase_asi_primera.csv",
+    "asi_gs2": "superficie_clase_asi_postrera.csv",
+}
+MAPA_CALOR_MUNI = "mapa_calor_municipios.csv"
+REJILLA_DEPT = "rejilla_departamentos.csv"
+REJILLA_COBERTURAS = "rejilla_coberturas.csv"
 
 
 def _geometria(salida: Path, nivel: str, archivo: str) -> str:
@@ -168,6 +183,47 @@ def construir(salida: Path = SALIDA) -> list[str]:
         lineas.append(_escribir(
             wide.heatmap_table(frame, season, cfg.SERIES[sid].unit_short),
             salida / archivo))
+
+    # Superficie por clase: una fila por dekad de la temporada, las cuatro
+    # clases en columnas y la campania al lado para separar los paneles.
+    for sid, archivo in SUPERFICIE.items():
+        if sid not in panel.stored_series():
+            continue
+        propios = panel.dekads(sid)
+        df = panel.load(sid, propios[0], propios[-1])
+        season = cfg.SERIES[sid].season
+        df = df[[dekad_of_year(d) in season_columns(season)
+                 for d in df["dekad_id"]]]
+        if df.empty:
+            continue
+        lineas.append(_escribir(
+            wide.severity_table(df, cfg.SERIES[sid].family, season),
+            salida / archivo))
+
+    # Las figuras por unidad, con ventana.
+    if "asi_gs1" in panel.stored_series():
+        propios = panel.dekads("asi_gs1")
+        tramo = propios[-VENTANA_UNIDADES:]
+        v = panel.load("asi_gs1", tramo[0], tramo[-1])
+        unidad = cfg.SERIES["asi_gs1"].unit_short
+        peor = (v.groupby("adm2_code", observed=True)["mean"].max()
+                 .nlargest(TOP_REJILLA).index)
+        lineas.append(_escribir(
+            wide.unit_series_table(v[v["adm2_code"].isin(peor)], unidad,
+                                   with_class=True),
+            salida / MAPA_CALOR_MUNI))
+        lineas.append(_escribir(
+            wide.unit_series_table(to_department(v), unidad,
+                                   name_col="adm1_name", group_col=None),
+            salida / REJILLA_DEPT))
+        if "asi_gs1_pasto" in panel.stored_series():
+            pastos = panel.dekads("asi_gs1_pasto")
+            desde = max(tramo[0], pastos[0])
+            lineas.append(_escribir(
+                wide.cover_grid_table(
+                    v[v["adm2_code"].isin(peor)],
+                    panel.load("asi_gs1_pasto", desde, tramo[-1])),
+                salida / REJILLA_COBERTURAS))
 
     lluvia = panel.national("serie_nacional_lluvia")
     if len(lluvia):
