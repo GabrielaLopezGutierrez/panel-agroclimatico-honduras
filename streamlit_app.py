@@ -429,7 +429,15 @@ def view_map(query: Query, muni: pd.DataFrame, cut: pd.DataFrame):
             data, geojson(query.level), query.family, titulo, subtitulo,
             animation=animacion, hover_extra=extra, code_col=query.code_col,
             name_col=query.name_col)
-    figure(fig, data, f"mapa_{query.slug()}", "dl_mapa")
+    # La tabla del mapa y no el corte crudo del panel: era la unica figura
+    # cuya descarga no pasaba por `asis.wide`, y entregaba veintidos columnas
+    # -percentiles, umbrales, pixeles- que el mapa no dibuja.
+    figure(fig, wide.map_table(
+        data, query.unit_short, family=query.family, code_col=query.code_col,
+        name_col=query.name_col,
+        group_col=None if query.level == "departamento" else "adm1_name",
+        with_dekad=not query.single),
+        f"mapa_{query.slug()}", "dl_mapa")
     if fig is not None:
         nota = texts.MAP_NOTE.format(
             indicador=query.label, unidad=query.unit_name,
@@ -968,7 +976,11 @@ def _rainfall_block(query: Query):
         # ejes distintos: arriba los años superpuestos sobre el dekad del año,
         # abajo la anomalía sobre el tiempo corrido. Una sola no puede ser las
         # dos, y la diferencia ahora sí es visible en lo que se descarga.
-        download(wide.anomaly_table(ventana),
+        # Partida por signo y con el anio, que es la forma publicada. El
+        # color de esta figura es el signo, asi que la descarga lo trae como
+        # columna en vez de dejarlo dentro del numero.
+        download(wide.anomaly_table(ventana, split_sign=True,
+                                    year_column=True),
                  f"lluvia_anomalia_{query.slug()}", "dl_anomalia")
     st.caption(texts.RAIN_NOTE)
 

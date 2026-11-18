@@ -61,6 +61,40 @@ def test_la_postrera_rotula_su_campania_con_los_dos_anios():
     assert not any("-" in c for c in list(t.columns)[1:]), list(t.columns)
 
 
+def test_la_campania_que_arranca_a_medias_solo_se_poda_al_publicar():
+    """La postrera que abrio en septiembre de 2004 entra al panel solo por su
+    cola de enero de 2005. Publicada como campania desordena el eje y miente
+    sobre lo que cubre, asi que se descarta. Pero con una ventana elegida en
+    pantalla la primera campania casi siempre empieza a mitad, y descartarla
+    ahi borraria justo lo que la persona pidio ver: por eso lo pide quien
+    publica y no la funcion."""
+    frame, season = _marco("asi_gs2", dekads=400)
+    entera = wide.season_table(frame, season)
+    podada = wide.season_table(frame, season, drop_partial_start=True)
+    assert len(podada.columns) <= len(entera.columns)
+    if pd.isna(entera.iloc[0, 1]):
+        assert len(podada.columns) == len(entera.columns) - 1
+        assert not pd.isna(podada.iloc[0, 1]), "la primera ya arranca entera"
+    # Y por defecto no se poda nada.
+    assert list(entera.columns) == list(
+        wide.season_table(frame, season).columns)
+
+
+def test_el_mapa_con_rango_fecha_cada_cifra():
+    """Con un rango el mapa se recorre dekad por dekad, asi que una fila por
+    unidad no alcanza: la descarga tiene que decir de cuando es cada cifra."""
+    if "asi_gs1" not in panel.stored_series():
+        pytest.skip("no hay panel construido")
+    dks = panel.dekads("asi_gs1")[-3:]
+    d = panel.load("asi_gs1", dks[0], dks[-1])
+    uno = wide.map_table(d[d["dekad_id"] == dks[-1]], "ASI %")
+    assert "dekad" not in uno.columns
+    varios = wide.map_table(d, "ASI %", with_dekad=True)
+    assert list(varios.columns)[2] == "dekad"
+    assert varios["dekad"].nunique() == len(dks)
+    assert len(varios) == len(d)
+
+
 def test_la_referencia_entra_como_una_columna_mas():
     """El promedio de largo plazo no es un anio mas, pero en la tabla es una
     columna como las otras: es lo que Flourish sabe dibujar."""

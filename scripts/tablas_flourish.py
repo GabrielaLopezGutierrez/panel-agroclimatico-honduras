@@ -145,8 +145,9 @@ def construir(salida: Path = SALIDA) -> list[str]:
         frame = climatology_frame(to_country(df), season)
         if season:
             frame = frame[frame["dekad_of_year"].isin(season_columns(season))]
-        lineas.append(_escribir(wide.season_table(frame, season),
-                                salida / archivo))
+        lineas.append(_escribir(
+            wide.season_table(frame, season, drop_partial_start=True),
+            salida / archivo))
 
     # Los mapas de calor van sobre el panel entero y no sobre la ventana.
     # Es la unica excepcion de esta carpeta y tiene un motivo: la matriz

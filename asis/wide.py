@@ -45,6 +45,7 @@ NO_DATA_LABEL = "sin dato"
 
 def season_table(frame: pd.DataFrame, season: str | None, value_col="mean",
                  reference: pd.Series | None = None, reference_label="",
+                 drop_partial_start: bool = False,
                  decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por dekad de la temporada y una columna por campaña.
 
@@ -72,6 +73,16 @@ def season_table(frame: pd.DataFrame, season: str | None, value_col="mean",
     m = (d.pivot_table(index="dekad_of_year", columns="Year",
                        values=value_col)
           .reindex(index=orden))
+    if drop_partial_start and len(m.columns) and pd.isna(m.iloc[0, 0]):
+        # La primera campaña no empieza donde empieza la temporada. En la
+        # postrera pasa siempre: la que abrió en septiembre de 2004 entra al
+        # panel solo por su cola de enero de 2005, porque START_YEAR es 2005.
+        # Esa columna no es una campaña, es su último tercio.
+        #
+        # Lo pide quien publica, no esta función: con una ventana elegida en
+        # pantalla la primera campaña casi siempre empieza a mitad, y
+        # descartarla ahí borraría justo lo que la persona pidió ver.
+        m = m.drop(columns=m.columns[0])
     anios = list(m.columns)
     m.columns = season_labels(anios, columnas)
     if reference is not None and len(reference):
@@ -113,18 +124,10 @@ def heatmap_table(frame: pd.DataFrame, season: str | None, label: str,
     llegó el panel, y una fila con la coordenada puesta y el valor vacío no es
     una observación: es la ausencia de una.
     """
-    ancha = season_table(frame, season, value_col=value_col, decimals=decimals)
+    ancha = season_table(frame, season, value_col=value_col,
+                         drop_partial_start=True, decimals=decimals)
     if not len(ancha):
         return pd.DataFrame()
-    campanias = list(ancha.columns)[1:]
-    # La primera campaña se descarta si no empieza donde empieza la temporada.
-    # En la postrera pasa siempre: la campaña que abrió en septiembre de 2004
-    # entra al panel solo por su cola de enero de 2005, porque START_YEAR es
-    # 2005. Esa fila no es una campaña, es su último tercio, y publicarla como
-    # campaña desordena el eje: enero aparece antes que septiembre porque es
-    # el primer dekad con dato de todo el archivo.
-    if campanias and pd.isna(ancha.iloc[0][campanias[0]]):
-        ancha = ancha.drop(columns=campanias[0])
     larga = ancha.melt(id_vars="dekad", var_name="campaña", value_name=label)
     larga = larga.dropna(subset=[label])
     if not len(larga):
@@ -262,7 +265,7 @@ def cover_table(crop: pd.DataFrame, pasture: pd.DataFrame, value_col="mean",
 def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",
               code_col="adm2_code", name_col="adm2_name",
               group_col: str | None = "adm1_name",
-              roster: pd.DataFrame | None = None,
+              roster: pd.DataFrame | None = None, with_dekad: bool = False,
               decimals: int = DECIMALS) -> pd.DataFrame:
     """Una fila por unidad del mapa, con el código que empata la geometría.
 
@@ -301,12 +304,19 @@ def map_table(frame: pd.DataFrame, label: str, family="ASI", value_col="mean",
                        on=code_col, how="left")
     else:
         d = frame
-    d = d.sort_values(code_col)
+    orden = ([code_col, "dekad_id"] if with_dekad and "dekad_id" in d
+             else [code_col])
+    d = d.sort_values(orden)
     nombres = {"adm2_name": "municipio", "adm1_name": "departamento"}
     out = pd.DataFrame({
         "código": d[code_col].astype(str).values,
         nombres.get(name_col, name_col): d[name_col].astype(str).values,
     })
+    if with_dekad and "dekad_id" in d:
+        # Con un rango el mapa se recorre dekad por dekad, así que una fila
+        # por unidad no alcanza: la descarga tiene que decir de cuándo es
+        # cada cifra.
+        out["dekad"] = [dekad_label(c) for c in d["dekad_id"]]
     if group_col and group_col in d and group_col != name_col:
         out["departamento"] = d[group_col].astype(str).values
     out[label] = d[value_col].round(decimals).values
