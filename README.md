@@ -15,6 +15,15 @@ permite verlo, filtrarlo y descargarlo en CSV.
 
 **App en línea:** https://panel-agroclimatico-honduras.streamlit.app/
 
+> **Este proyecto se mudó el 18 de noviembre de 2026.** Nació en
+> `GabrielaLopezGutierrez/panel-agroclimatico-honduras` y ahora vive en
+> `sendasorg/panel-agroclimatico-honduras`. GitHub redirige la ruta anterior,
+> así que los enlaces viejos al repositorio siguen funcionando.
+>
+> La app, en cambio, cambió de dirección. La anterior
+> —`panel-agroclimatico-honduras-s8vsevqbdphjosdmjeysye.streamlit.app`— quedó
+> fuera de servicio y **no recibe datos nuevos**. La vigente es la de arriba.
+
 ## Cómo se usa
 
 ### La app
