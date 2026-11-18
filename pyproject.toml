@@ -1,0 +1,52 @@
+# Empaquetado del panel agroclimatico.
+#
+# Existe para que `asis` se pueda instalar, no para publicarlo en PyPI. Hasta
+# ahora el paquete solo era importable desde la raiz del repositorio: las
+# pruebas por el conftest.py que inyecta la raiz en sys.path, y la app porque
+# streamlit corre desde ahi. Eso alcanza mientras haya un solo consumidor dentro
+# de un solo repositorio.
+#
+# Con esto, `pip install -e .` funciona y cualquier cosa de afuera -un cuaderno
+# en otra maquina, una API, un segundo tablero, otro repositorio- puede depender
+# del calculo sin copiarlo. Es la precondicion de cualquier migracion: el
+# paquete viaja, la app es reemplazable.
+#
+# Las dependencias no se repiten aqui: se leen de requirements.txt, que sigue
+# siendo el archivo que instala el despliegue y la unica lista que hay que
+# mantener.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asis-honduras"
+version = "0.1.0"
+description = "Panel agroclimatico de Honduras a partir de FAO GIEWS ASIS"
+readme = "README.md"
+# 3.12 es la version mas vieja contra la que se prueba de verdad: es la que fija
+# el CI. En local corre sobre 3.14. No se declara un piso mas bajo porque no
+# habria nada que lo respalde.
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+# Lo que necesita el constructor y no la app. Es el contenido de
+# requirements-build.txt sin su `-r`, que setuptools no sabe leer. Ese archivo
+# sigue siendo el que usa el workflow; esta lista es para `pip install -e .[build]`.
+build = [
+    "rasterio>=1.3,<2",
+    "geopandas>=1.0,<2",
+    "requests>=2.31,<3",
+    "pytest>=8,<10",
+]
+
+[tool.setuptools]
+# `app` entra porque `streamlit_app.py` lo importa; `streamlit_app.py` no, porque
+# es el punto de entrada del despliegue y no parte de la biblioteca.
+packages = ["asis", "app"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

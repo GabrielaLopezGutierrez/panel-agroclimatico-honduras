@@ -14,6 +14,11 @@ salidas/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Artefactos de empaquetado: los deja `pip install -e .` y se regeneran solos.
+*.egg-info/
+build/
+dist/
 .ipynb_checkpoints/
 .venv/
 venv/
