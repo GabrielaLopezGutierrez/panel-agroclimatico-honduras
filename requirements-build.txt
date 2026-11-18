@@ -1,7 +1,15 @@
 # Dependencias de la construccion: lo de la app mas el acceso a los servicios de
 # FAO y la estadistica zonal.
+#
+# Mismo criterio de techos que requirements.txt, y aqui pesa mas: la
+# construccion corre sola todos los dias y escribe en data/. Una version mayor
+# de rasterio o geopandas que cambie el comportamiento de la estadistica zonal
+# moveria cifras ya publicadas sin que nadie lo hubiera pedido.
+#
+# Verificado con rasterio 1.5.1, geopandas 1.1.4, requests 2.34.2 y
+# pytest 9.1.1 sobre Python 3.14.
 -r requirements.txt
-rasterio>=1.3
-geopandas>=1.0
-requests>=2.31
-pytest>=8
+rasterio>=1.3,<2
+geopandas>=1.0,<2
+requests>=2.31,<3
+pytest>=8,<10

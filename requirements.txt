@@ -1,11 +1,35 @@
 # Dependencias de la app. No incluye rasterio ni geopandas a proposito: la app
 # solo lee parquet y un geojson ya simplificado, y arrastrar GDAL al hosting
 # alargaria el despliegue sin dar nada.
-# 1.62 es el piso real: el codigo usa width="stretch" en
+#
+# Cada linea lleva piso y techo. El piso es la version mas vieja con la que el
+# codigo funciona; el techo es el siguiente cambio de version mayor, que es
+# donde una biblioteca puede romper la interfaz sin avisar.
+#
+# El techo existe por la corrida diaria: nadie la mira. Sin techo, pip instala
+# lo que haya el dia del despliegue y una version nueva puede tumbar la app o la
+# tuberia sin que haya nada a que volver. Con techo, la actualizacion a una
+# version mayor es una decision que alguien toma mirando, no un accidente de un
+# martes.
+#
+# No se fija la version exacta a proposito: eso obligaria a subir cada numero a
+# mano y a quedarse sin parches de seguridad. El techo en la version mayor da la
+# proteccion sin la tarea.
+#
+# Verificado: la suite completa pasa con streamlit 1.62.0, pandas 3.0.5,
+# pyarrow 25.0.1, plotly 7.0.0 y numpy 2.5.1 sobre Python 3.14, y en CI sobre
+# Python 3.12. Si algo falla tras un despliegue, esta lista dice contra que
+# versiones se probo.
+#
+# 1.62 es el piso real de streamlit: el codigo usa width="stretch" en
 # plotly_chart, dataframe y download_button, y placeholder= en
 # multiselect. Con 1.40 la app arranca y falla al primer render.
-streamlit>=1.62
-pandas>=2.2
+streamlit>=1.62,<2
+pandas>=2.2,<4
+plotly>=5.24,<8
+numpy>=1.26,<3
+
+# pyarrow va sin techo porque el codigo nunca lo importa: es solo el motor de
+# parquet de pandas, y su interfaz publica aqui es pd.read_parquet. Ponerle
+# techo obligaria a subirlo tres veces al ano sin que eso proteja de nada.
 pyarrow>=16
-plotly>=5.24
-numpy>=1.26
