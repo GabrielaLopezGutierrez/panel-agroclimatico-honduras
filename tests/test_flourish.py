@@ -255,6 +255,15 @@ def test_la_superficie_por_clase_trae_las_cuatro_clases_en_columnas():
     assert list(t.columns) == ["campaña", "dekad", *cfg.CLASSES["ASI"][1]]
     # Son km2, asi que ninguna es negativa y la suma es el area con dato.
     assert (t[cfg.CLASSES["ASI"][1]] >= 0).all().all()
+    # La campania se rotula como en las series: la postrera cruza el anio y
+    # por eso lleva los dos. Y la que arranca a medias no entra, igual que en
+    # el mapa de calor.
+    carpeta = cfg.DATA / "flourish"
+    if (carpeta / "superficie_clase_asi_postrera.csv").exists():
+        pos = pd.read_csv(carpeta / "superficie_clase_asi_postrera.csv")
+        assert "–" in pos["campaña"].iloc[0], pos["campaña"].iloc[0]
+        primera = pos[pos["campaña"] == pos["campaña"].iloc[0]]
+        assert primera["dekad"].iloc[0].startswith("sep")
 
 
 def test_las_figuras_por_unidad_llevan_fecha_para_poder_ordenarse():

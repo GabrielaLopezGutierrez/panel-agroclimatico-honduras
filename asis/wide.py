@@ -231,7 +231,7 @@ def severity_table(frame: pd.DataFrame, family: str, season: str | None,
     campaña, porque entre el cierre de una y la apertura de la siguiente no
     hay dato y una sola serie corrida afirmaría una caída que nadie midió.
     """
-    from asis.aggregate import campaign_year, severity_area
+    from asis.aggregate import campaign_year, season_columns, severity_area
     from asis.calendar import dekad_of_year
 
     if not len(frame):
@@ -240,12 +240,26 @@ def severity_table(frame: pd.DataFrame, family: str, season: str | None,
     if not len(g):
         return pd.DataFrame()
     clases = [c for c in g.columns if c != "dekad_id"]
-    # Etiqueta corta, la de la posición dentro de la temporada: la campaña ya
-    # va en su propia columna y repetir el año en cada dekad llena el eje de
-    # cada panel con «1er dek may 2005» dieciocho veces.
+    doy = [dekad_of_year(c) for c in g["dekad_id"]]
+    anios = campaign_year(g["dekad_id"], season)
+    if season:
+        # La campaña que arranca a medias se descarta, igual que en el mapa
+        # de calor y por lo mismo: no es una campaña, es su último tercio, y
+        # además pone enero al frente del eje de todos los paneles.
+        abre = season_columns(season)[0]
+        primera = anios.min()
+        tiene_apertura = any(a == primera and d == abre
+                             for a, d in zip(anios, doy))
+        if not tiene_apertura:
+            quedan = [a != primera for a in anios]
+            g, doy = g[quedan], [d for d, k in zip(doy, quedan) if k]
+            anios = anios[quedan]
     out = pd.DataFrame({
-        "campaña": campaign_year(g["dekad_id"], season).astype(str).values,
-        "dekad": dekad_labels([dekad_of_year(c) for c in g["dekad_id"]]),
+        # El rótulo de campaña lo arma `season_labels`, que es el mismo que
+        # usan las series: una temporada que cruza el año lleva los dos.
+        "campaña": season_labels(anios, season_columns(season) if season
+                                 else [0]),
+        "dekad": dekad_labels(doy),
     })
     for c in clases:
         out[c] = g[c].round(decimals).values
