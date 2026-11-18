@@ -267,7 +267,7 @@ GEOJSON_TOL = 0.004                  # ~400 m: mantiene la forma, pesa 10x menos
 # poder llegar al dato original sin buscarlo.
 # El repositorio, que es público. De aquí sale el enlace a los archivos que
 # viajan con el código y que la app no puede servir por su cuenta.
-REPO = "GabrielaLopezGutierrez/panel-agroclimatico-honduras"
+REPO = "sendasorg/panel-agroclimatico-honduras"
 REPO_URL = f"https://github.com/{REPO}"
 
 SOURCE_URL = ("https://www.fao.org/giews/earthobservation/country/index.jsp"
