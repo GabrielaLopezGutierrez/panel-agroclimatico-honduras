@@ -5,13 +5,20 @@ la app, así que la cifra publicada y la dibujada no pueden divergir.
 
 No son el mismo archivo, y conviene decir en qué se separan. El periodo: el
 botón sigue el que la persona eligió en pantalla y acá no hay pantalla, así que
-las series van completas. Y la forma, en tres casos, siempre por lo mismo: la
-herramienta de afuera colorea por columna y no por valor, de modo que lo que
-la figura codifica en el color aquí tiene que viajar como columna. La anomalía
-va partida en dos por signo y con el año para el filtro; el contraste de
-coberturas lleva el grupo; y los dos mapas de calor van largos y con la clase.
+las series van completas y las figuras por unidad llevan su propia ventana.
+
+Y la forma, siempre por lo mismo: la herramienta de afuera colorea por columna
+y no por valor, de modo que lo que la figura codifica en el color aquí tiene
+que viajar como columna. La anomalía va partida en dos por signo y con el año
+para el filtro; el contraste de coberturas lleva el grupo; los mapas y los
+mapas de calor llevan la clase; y los dos rankings reparten la cifra entre las
+cuatro columnas de clase.
+
 Los valores son los mismos en todos los casos: lo que cambia es cómo están
-dispuestos.
+dispuestos. Las dos últimas son además una aproximación y no una copia: la
+figura de la app colorea la barra y el mapa con el degradado continuo del
+indicador, y afuera salen los cuatro intervalos planos de FAO, que es lo que
+esa herramienta sabe pintar.
 
 Las series nacionales y los mapas de calor van completos, con todo lo que hay
 en el panel. Afuera el lector elige qué campañas mirar con el control de
